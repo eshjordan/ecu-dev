@@ -1,0 +1,6 @@
+Trace.dump
+build
+compile_commands.json
+.cache
+.clang-format
+.clang-tidy
