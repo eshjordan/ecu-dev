@@ -179,7 +179,7 @@ static void prvSaveTraceFile(void)
 
         if (pxOutputFile != NULL)
         {
-            fwrite(RecorderDataPtr, sizeof(RecorderDataType), 1, pxOutputFile);
+            // fwrite(RecorderDataPtr, sizeof(RecorderDataType), 1, pxOutputFile);
             fclose(pxOutputFile);
             printf("\r\nTrace output saved to Trace.dump\r\n");
         } else
@@ -880,11 +880,11 @@ static void prvDemonstrateTaskStateAndHandleGetFunctions(void)
     }
 
     /* Also with the vTaskGetInfo() function. */
-    vTaskGetInfo(xTimerTaskHandle, /* The task being queried. */
-                 &xTaskInfo,       /* The structure into which information on the task
-                                      will be written. */
-                 pdTRUE,           /* Include the task's high watermark in the structure. */
-                 eInvalid);        /* Include the task state in the structure. */
+    // vTaskGetInfo(xTimerTaskHandle, /* The task being queried. */
+    //              &xTaskInfo,       /* The structure into which information on the task
+    //                                   will be written. */
+    //              pdTRUE,           /* Include the task's high watermark in the structure. */
+    //              eInvalid);        /* Include the task state in the structure. */
 
     /* Check the information returned by vTaskGetInfo() is as expected. */
     if ((xTaskInfo.eCurrentState != eBlocked) || (strcmp(xTaskInfo.pcTaskName, "Tmr Svc") != 0)

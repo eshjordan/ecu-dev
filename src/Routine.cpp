@@ -1,6 +1,7 @@
 #include "Routine.hpp"
+#include <cstdint>
 
-Routine::Routine(const std::string &name) : m_name(name) {}
+Routine::Routine(const std::string &name, const uint32_t frequency) : m_name(name), m_frequency(frequency) {}
 
 Routine::~Routine() {}
 
