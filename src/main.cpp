@@ -26,8 +26,6 @@ int main(int /*argc*/, char * /*argv*/[])
     /* SIGINT is not blocked by the posix port */
     signal(SIGINT, handle_sigint);
 
-    // init_application();
-
     /* Add tasks here. */
 
     /* Start the tasks and timer running. */

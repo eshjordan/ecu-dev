@@ -1,0 +1,4 @@
+[submodule "cppcheck"]
+	path = cppcheck
+	url = ./cppcheck
+	branch = main

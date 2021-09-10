@@ -1,0 +1,23 @@
+#!/bin/bash
+
+cd misra/
+python3 cppcheck-misra-parsetexts.py MISRA_C_2012.pdf
+../cppcheck/build/bin/cppcheck --dump ../src ../libs/RTOS.cpp ../libs/RTOS.hpp
+
+ctu_src_files=$(find ../src/ -type f -name "*.ctu-info")
+dmp_src_files=$(find ../src/ -type f -name "*.dump")
+
+ctu_libs_files=$(find ../libs/ -type f -name "*.ctu-info")
+dmp_libs_files=$(find ../libs/ -type f -name "*.dump")
+
+mkdir -p ./generated
+mv ${ctu_src_files} ./generated/
+mv ${dmp_src_files} ./generated/
+mv ${ctu_libs_files} ./generated/
+mv ${dmp_libs_files} ./generated/
+rm src/cppcheck-addon-ctu-file-list
+
+python3 ../cppcheck/addons/misra.py --rule-texts=MISRA_C_2012_Rules.txt  ./generated/*.dump
+
+cd ..
+

@@ -5,3 +5,6 @@ compile_commands.json
 .clang-format
 .clang-tidy
 .vscode
+**.dump
+**.ctu-info
+src/cppcheck-addon-ctu-file-list
