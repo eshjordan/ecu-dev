@@ -1,14 +1,7 @@
 #pragma once
 
-#include "FreeRTOS.h"
 #include "RTOS.hpp"
 #include "Routine.hpp"
-#include "portmacro.h"
-#include <cstddef>
-#include <cstdint>
-#include <cstdio>
-#include <functional>
-#include <string>
 
 class System
 {
@@ -19,11 +12,6 @@ public:
                                 // Instantiated on first use.
         return &instance;
     }
-
-    using MEMBER_FN = void (System::*)(void *);
-    using VOID_FN   = void (*)(void *);
-    using CB_FN     = void(void *);
-    using CB_LIST   = std::function<CB_FN>;
 
 private:
     /**
@@ -82,7 +70,7 @@ public:
 
         TimerHandle_t x_timer = xTimerCreate(name.c_str(), /* The text name assigned to the software timer - for
                                                               debug only as it is not used by the kernel. */
-                                             ticks,       /* The period of the software timer in ticks. */
+                                             ticks,        /* The period of the software timer in ticks. */
                                              true,         /* xAutoReload is set to pdTRUE. */
                                              nullptr,      /* The timer's ID is not used. */
                                              cb            /* The function executed when the timer expires. */
@@ -95,6 +83,4 @@ public:
 
         return rout;
     }
-
-    void run_routines();
 };

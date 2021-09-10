@@ -1,4 +1,5 @@
 /* Standard includes. */
+#include <csignal>
 #include <iostream>
 
 #include "RTOS.hpp"
@@ -25,7 +26,7 @@ int main(int /*argc*/, char * /*argv*/[])
     /* SIGINT is not blocked by the posix port */
     signal(SIGINT, handle_sigint);
 
-    init_application();
+    // init_application();
 
     /* Add tasks here. */
 
