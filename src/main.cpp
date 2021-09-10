@@ -7,6 +7,8 @@
 /* Program includes. */
 #include "Routine.hpp"
 #include "System.hpp"
+#include "portable.h"
+#include "portmacro.h"
 
 /**
  * @brief Signal handler for Ctrl_C to cause the program to exit.
@@ -21,8 +23,11 @@ static void handle_sigint(int signal) { exit(signal); }
  */
 REGISTER_ROUTINE(test, 1) { std::cout << "hello world!\n"; }
 
-int main(int /*argc*/, char * /*argv*/[])
+int main(int argc, char *argv[])
 {
+    (void)argc;
+    (void)argv;
+
     /* SIGINT is not blocked by the posix port */
     signal(SIGINT, handle_sigint);
 

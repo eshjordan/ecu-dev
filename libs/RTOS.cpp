@@ -69,7 +69,7 @@ void vAssertCalled(const char *const pcFileName, unsigned long ulLine)
         /* You can step out of this function to debug the assertion by using
          * the debugger to set ulSetToNonZeroInDebuggerToContinue to a non-zero
          * value. */
-        while (ulSetToNonZeroInDebuggerToContinue == 0)
+        while (ulSetToNonZeroInDebuggerToContinue == (uint32_t)0)
         {
             __asm volatile("NOP");
             __asm volatile("NOP");

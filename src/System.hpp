@@ -6,7 +6,7 @@
 class System
 {
 public:
-    static System *get_instance()
+    static System *get_instance(void)
     {
         static System instance; // Guaranteed to be destroyed.
                                 // Instantiated on first use.
@@ -18,19 +18,19 @@ private:
      * @brief Construct a System instance. Private to force singleton.
      *
      */
-    System() {}
+    System(void) {}
 
     /**
      * @brief List of routines to be executed.
      *
      */
-    Routine **m_routines = static_cast<Routine **>(pvPortMalloc(1000 * sizeof(Routine *)));
+    Routine **m_routines = static_cast<Routine **>(pvPortMalloc(1000UL * sizeof(Routine *)));
 
     /**
      * @brief List of timers under execution.
      *
      */
-    TimerHandle_t *m_timers = static_cast<TimerHandle_t *>(pvPortMalloc(1000 * sizeof(TimerHandle_t)));
+    TimerHandle_t *m_timers = static_cast<TimerHandle_t *>(pvPortMalloc(1000UL * sizeof(TimerHandle_t)));
 
     /**
      * @brief The number of routines in the system.
@@ -49,13 +49,13 @@ public:
      * @brief Copy constructor does nothing, because the class is a singleton.
      *
      */
-    System(System const &) {}
+    System(System const &other) {}
 
     /**
      * @brief Copy assignment operator does nothing, because the class is a singleton.
      *
      */
-    void operator=(System const &) {}
+    void operator=(System const &other) {}
 
     template <typename T> static Routine *register_routine(const std::string &name, RoutineFactory<T> *factory)
     {
@@ -64,7 +64,7 @@ public:
 
         TimerCallbackFunction_t cb = T::FunctionBody;
 
-        const unsigned long period = 1000 / (float)rout->m_frequency;
+        const uint16_t period = 1000 / (float)rout->m_frequency;
 
         const TickType_t ticks = pdMS_TO_TICKS(period);
 
@@ -76,8 +76,11 @@ public:
                                              cb            /* The function executed when the timer expires. */
         );
 
-        sys->m_routines[sys->m_routines_count++] = rout;
-        sys->m_timers[sys->m_timers_count++]     = x_timer;
+        sys->m_routines[sys->m_routines_count] = rout;
+        sys->m_timers[sys->m_timers_count]     = x_timer;
+
+        sys->m_routines_count++;
+        sys->m_timers_count++;
 
         xTimerStart(x_timer, 0);
 

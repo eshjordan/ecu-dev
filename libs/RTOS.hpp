@@ -35,7 +35,7 @@ void vApplicationTickHook(void);
  * parts of the demo application.  If heap_1.c, heap_2.c or heap_4.c is being used, then the size of the    heap
  * available to pvPortMalloc() is defined by configTOTAL_HEAP_SIZE in FreeRTOSConfig.h, and the xPortGetFreeHeapSize()
  * API function can be used to query the size of free heap space that remains (although it does not provide information
- * on how the remaining heap might be fragmented).  See http://www.freertos.org/a00111.html for more information.
+ * on how the remaining heap might be fragmented).  See www.freertos.org/a00111.html for more information.
  *
  */
 void vApplicationMallocFailedHook(void);
@@ -51,7 +51,7 @@ void vApplicationMallocFailedHook(void);
 void vApplicationStackOverflowHook(TaskHandle_t pxTask, char *pcTaskName);
 
 /**
- * @brief This function will be called once only, when the daemon task starts to execute    (sometimes called the timer
+ * @brief This function will be called once only, when the daemon task starts to execute (sometimes called the timer
  * task).  This is useful if the application includes initialisation code that would benefit from executing after the
  * scheduler has been started.
  *
@@ -59,7 +59,7 @@ void vApplicationStackOverflowHook(TaskHandle_t pxTask, char *pcTaskName);
 void vApplicationDaemonTaskStartupHook(void);
 
 /**
- * @brief Called if an assertion passed to configASSERT() fails.  See http://www.freertos.org/a00110.html#configASSERT
+ * @brief Called if an assertion passed to configASSERT() fails.  See www.freertos.org/a00110.html#configASSERT
  * for more information. Parameters are not used.
  *
  * @param pcFileName

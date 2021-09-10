@@ -15,7 +15,7 @@ mv ${ctu_src_files} ./generated/
 mv ${dmp_src_files} ./generated/
 mv ${ctu_libs_files} ./generated/
 mv ${dmp_libs_files} ./generated/
-rm src/cppcheck-addon-ctu-file-list
+rm ../src/cppcheck-addon-ctu-file-list
 
 python3 ../cppcheck/addons/misra.py --rule-texts=MISRA_C_2012_Rules.txt  ./generated/*.dump
 
