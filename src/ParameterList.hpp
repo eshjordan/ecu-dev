@@ -37,12 +37,12 @@ public:
 
     template <typename T> static void set_parameter(const std::string &name, const T &value);
 
-    static const std::vector<const ParameterBase *> &parameter_list()
+    static const std::vector<const ParameterBase *> &parameter_list(void)
     {
         return *reinterpret_cast<std::vector<const ParameterBase *> *>(&(get_instance()->m_parameters));
     }
 
-    [[nodiscard]] static inline auto get_size() { return ParameterList::get_instance()->m_parameters.size(); }
+    [[nodiscard]] static inline auto get_size(void) { return ParameterList::get_instance()->m_parameters.size(); }
 
 private:
     /**

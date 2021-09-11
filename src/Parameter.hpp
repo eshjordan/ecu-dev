@@ -56,31 +56,67 @@ enum class TYPE_ID {
 
 template <typename T> constexpr TYPE_ID type_hash(void)
 {
-    if (std::is_same<T, short int>::value) { return TYPE_ID::SHORT_INT; }
-    if (std::is_same<T, int>::value) { return TYPE_ID::INT; }
-    if (std::is_same<T, unsigned int>::value) { return TYPE_ID::UNSIGNED_INT; }
-    if (std::is_same<T, unsigned long int>::value) { return TYPE_ID::UNSIGNED_LONG_INT; }
-    if (std::is_same<T, long long int>::value) { return TYPE_ID::LONG_LONG_INT; }
-    if (std::is_same<T, unsigned long long int>::value) { return TYPE_ID::UNSIGNED_LONG_LONG_INT; }
-    if (std::is_same<T, bool>::value) { return TYPE_ID::BOOL; }
-    if (std::is_same<T, signed char>::value) { return TYPE_ID::SIGNED_CHAR; }
-    if (std::is_same<T, unsigned char>::value) { return TYPE_ID::UNSIGNED_CHAR; }
-    if (std::is_same<T, char>::value) { return TYPE_ID::CHAR; }
-    if (std::is_same<T, wchar_t>::value) { return TYPE_ID::WCHAR; }
-    if (std::is_same<T, char16_t>::value) { return TYPE_ID::CHAR16; }
-    if (std::is_same<T, char32_t>::value) { return TYPE_ID::CHAR32; }
-    if (std::is_same<T, float>::value) { return TYPE_ID::FLOAT; }
-    if (std::is_same<T, double>::value) { return TYPE_ID::DOUBLE; }
-    if (std::is_same<T, long double>::value) { return TYPE_ID::LONG_DOUBLE; }
-    if (std::is_same<T, std::string>::value) { return TYPE_ID::STRING; }
-    return TYPE_ID::UNDEFINED;
+    TYPE_ID type_id = TYPE_ID::UNDEFINED;
+    if ((bool)std::is_same<T, short int>::value)
+    {
+        type_id = TYPE_ID::SHORT_INT;
+    } else if ((bool)std::is_same<T, int>::value)
+    {
+        type_id = TYPE_ID::INT;
+    } else if ((bool)std::is_same<T, unsigned int>::value)
+    {
+        type_id = TYPE_ID::UNSIGNED_INT;
+    } else if ((bool)std::is_same<T, unsigned long int>::value)
+    {
+        type_id = TYPE_ID::UNSIGNED_LONG_INT;
+    } else if ((bool)std::is_same<T, long long int>::value)
+    {
+        type_id = TYPE_ID::LONG_LONG_INT;
+    } else if ((bool)std::is_same<T, unsigned long long int>::value)
+    {
+        type_id = TYPE_ID::UNSIGNED_LONG_LONG_INT;
+    } else if ((bool)std::is_same<T, bool>::value)
+    {
+        type_id = TYPE_ID::BOOL;
+    } else if ((bool)std::is_same<T, signed char>::value)
+    {
+        type_id = TYPE_ID::SIGNED_CHAR;
+    } else if ((bool)std::is_same<T, unsigned char>::value)
+    {
+        type_id = TYPE_ID::UNSIGNED_CHAR;
+    } else if ((bool)std::is_same<T, char>::value)
+    {
+        type_id = TYPE_ID::CHAR;
+    } else if ((bool)std::is_same<T, wchar_t>::value)
+    {
+        type_id = TYPE_ID::WCHAR;
+    } else if ((bool)std::is_same<T, char16_t>::value)
+    {
+        type_id = TYPE_ID::CHAR16;
+    } else if ((bool)std::is_same<T, char32_t>::value)
+    {
+        type_id = TYPE_ID::CHAR32;
+    } else if ((bool)std::is_same<T, float>::value)
+    {
+        type_id = TYPE_ID::FLOAT;
+    } else if ((bool)std::is_same<T, double>::value)
+    {
+        type_id = TYPE_ID::DOUBLE;
+    } else if ((bool)std::is_same<T, long double>::value)
+    {
+        type_id = TYPE_ID::LONG_DOUBLE;
+    } else if ((bool)std::is_same<T, std::string>::value)
+    {
+        type_id = TYPE_ID::STRING;
+    }
+    return type_id;
 }
 
 class ParameterBase
 {
 public:
-    [[nodiscard]] virtual std::string get_name() const = 0;
-    [[nodiscard]] virtual TYPE_ID get_type() const     = 0;
+    [[nodiscard]] virtual std::string get_name(void) const = 0;
+    [[nodiscard]] virtual TYPE_ID get_type(void) const     = 0;
 };
 
 template <typename T> class Parameter : public ParameterBase
@@ -98,21 +134,21 @@ public:
         set_value(value);
     }
 
-    ~Parameter<T>() = default;
+    ~Parameter<T>(void) = default;
 
-    Parameter<T>(const Parameter<T> &) = default;
+    Parameter<T>(const Parameter<T> &other) = default;
 
-    Parameter<T> &operator=(const Parameter<T> &) = default;
+    Parameter<T> &operator=(const Parameter<T> &other) = default;
 
-    Parameter<T>(Parameter<T> &&) noexcept = default;
+    Parameter<T>(Parameter<T> &&other) noexcept = default;
 
-    Parameter<T> &operator=(Parameter<T> &&) noexcept = default;
+    Parameter<T> &operator=(Parameter<T> &&other) noexcept = default;
 
-    [[nodiscard]] std::string get_name() const override { return m_name; }
+    [[nodiscard]] std::string get_name(void) const override { return m_name; }
 
-    [[nodiscard]] TYPE_ID get_type() const override { return m_type; }
+    [[nodiscard]] TYPE_ID get_type(void) const override { return m_type; }
 
-    [[nodiscard]] T get_value() const { return m_value; }
+    [[nodiscard]] T get_value(void) const { return m_value; }
 
     void set_value(const T &value) { m_value = value; }
 };

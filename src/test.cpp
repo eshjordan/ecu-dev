@@ -10,8 +10,8 @@ REGISTER_ROUTINE(point_mass_model, 10)
     auto acc = ParameterList::get_parameter<double>("acceleration");
 
     // perform a calculation with the parameters
-    pos = pos + vel * 1 / 10.0;
-    vel = vel + acc * 1 / 10.0;
+    pos = pos + vel * (double)(1 / 10.0);
+    vel = vel + acc * (double)(1 / 10.0);
 
     // update parameter 2 by name
     ParameterList::set_parameter("position", pos);
