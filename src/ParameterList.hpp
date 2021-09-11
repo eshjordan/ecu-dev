@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Parameter.hpp"
+#include <cstddef>
 #include <stdexcept>
 #include <vector>
 
@@ -8,12 +9,17 @@ namespace System {
 namespace Impl {
 
 /**
- * @brief Singleton.
+ * @brief Singleton record of all managed Parameters. Can contain Parameters with values of different types.
  *
  */
 class ParameterList
 {
-public:
+private:
+    /**
+     * @brief Get the single instance of the ParameterList object. Shouldn't be accessed outside the class.
+     *
+     * @return ParameterList* Pointer to the ParameterList object.
+     */
     static ParameterList *get_instance(void)
     {
         static ParameterList instance; // Guaranteed to be destroyed.
@@ -21,41 +27,102 @@ public:
         return &instance;
     }
 
-    /**
-     * @brief Copy constructor does nothing, because the class is a singleton.
-     *
-     */
-    ParameterList(ParameterList const &other) { (void)other; }
+    /** Rule of Six */
 
     /**
-     * @brief Copy assignment operator does nothing, because the class is a singleton.
+     * @brief Default constructor. Construct the ParameterList instance. Private because the class is a singleton.
      *
      */
-    void operator=(ParameterList const &other) { (void)other; }
+    ParameterList(void) = default;
 
+    /**
+     * @brief Default destructor. Destroy the ParameterList instance. Private because the class is a singleton.
+     *
+     */
+    ~ParameterList(void) = default;
+
+public:
+    /**
+     * @brief Copy constructor. Deleted because the class is a singleton.
+     *
+     */
+    ParameterList(ParameterList const &other) = delete;
+
+    /**
+     * @brief Copy assignment operator. Deleted because the class is a singleton.
+     *
+     */
+    void operator=(ParameterList const &other) = delete;
+
+    /**
+     * @brief Move constructor. Deleted because the class is a singleton.
+     *
+     */
+    ParameterList(ParameterList &&other) = delete;
+
+    /**
+     * @brief Move assignment operator. Deleted because the class is a singleton.
+     *
+     */
+    ParameterList &operator=(ParameterList &&other) = delete;
+
+private:
+    /** Member variables */
+
+    /**
+     * @brief Utility function to get the internal list of Parameters (within class only).
+     *
+     * @return std::vector<ParameterBase *>& Mutable reference to the internal list of Parameters.
+     */
+    static std::vector<ParameterBase *> &get_list(void) { return ParameterList::get_instance()->m_parameters; }
+
+    /** @brief List of ParameterBase pointers. */
+    std::vector<ParameterBase *> m_parameters{};
+
+public:
+    /**
+     * @brief Add a new named Parameter to the ParameterList.
+     *
+     * @tparam T Type of the Parameter's value.
+     * @param name Name of the Parameter.
+     * @param value Value of the Parameter.
+     */
     template <typename T> static void add_parameter(const std::string &name, const T &value);
 
+    /**
+     * @brief Get the value of a named parameter.
+     *
+     * @tparam T Type of the Parameter's value. Set explicitly to avoid runtime errors.
+     * @param name Name of the Parameter.
+     * @return T Current value of the Parameter.
+     */
     template <typename T> [[nodiscard]] static T get_parameter(const std::string &name);
 
+    /**
+     * @brief Set a new value for a named Parameter.
+     *
+     * @tparam T Type of the Parameter's value. Set explicitly to avoid runtime errors.
+     * @param name Name of the Parameter.
+     * @param value New value of the Parameter.
+     */
     template <typename T> static void set_parameter(const std::string &name, const T &value);
 
+    /**
+     * @brief Return a constant reference to the internal list of Parameters.
+     *
+     * @return const std::vector<const ParameterBase *>& Constant reference to the internal list of Parameters.
+     */
     static const std::vector<const ParameterBase *> &parameter_list(void)
     {
         return *reinterpret_cast<std::vector<const ParameterBase *> *>(&(get_instance()->m_parameters));
     }
 
-    [[nodiscard]] static inline auto get_size(void) { return ParameterList::get_instance()->m_parameters.size(); }
-
-private:
     /**
-     * @brief Construct a System instance. Private to force singleton.
+     * @brief Get the number of Parameters in the ParameterList.
      *
+     * @return size_t Number of Parameters in the ParameterList.
      */
-    ParameterList(void) {}
-
-    static std::vector<ParameterBase *> &get_list(void) { return ParameterList::get_instance()->m_parameters; }
-
-    std::vector<ParameterBase *> m_parameters{};
+    [[nodiscard]] static inline size_t get_size(void) { return ParameterList::get_instance()->m_parameters.size(); }
 };
 
 template <typename T> void ParameterList::add_parameter(const std::string &name, const T &value)

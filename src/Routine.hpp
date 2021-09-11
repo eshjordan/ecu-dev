@@ -14,8 +14,12 @@ namespace Impl {
 class Routine
 {
 private:
+    /** @brief Routine name. */
     const std::string m_name{};
+
+    /** @brief Frequency of Routine's timer (Hz). */
     const double m_frequency{};
+
     friend class RoutineManager;
 
 public:
@@ -31,29 +35,59 @@ public:
         (void)frequency;
     }
 
+    /**
+     * @brief Destroy the Routine object.
+     *
+     */
     ~Routine(void) = default;
 };
 
+/**
+ * @brief Base class for Routine generators.
+ *
+ */
 class RoutineFactoryBase
 {
 public:
+    /**
+     * @brief Construct a new Routine Factory Base object for each custom generator to inherit from.
+     *
+     */
     RoutineFactoryBase(void) = default;
 
+    /**
+     * @brief Destroy the Routine Factory Base object.
+     *
+     */
     ~RoutineFactoryBase(void) = default;
 
     /**
-     * @brief Creates a test instance to run. The instance is both created and destroyed within TestInfoImpl::Run()
+     * @brief Factory for making a newly generated Routine.
      *
-     * @return Routine*
+     * @return Routine* Pointer to the newly generated Routine.
      */
     virtual Routine *create_routine(void) = 0;
 };
 
+/**
+ * @brief Template Factory class to generate Routines.
+ *
+ * @tparam RoutineClass Type of Routine to generate (each is unique).
+ */
 template <class RoutineClass> class RoutineFactory : RoutineFactoryBase
 {
 public:
+    /**
+     * @brief Construct a new Routine Factory object.
+     *
+     */
     RoutineFactory(void) : RoutineFactoryBase() {}
 
+    /**
+     * @brief Actually generate the Routine using its default constructor.
+     *
+     * @return RoutineClass* Pointer to the newly generated Routine.
+     */
     RoutineClass *create_routine(void) override { return new RoutineClass; }
 };
 

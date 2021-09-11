@@ -8,7 +8,7 @@ namespace System {
 namespace Impl {
 
 /**
- * @brief Manages all user-defined auto-generated routines.
+ * @brief Singleton record of all managed Routines. Manages all user-defined auto-generated routines.
  *
  */
 class RoutineManager
@@ -30,13 +30,13 @@ private:
     /** Rule of Six */
 
     /**
-     * @brief Default constructor. Construct a System instance. Private because the class is a singleton.
+     * @brief Default constructor. Construct the RoutineManager instance. Private because the class is a singleton.
      *
      */
     RoutineManager(void) = default;
 
     /**
-     * @brief Destructor. Destroy the System instance. Private because the class is a singleton.
+     * @brief Destructor. Destroy the RoutineManager instance. Private because the class is a singleton.
      *
      */
     ~RoutineManager(void) = default;
