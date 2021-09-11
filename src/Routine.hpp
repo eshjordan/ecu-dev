@@ -25,7 +25,11 @@ public:
      * @param name Name of the routine, used for debugging.
      * @param frequency Frequency the routine is called, in Hz.
      */
-    Routine(std::string name, const double &frequency) : m_name(std::move(name)), m_frequency(frequency) {}
+    Routine(std::string name, const double &frequency) : m_name(std::move(name)), m_frequency(frequency)
+    {
+        (void)name;
+        (void)frequency;
+    }
 
     ~Routine(void) = default;
 };

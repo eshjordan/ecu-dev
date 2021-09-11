@@ -84,6 +84,9 @@ template <typename T> constexpr TYPE_ID type_hash(void)
     } else if ((bool)std::is_same<T, std::string>::value)
     {
         type_id = TYPE_ID::STRING;
+    } else
+    {
+        type_id = TYPE_ID::UNDEFINED;
     }
     return type_id;
 }
@@ -107,6 +110,7 @@ private:
 public:
     Parameter<T>(std::string name, const T &value) : m_type(type_hash<T>()), m_name(std::move(name))
     {
+        (void)name;
         set_value(value);
     }
 

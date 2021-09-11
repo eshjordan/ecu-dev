@@ -25,13 +25,13 @@ public:
      * @brief Copy constructor does nothing, because the class is a singleton.
      *
      */
-    ParameterList(ParameterList const &other) {}
+    ParameterList(ParameterList const &other) { (void)other; }
 
     /**
      * @brief Copy assignment operator does nothing, because the class is a singleton.
      *
      */
-    void operator=(ParameterList const &other) {}
+    void operator=(ParameterList const &other) { (void)other; }
 
     template <typename T> static void add_parameter(const std::string &name, const T &value);
 
