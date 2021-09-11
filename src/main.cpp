@@ -1,14 +1,16 @@
 /* Standard includes. */
 #include <csignal>
-#include <iostream>
 
 #include "RTOS.hpp"
 
-/* Program includes. */
+/* System includes. */
+#include "Parameter.hpp"
+#include "ParameterList.hpp"
 #include "Routine.hpp"
 #include "System.hpp"
-#include "portable.h"
-#include "portmacro.h"
+
+/* User code */
+#include "test.cpp"
 
 /**
  * @brief Signal handler for Ctrl_C to cause the program to exit.
@@ -16,12 +18,6 @@
  * @param signal
  */
 static void handle_sigint(int signal) { exit(signal); }
-
-/**
- * @brief Test routine to print to the console.
- *
- */
-REGISTER_ROUTINE(test, 1) { std::cout << "hello world!\n"; }
 
 int main(int argc, char *argv[])
 {
@@ -32,6 +28,9 @@ int main(int argc, char *argv[])
     signal(SIGINT, handle_sigint);
 
     /* Add tasks here. */
+    ParameterList::add_parameter("position", 0.0);
+    ParameterList::add_parameter("velocity", 0.0);
+    ParameterList::add_parameter("acceleration", 1.0);
 
     /* Start the tasks and timer running. */
     vTaskStartScheduler();
