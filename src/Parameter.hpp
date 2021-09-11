@@ -4,32 +4,8 @@
 #include <type_traits>
 #include <utility>
 
-// // All int types
-// template class Parameter<short int>;
-// template class Parameter<>;
-// template class Parameter<>;
-// template class Parameter<>;
-// template class Parameter<>;
-// template class Parameter<>;
-
-// // Boolean type
-// template class Parameter<bool>;
-
-// // Char types
-// template class Parameter<signed char>;
-// template class Parameter<unsigned char>;
-// template class Parameter<char>;
-// template class Parameter<wchar_t>;
-// template class Parameter<char16_t>;
-// template class Parameter<char32_t>;
-
-// // Floating point types
-// template class Parameter<float>;
-// template class Parameter<double>;
-// template class Parameter<long double>;
-
-// // Other useful types
-// template class Parameter<std::string>;
+namespace System {
+namespace Impl {
 
 enum class TYPE_ID {
     SHORT_INT,
@@ -152,3 +128,6 @@ public:
 
     void set_value(const T &value) { m_value = value; }
 };
+
+} // namespace Impl
+} // namespace System

@@ -1,9 +1,11 @@
 #pragma once
 
 #include "Parameter.hpp"
-#include <iterator>
 #include <stdexcept>
 #include <vector>
+
+namespace System {
+namespace Impl {
 
 /**
  * @brief Singleton.
@@ -51,7 +53,7 @@ private:
      */
     ParameterList(void) {}
 
-    static std::vector<ParameterBase *> &get_list(void) { return get_instance()->m_parameters; }
+    static std::vector<ParameterBase *> &get_list(void) { return ParameterList::get_instance()->m_parameters; }
 
     std::vector<ParameterBase *> m_parameters{};
 };
@@ -94,3 +96,6 @@ template <typename T> void ParameterList::set_parameter(const std::string &name,
 
     throw std::range_error("Parameter '" + name + "' not found.");
 }
+
+} // namespace Impl
+} // namespace System

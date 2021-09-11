@@ -4,13 +4,7 @@
 #include "RTOS.hpp"
 
 /* System includes. */
-#include "Parameter.hpp"
-#include "ParameterList.hpp"
-#include "Routine.hpp"
 #include "System.hpp"
-
-/* User code */
-#include "test.cpp"
 
 /**
  * @brief Signal handler for Ctrl_C to cause the program to exit.
@@ -28,9 +22,7 @@ int main(int argc, char *argv[])
     signal(SIGINT, handle_sigint);
 
     /* Add tasks here. */
-    ParameterList::add_parameter("position", 0.0);
-    ParameterList::add_parameter("velocity", 0.0);
-    ParameterList::add_parameter("acceleration", 1.0);
+    System::init();
 
     /* Start the tasks and timer running. */
     vTaskStartScheduler();

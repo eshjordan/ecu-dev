@@ -2,26 +2,40 @@
 
 #include "RTOS.hpp"
 #include <string>
+#include <utility>
 
+namespace System {
+namespace Impl {
+
+/**
+ * @brief Base class for all generated routines.
+ *
+ */
 class Routine
 {
 private:
     const std::string m_name{};
-    const uint32_t m_frequency{};
-    friend class System;
+    const double m_frequency{};
+    friend class RoutineManager;
 
 public:
-    Routine(const std::string &name, uint32_t frequency);
+    /**
+     * @brief Construct a new Routine object. Must have a name and frequency.
+     *
+     * @param name Name of the routine, used for debugging.
+     * @param frequency Frequency the routine is called, in Hz.
+     */
+    Routine(std::string name, const double &frequency) : m_name(std::move(name)), m_frequency(frequency) {}
 
-    ~Routine(void);
+    ~Routine(void) = default;
 };
 
 class RoutineFactoryBase
 {
 public:
-    RoutineFactoryBase(void);
+    RoutineFactoryBase(void) = default;
 
-    ~RoutineFactoryBase(void);
+    ~RoutineFactoryBase(void) = default;
 
     /**
      * @brief Creates a test instance to run. The instance is both created and destroyed within TestInfoImpl::Run()
@@ -39,18 +53,25 @@ public:
     RoutineClass *create_routine(void) override { return new RoutineClass; }
 };
 
+} // namespace Impl
+} // namespace System
+
 // clang-format off
-#define REGISTER_ROUTINE(name, frequency)                                                               \
-class name##_t : public Routine                                                                         \
-{                                                                                                       \
-public:                                                                                                 \
-    name##_t(void) : Routine((#name), (frequency)) {}                                                       \
-                                                                                                        \
-private:                                                                                                \
-    static void FunctionBody(TimerHandle_t xTimer);                                                     \
-    const static Routine *const result_;                                                                \
-    friend class System;                                                                                \
-};                                                                                                      \
-const Routine *const name##_t::result_ = System::register_routine((#name), new RoutineFactory<name##_t>); \
-void name##_t::FunctionBody(TimerHandle_t xTimer)
+#define REGISTER_ROUTINE(name, frequency)                                                                                                           \
+namespace System {                                                                                                                                  \
+namespace Generated {                                                                                                                                    \
+class name##_t : public System::Impl::Routine                                                                                                       \
+{                                                                                                                                                   \
+public:                                                                                                                                             \
+    name##_t(void) : System::Impl::Routine((#name), (frequency)) {}                                                                                 \
+                                                                                                                                                    \
+private:                                                                                                                                            \
+    static void FunctionBody(TimerHandle_t xTimer);                                                                                                 \
+    const static System::Impl::Routine *const result_;                                                                                              \
+    friend class System::Impl::RoutineManager;                                                                                                      \
+};                                                                                                                                                  \
+const System::Impl::Routine *const name##_t::result_ = System::Impl::RoutineManager::register_routine(new System::Impl::RoutineFactory<name##_t>);  \
+}                                                                                                                                                   \
+}                                                                                                                                                   \
+void System::Generated::name##_t::FunctionBody(TimerHandle_t xTimer)
 // clang-format on

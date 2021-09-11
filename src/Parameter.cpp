@@ -2,6 +2,9 @@
 #include <cstdint>
 #include <string>
 
+namespace System {
+namespace Impl {
+
 // All int types
 template class Parameter<short int>;
 template class Parameter<int>;
@@ -28,3 +31,6 @@ template class Parameter<long double>;
 
 // Other useful types
 template class Parameter<std::string>;
+
+} // namespace Impl
+} // namespace System
