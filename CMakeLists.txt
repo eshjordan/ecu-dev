@@ -8,30 +8,18 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
 
+set(ECU_ENABLE_NETWORKING ON)
+
 include(libs/CMakeLists.txt)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(RTOS_TEST_INCLUDE src)
 
-set(RTOS_TEST_INCLUDE
-    src
-)
+file(GLOB RTOS_TEST_SRC src/*.c src/*.cpp)
 
-file(GLOB RTOS_TEST_SRC
-    src/*.c
-    src/*.cpp
-)
+include_directories(${RTOS_TEST_INCLUDE} ${FreeRTOS_INCLUDE_DIRS})
 
-include_directories(
-    ${RTOS_TEST_INCLUDE}
-    ${FreeRTOS_INCLUDE_DIRS}
-)
+add_executable(rtos_bin ${RTOS_TEST_SRC})
 
-add_executable(rtos_bin
-    ${RTOS_TEST_SRC}
-)
-
-target_link_libraries(rtos_bin
-    pthread
-    rtos
-)
+target_link_libraries(rtos_bin pthread rtos)
