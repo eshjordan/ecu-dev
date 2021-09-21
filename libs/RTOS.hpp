@@ -161,9 +161,6 @@ BaseType_t xApplicationDNSQueryHook(const char *pcName);
 /* FreeRTOS_IP.h must be included after declaring the prototypes. */
 #include "FreeRTOS_IP.h"
 
-void vNetworkInterfaceAllocateRAMToBuffers(
-    NetworkBufferDescriptor_t pxNetworkBuffers[ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS]);
-
 /**
  * @brief If ipconfigUSE_NETWORK_EVENT_HOOK is set to 1 then FreeRTOS+TCP will call the network event hook at the
  * appropriate times. If ipconfigUSE_NETWORK_EVENT_HOOK is not set to 1 then the network event hook will never be

@@ -209,23 +209,6 @@ BaseType_t xApplicationGetRandomNumber(uint32_t *pulNumber)
     return pdTRUE;
 }
 
-#define ETH_RX_BUF_SIZE 1536
-static uint8_t ucNetworkPackets[ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS * ETH_RX_BUF_SIZE] __attribute__((aligned(32)));
-
-void vNetworkInterfaceAllocateRAMToBuffers(
-    NetworkBufferDescriptor_t pxNetworkBuffers[ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS])
-{
-    uint8_t *ucRAMBuffer = ucNetworkPackets;
-    uint32_t ul;
-
-    for (ul = 0; ul < ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS; ul++)
-    {
-        pxNetworkBuffers[ul].pucEthernetBuffer = ucRAMBuffer + ipBUFFER_PADDING;
-        *((unsigned *)ucRAMBuffer)             = (unsigned long)(&(pxNetworkBuffers[ul]));
-        ucRAMBuffer += ETH_RX_BUF_SIZE;
-    }
-}
-
 BaseType_t xApplicationDNSQueryHook(const char *pcName)
 {
     BaseType_t xReturn;

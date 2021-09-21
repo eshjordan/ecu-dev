@@ -27,7 +27,6 @@ set(FreeRTOS_CORE_INCLUDE
 )
 
 if(ECU_ENABLE_NETWORKING)
-    message("WHOOPS")
     add_compile_options(-DECU_ENABLE_NETWORKING)
     file (GLOB FreeRTOS_Plus_TCP_SRC
         ${CMAKE_SOURCE_DIR}/libs/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/FreeRTOS_IP.c
@@ -46,7 +45,7 @@ if(ECU_ENABLE_NETWORKING)
     )
 
     file (GLOB FreeRTOS_Plus_TCP_BufferManagement_SRC
-        ${CMAKE_SOURCE_DIR}/libs/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/BufferManagement/BufferAllocation_1.c
+        ${CMAKE_SOURCE_DIR}/libs/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/BufferManagement/BufferAllocation_2.c
     )
 
     set(FreeRTOS_Plus_TCP_INCLUDE
