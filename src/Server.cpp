@@ -1,7 +1,9 @@
 #include "Server.hpp"
+#include "RTOS.hpp"
 
-bool System::Impl::Server::server_started    = false;
-Socket_t System::Impl::Server::server_socket = nullptr;
+bool System::Impl::Server::server_started             = false;
+Socket_t System::Impl::Server::server_socket          = nullptr;
+TaskHandle_t System::Impl::Server::listen_task_handle = nullptr;
 
 void System::Impl::Server::init(void)
 {
@@ -42,6 +44,9 @@ void System::Impl::Server::start_task(void *arg)
         throw std::runtime_error("Socket failed to bind to address!");
     }
 
+    /* Set the socket to listen for incoming connections. */
+    FreeRTOS_listen(server_socket, 1);
+
     /* Log the network statistics to console. */
     print_network_stats();
 
@@ -52,13 +57,60 @@ void System::Impl::Server::start_task(void *arg)
     vTaskDelete(NULL);
 }
 
+void System::Impl::Server::listen_task(void *arg)
+{
+    while (true)
+    {
+        if (server_started)
+        {
+            freertos_sockaddr client_address{};
+            uint32_t address_size     = sizeof(freertos_sockaddr);
+            Socket_t connected_socket = FreeRTOS_accept(server_socket, &client_address, &address_size);
+            configASSERT(connected_socket != FREERTOS_INVALID_SOCKET);
+
+            if (connected_socket && connected_socket != FREERTOS_INVALID_SOCKET)
+            {
+                /* Spawn a RTOS task to handle the connection. */
+                xTaskCreate(connection_task, "connection_task", 10000, /* Stack size in words, not bytes. */
+                            (void *)connected_socket,                  /* Parameter passed into the task. */
+                            tskIDLE_PRIORITY,                          /* Priority of the task. */
+                            nullptr);                                  /* Task handle. */
+            }
+        }
+    }
+}
+
+void System::Impl::Server::connection_task(void *arg)
+{
+    Socket_t connected_socket = *(Socket_t *)arg;
+    static char rx_data[ipconfigNETWORK_MTU];
+    BaseType_t bytes_received = 0;
+
+    bytes_received = FreeRTOS_recv(connected_socket, &rx_data, ipconfigNETWORK_MTU, 0);
+    FreeRTOS_send(connected_socket, "Got Message!", 12, 0);
+
+    if (bytes_received > 0)
+    {
+        /* Data was received, process it here. */
+        vLoggingPrintf("Tick!\n");
+        vLoggingPrintf("My data: %s\n", rx_data);
+    }
+
+    vTaskDelete(nullptr);
+}
+
 void System::Impl::Server::start(void)
 {
     vLoggingPrintf("Network Up!\n");
 
     /* Create a task to set up the server socket when the RTOS Scheduler starts running. */
-    xTaskCreate(start_task, "bindHook", 10000, /* Stack size in words, not bytes. */
-                nullptr,                       /* Parameter passed into the task. */
-                tskIDLE_PRIORITY,              /* Priority of the task. */
-                nullptr);                      /* Don't need to keep the task handle. */
+    xTaskCreate(start_task, "start_task", 10000, /* Stack size in words, not bytes. */
+                nullptr,                         /* Parameter passed into the task. */
+                tskIDLE_PRIORITY,                /* Priority of the task. */
+                nullptr);                        /* Don't need to keep the task handle. */
+
+    xTaskCreate(listen_task, "listen_task", 10000, /* Stack size in words, not bytes. */
+                nullptr,                           /* Parameter passed into the task. */
+                tskIDLE_PRIORITY,                  /* Priority of the task. */
+                &listen_task_handle);              /* Keep the task handle. */
 }
