@@ -144,6 +144,13 @@ extern const uint8_t ucGatewayAddress[4]   = {configGATEWAY_ADDR0, configGATEWAY
                                             configGATEWAY_ADDR3};
 extern const uint8_t ucDNSServerAddress[4] = {configDNS_SERVER_ADDR0, configDNS_SERVER_ADDR1, configDNS_SERVER_ADDR2,
                                               configDNS_SERVER_ADDR3};
+/* Default MAC address configuration.  The demo creates a virtual network
+ * connection that uses this MAC address by accessing the raw Ethernet data
+ * to and from a real network connection on the host PC.  See the
+ * configNETWORK_INTERFACE_TO_USE definition for information on how to configure
+ * the real network connection to use. */
+extern const uint8_t ucMACAddress[6] = {configMAC_ADDR0, configMAC_ADDR1, configMAC_ADDR2,
+                                        configMAC_ADDR3, configMAC_ADDR4, configMAC_ADDR5};
 
 /* Set the following constant to pdTRUE to log using the method indicated by the
  * name of the constant, or pdFALSE to not log using the method indicated by the
@@ -155,14 +162,6 @@ extern const uint8_t ucDNSServerAddress[4] = {configDNS_SERVER_ADDR0, configDNS_
 extern const BaseType_t xLogToStdout = pdTRUE;
 extern const BaseType_t xLogToFile   = pdFALSE;
 extern const BaseType_t xLogToUDP    = pdFALSE;
-
-/* Default MAC address configuration.  The demo creates a virtual network
- * connection that uses this MAC address by accessing the raw Ethernet data
- * to and from a real network connection on the host PC.  See the
- * configNETWORK_INTERFACE_TO_USE definition for information on how to configure
- * the real network connection to use. */
-extern const uint8_t ucMACAddress[6] = {configMAC_ADDR0, configMAC_ADDR1, configMAC_ADDR2,
-                                        configMAC_ADDR3, configMAC_ADDR4, configMAC_ADDR5};
 
 void vLoggingPrintf(const char *pcFormatString, ...)
 {
@@ -224,6 +223,40 @@ BaseType_t xApplicationDNSQueryHook(const char *pcName)
     return xReturn;
 }
 
+#ifdef ipconfigDHCP_REGISTER_HOSTNAME
+
+const char *pcApplicationHostnameHook(void) { return "jordan-ecu"; }
+
+#endif /* ipconfigDHCP_REGISTER_HOSTNAME */
+
+void start_server(void *pvArgument)
+{
+    static Socket_t server_socket = nullptr;
+    static freertos_sockaddr server_address;
+
+    server_socket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_STREAM, FREERTOS_IPPROTO_TCP);
+
+    if (!server_socket) { throw std::runtime_error("Socket failed to create!"); }
+
+    static constexpr TickType_t xTimeOut = pdMS_TO_TICKS(2000);
+
+    FreeRTOS_setsockopt(server_socket, 0, FREERTOS_SO_RCVTIMEO, (void *)&xTimeOut, 0);
+    FreeRTOS_setsockopt(server_socket, 0, FREERTOS_SO_SNDTIMEO, (void *)&xTimeOut, 0);
+
+    server_address.sin_port = FreeRTOS_htons(9999U);
+    BaseType_t fail         = FreeRTOS_bind(server_socket, &server_address, sizeof(freertos_sockaddr));
+
+    if (fail)
+    {
+        FreeRTOS_closesocket(server_socket);
+        throw std::runtime_error("Socket failed to bind to address!");
+    }
+
+    print_network_stats();
+
+    while (true) {}
+}
+
 void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent)
 {
     static BaseType_t xTasksAlreadyCreated = pdFALSE;
@@ -235,6 +268,14 @@ void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent)
         been created. */
         if (xTasksAlreadyCreated == pdFALSE)
         {
+            vLoggingPrintf("Network Up!\n");
+
+            TaskHandle_t handle = nullptr;
+            xTaskCreate(start_server, "bindHook", 10000, /* Stack size in words, not bytes. */
+                        nullptr,                         /* Parameter passed into the task. */
+                        tskIDLE_PRIORITY,                /* Priority of the task. */
+                        &handle);
+
             /*
              * For convenience, tasks that use FreeRTOS+TCP can be created here
              * to ensure they are not created before the network is usable.
@@ -243,6 +284,44 @@ void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent)
             xTasksAlreadyCreated = pdTRUE;
         }
     }
+}
+
+void print_network_stats(void)
+{
+    char ip[16] = {0}, netmask[16] = {0}, gateway[16] = {0}, dns[16] = {0}, mac[32] = {0};
+    int ip_written = 0, netmask_written = 0, gateway_written = 0, dns_written = 0, mac_written = 0;
+
+    const uint32_t ip_value  = FreeRTOS_GetIPAddress();
+    const uint32_t net_value = FreeRTOS_GetNetmask();
+    const uint32_t gw_value  = FreeRTOS_GetGatewayAddress();
+    const uint32_t dns_value = FreeRTOS_GetDNSServerAddress();
+    const uint8_t *mac_value = FreeRTOS_GetMACAddress();
+
+    for (int i = 0; i < ipIP_ADDRESS_LENGTH_BYTES; i++)
+    {
+        ip_written += sprintf(ip + ip_written, "%u.", ip_value >> (8U * i) & 0xFFU);
+        netmask_written += sprintf(netmask + netmask_written, "%u.", net_value >> (8U * i) & 0xFFU);
+        gateway_written += sprintf(gateway + gateway_written, "%u.", gw_value >> (8U * i) & 0xFFU);
+        dns_written += sprintf(dns + dns_written, "%u.", dns_value >> (8U * i) & 0xFFU);
+        mac_written += sprintf(mac + mac_written, "%02X:", mac_value[i]);
+    }
+
+    for (int i = ipIP_ADDRESS_LENGTH_BYTES; i < ipMAC_ADDRESS_LENGTH_BYTES; i++)
+    {
+        mac_written += sprintf(mac + mac_written, "%02X:", mac_value[i]);
+    }
+
+    ip[ip_written - 1]           = '\0';
+    netmask[netmask_written - 1] = '\0';
+    gateway[gateway_written - 1] = '\0';
+    dns[dns_written - 1]         = '\0';
+    mac[mac_written - 1]         = '\0';
+
+    char buffer[512];
+    sprintf(buffer, "\nNetwork Stats:\nIP: %s\nNETMASK: %s\nGATEWAY: %s\nDNS: %s\nMAC: %s\n\n", ip, netmask, gateway,
+            dns, mac);
+
+    vLoggingPrintf(buffer);
 }
 
 #endif

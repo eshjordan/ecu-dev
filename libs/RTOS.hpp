@@ -158,8 +158,26 @@ BaseType_t xApplicationGetRandomNumber(uint32_t *pulNumber);
  */
 BaseType_t xApplicationDNSQueryHook(const char *pcName);
 
+/**
+ * @brief Print network statistics.
+ *
+ */
+void print_network_stats(void);
+
+#ifdef ipconfigDHCP_REGISTER_HOSTNAME
+
+/**
+ * @brief Declare our hostname to a DHCP server.
+ *
+ * @return const char* Hostname.
+ */
+const char *pcApplicationHostnameHook(void);
+
+#endif /* ipconfigDHCP_REGISTER_HOSTNAME */
+
 /* FreeRTOS_IP.h must be included after declaring the prototypes. */
 #include "FreeRTOS_IP.h"
+#include "FreeRTOS_Sockets.h"
 
 /**
  * @brief If ipconfigUSE_NETWORK_EVENT_HOOK is set to 1 then FreeRTOS+TCP will call the network event hook at the

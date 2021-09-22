@@ -144,7 +144,7 @@ stack will revert to using the static IP address even when ipconfigUSE_DHCP is
 set to 1 if a valid configuration cannot be obtained from a DHCP server for any
 reason.  The static configuration used is that passed into the stack by the
 FreeRTOS_IPInit() function call. */
-#define ipconfigUSE_DHCP 0
+#define ipconfigUSE_DHCP 1
 
 /* When ipconfigUSE_DHCP is set to 1, DHCP requests will be sent out at
 increasing time intervals until either a reply is received from a DHCP server
@@ -214,7 +214,7 @@ socketAUTO_PORT_ALLOCATION_START_NUMBER to 0xffff.  If
 ipconfigALLOW_SOCKET_SEND_WITHOUT_BIND is set to 0 then calling FreeRTOS_sendto()
 on a socket that has not yet been bound will result in the send operation being
 aborted. */
-#define ipconfigALLOW_SOCKET_SEND_WITHOUT_BIND 1
+#define ipconfigALLOW_SOCKET_SEND_WITHOUT_BIND 0
 
 /* Defines the Time To Live (TTL) values used in outgoing UDP packets. */
 #define ipconfigUDP_TIME_TO_LIVE 128
@@ -231,7 +231,7 @@ contain.  For normal Ethernet V2 frames the maximum MTU is 1500.  Setting a
 lower value can save RAM, depending on the buffer management scheme used.  If
 ipconfigCAN_FRAGMENT_OUTGOING_PACKETS is 1 then (ipconfigNETWORK_MTU - 28) must
 be divisible by 8. */
-#define ipconfigNETWORK_MTU 1200U
+#define ipconfigNETWORK_MTU 1500U
 
 /* Set ipconfigUSE_DNS to 1 to include a basic DNS client/resolver.  DNS is used
 through the FreeRTOS_gethostbyname() API function. */
@@ -307,5 +307,8 @@ disconnecting stage will timeout after a period of non-activity. */
 #if (((ipconfigBUFFER_PADDING) < 14) || ((((ipconfigBUFFER_PADDING) + 2) % 4) != 0))
 #error "ipconfigBUFFER_PADDING must be two less than a multiple of 4 and at least 14"
 #endif
+
+/* Register our hostname with the DHCP server. */
+#define ipconfigDHCP_REGISTER_HOSTNAME 1
 
 #endif /* FREERTOS_IP_CONFIG_H */
