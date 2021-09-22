@@ -1,4 +1,5 @@
 #include "RTOS.hpp"
+// #include "../src/Server.hpp"
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
@@ -229,33 +230,16 @@ const char *pcApplicationHostnameHook(void) { return "jordan-ecu"; }
 
 #endif /* ipconfigDHCP_REGISTER_HOSTNAME */
 
-void start_server(void *pvArgument)
+/* Forward declare the Server::start() function. */
+namespace System {
+namespace Impl {
+class Server
 {
-    static Socket_t server_socket = nullptr;
-    static freertos_sockaddr server_address;
-
-    server_socket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_STREAM, FREERTOS_IPPROTO_TCP);
-
-    if (!server_socket) { throw std::runtime_error("Socket failed to create!"); }
-
-    static constexpr TickType_t xTimeOut = pdMS_TO_TICKS(2000);
-
-    FreeRTOS_setsockopt(server_socket, 0, FREERTOS_SO_RCVTIMEO, (void *)&xTimeOut, 0);
-    FreeRTOS_setsockopt(server_socket, 0, FREERTOS_SO_SNDTIMEO, (void *)&xTimeOut, 0);
-
-    server_address.sin_port = FreeRTOS_htons(9999U);
-    BaseType_t fail         = FreeRTOS_bind(server_socket, &server_address, sizeof(freertos_sockaddr));
-
-    if (fail)
-    {
-        FreeRTOS_closesocket(server_socket);
-        throw std::runtime_error("Socket failed to bind to address!");
-    }
-
-    print_network_stats();
-
-    while (true) {}
-}
+public:
+    static void start();
+};
+} // namespace Impl
+} // namespace System
 
 void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent)
 {
@@ -268,19 +252,12 @@ void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent)
         been created. */
         if (xTasksAlreadyCreated == pdFALSE)
         {
-            vLoggingPrintf("Network Up!\n");
-
-            TaskHandle_t handle = nullptr;
-            xTaskCreate(start_server, "bindHook", 10000, /* Stack size in words, not bytes. */
-                        nullptr,                         /* Parameter passed into the task. */
-                        tskIDLE_PRIORITY,                /* Priority of the task. */
-                        &handle);
+            System::Impl::Server::start();
 
             /*
              * For convenience, tasks that use FreeRTOS+TCP can be created here
              * to ensure they are not created before the network is usable.
              */
-
             xTasksAlreadyCreated = pdTRUE;
         }
     }

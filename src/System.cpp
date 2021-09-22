@@ -15,26 +15,23 @@ void init(void)
     {
 
 #ifdef ECU_ENABLE_NETWORKING
-        /* Initialise the RTOS's TCP/IP stack. The tasks that use the network are created in the
-         * vApplicationIPNetworkEventHook() hook function below. The hook function is called when the network connects.
-         */
-
-        BaseType_t init_result =
-            FreeRTOS_IPInit(ucIPAddress, ucNetMask, ucGatewayAddress, ucDNSServerAddress, ucMACAddress);
-
-        // if (init_result != pdPASS) { throw std::runtime_error("FreeRTOS+TCP Failed to initialise!"); }
+        
+        System::Impl::Server::init();
 
 #endif
 
         System::Impl::ParameterList::add_parameter("position", 0.0);
         System::Impl::ParameterList::add_parameter("velocity", 0.0);
         System::Impl::ParameterList::add_parameter("acceleration", 1.0);
-
-        /* Start the RTOS schedule, set tasks and timers running. */
-        vTaskStartScheduler();
     }
 
     System::Impl::initialised = true;
+}
+
+void run(void)
+{
+    /* Start the RTOS schedule, set tasks and timers running. */
+    vTaskStartScheduler();
 }
 
 } // namespace System

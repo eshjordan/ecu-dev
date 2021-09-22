@@ -2,6 +2,7 @@
 
 #include "ParameterList.hpp"
 #include "RoutineManager.hpp"
+#include "Server.hpp"
 
 /**
  * @brief Hide the implementation of the system from the user. Expose only the simplest part of the interface.
@@ -14,6 +15,9 @@ namespace Impl {
 /** @brief Stop chat users from resetting everything accidentally. */
 static bool initialised = false;
 
+/** @brief The routine manager. */
+static bool network_up = false;
+
 } // namespace Impl
 
 /**
@@ -21,6 +25,12 @@ static bool initialised = false;
  *
  */
 void init(void);
+
+/**
+ * @brief 
+ * 
+ */
+void run(void);
 
 /**
  * @brief Get the value of an existing parameter given its name.
