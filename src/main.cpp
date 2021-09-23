@@ -11,7 +11,10 @@
  *
  * @param signal
  */
-static void handle_sigint(int signal) { exit(signal); }
+static void handle_sigint(int signal) {
+    System::shutdown();
+    exit(signal);
+}
 
 int main(int argc, char *argv[])
 {

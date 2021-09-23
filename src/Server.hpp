@@ -11,7 +11,7 @@ class Server
 private:
     static bool server_started;
 
-    static Socket_t server_socket;
+    static Socket_t client_socket;
 
     static TaskHandle_t listen_task_handle;
 
@@ -25,6 +25,8 @@ public:
     static void init(void);
 
     static void start(void);
+
+    static void shutdown(void);
 };
 
 } // namespace Impl

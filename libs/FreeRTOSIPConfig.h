@@ -42,7 +42,7 @@ extern void vLoggingPrintf(const char *pcFormatString, ...);
 /* Set to 1 to print out debug messages.  If ipconfigHAS_DEBUG_PRINTF is set to
 1 then FreeRTOS_debug_printf should be defined to the function used to print
 out the debugging messages. */
-#define ipconfigHAS_DEBUG_PRINTF 0
+#define ipconfigHAS_DEBUG_PRINTF 1
 #if (ipconfigHAS_DEBUG_PRINTF == 1)
 #define FreeRTOS_debug_printf(X) vLoggingPrintf X
 #endif
@@ -214,7 +214,7 @@ socketAUTO_PORT_ALLOCATION_START_NUMBER to 0xffff.  If
 ipconfigALLOW_SOCKET_SEND_WITHOUT_BIND is set to 0 then calling FreeRTOS_sendto()
 on a socket that has not yet been bound will result in the send operation being
 aborted. */
-#define ipconfigALLOW_SOCKET_SEND_WITHOUT_BIND 0
+#define ipconfigALLOW_SOCKET_SEND_WITHOUT_BIND 1
 
 /* Defines the Time To Live (TTL) values used in outgoing UDP packets. */
 #define ipconfigUDP_TIME_TO_LIVE 128

@@ -1,36 +1,55 @@
-#include <arpa/inet.h>
-#include <cstdio>
-#include <cstring>
-#include <netinet/in.h>
+#include <arpa/inet.h> //inet_addr
+#include <csignal>
+#include <cstdlib>
+#include <stdio.h>
+#include <string.h> //strlen
 #include <sys/socket.h>
 #include <unistd.h>
 
+int socket_desc;
+
+void error(char *message)
+{
+    shutdown(socket_desc, SHUT_RDWR);
+    close(socket_desc);
+    perror(message);
+    exit(EXIT_FAILURE);
+}
+
+void sigpipe_handler(int unused) { printf("SIGPIPE caught\n"); }
+
 int main(int argc, char *argv[])
 {
-    int sockfd = 0;
-    struct sockaddr_in servaddr{};
+    signal(SIGPIPE, sigpipe_handler);
 
-    sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    struct sockaddr_in server;
+    char *message, server_reply[2000];
 
-    bzero(&servaddr, sizeof(servaddr));
+    // Create socket
+    socket_desc = socket(AF_INET, SOCK_STREAM, 0);
+    if (socket_desc == -1) { error("Could not create socket"); }
 
-    servaddr.sin_family      = AF_INET;
-    servaddr.sin_port        = htons(9999);
-    servaddr.sin_addr.s_addr = inet_addr("192.168.10.33");
+    server.sin_addr.s_addr = inet_addr("192.168.10.33");
+    server.sin_family      = AF_INET;
+    server.sin_port        = htons(9999);
 
-    int fail = connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr));
+    // Connect to remote server
+    if (connect(socket_desc, (struct sockaddr *)&server, sizeof(server)) < 0) { error("connect error"); }
 
-    char sendline[1024];
-    char recvline[1024];
+    puts("Connected\n");
 
-    while (fgets(sendline, 1024, stdin) != NULL)
-    {
-        write(sockfd, sendline, strlen(sendline));
-        read(sockfd, recvline, 1024);
-        printf("%s", recvline);
-    }
+    // Send some data
+    message = "GET / HTTP/1.1\n\n";
+    if (send(socket_desc, message, strlen(message), 0) < 0) { error("Send failed"); }
+    puts("Data Send\n");
 
-    close(sockfd);
+    // Receive a reply from the server
+    if (recv(socket_desc, server_reply, 2000, 0) < 0) { error("recv failed"); }
+    puts("Reply received\n");
+    puts(server_reply);
+
+    shutdown(socket_desc, SHUT_RDWR);
+    close(socket_desc);
 
     return 0;
 }

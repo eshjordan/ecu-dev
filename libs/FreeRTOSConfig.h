@@ -145,6 +145,8 @@ extern void vAssertCalled(const char *const pcFileName, unsigned long ulLine);
 #define configMAC_ISR_SIMULATOR_PRIORITY (configMAX_PRIORITIES - 1)
 #define configNETWORK_INTERFACE_TO_USE 1L
 
+/* Ethernet interface configuration. */
+
 /* Default MAC address configuration.  The demo creates a virtual network connection that uses this MAC address by
  * accessing the raw Ethernet/WiFi data to and from a real network connection on the host PC.  See the
  * configNETWORK_INTERFACE_TO_USE definition above for information on how to configure the real network connection to
@@ -162,7 +164,7 @@ extern void vAssertCalled(const char *const pcFileName, unsigned long ulLine);
 #define configIP_ADDR0 192
 #define configIP_ADDR1 168
 #define configIP_ADDR2 10
-#define configIP_ADDR3 29
+#define configIP_ADDR3 33
 
 /* Default gateway IP address configuration.  Used in ipconfigUSE_DNS is set to 0, or ipconfigUSE_DNS is set to 1 but a
  * DNS server cannot be contacted. */
@@ -186,6 +188,50 @@ extern void vAssertCalled(const char *const pcFileName, unsigned long ulLine);
 #define configNET_MASK1 255
 #define configNET_MASK2 255
 #define configNET_MASK3 0
+
+/* Loopback interface configuration. */
+
+// /* Default MAC address configuration.  The demo creates a virtual network connection that uses this MAC address by
+//  * accessing the raw Ethernet/WiFi data to and from a real network connection on the host PC.  See the
+//  * configNETWORK_INTERFACE_TO_USE definition above for information on how to configure the real network connection to
+//  * use. */
+// #define configMAC_ADDR0 0x00
+// #define configMAC_ADDR1 0x11
+// #define configMAC_ADDR2 0x22
+// #define configMAC_ADDR3 0x33
+// #define configMAC_ADDR4 0x44
+// #define configMAC_ADDR5 0x55
+
+// /* Default IP address configuration.  Used in ipconfigUSE_DNS is set to 0, or ipconfigUSE_DNS is set to 1 but a DNS
+//  * server cannot be contacted. */
+
+// #define configIP_ADDR0 127
+// #define configIP_ADDR1 0
+// #define configIP_ADDR2 0
+// #define configIP_ADDR3 1
+
+// /* Default gateway IP address configuration.  Used in ipconfigUSE_DNS is set to 0, or ipconfigUSE_DNS is set to 1 but a
+//  * DNS server cannot be contacted. */
+
+// #define configGATEWAY_ADDR0 127
+// #define configGATEWAY_ADDR1 0
+// #define configGATEWAY_ADDR2 0
+// #define configGATEWAY_ADDR3 1
+
+// /* Default DNS server configuration.  OpenDNS addresses are 208.67.222.222 and 208.67.220.220.  Used in ipconfigUSE_DNS
+//  * is set to 0, or ipconfigUSE_DNS is set to 1 but a DNS server cannot be contacted.*/
+
+// #define configDNS_SERVER_ADDR0 127
+// #define configDNS_SERVER_ADDR1 0
+// #define configDNS_SERVER_ADDR2 0
+// #define configDNS_SERVER_ADDR3 1
+
+// /* Default netmask configuration.  Used if ipconfigUSE_DNS is set to 0, or ipconfigUSE_DNS is set to 1 but a DNS server
+//  * cannot be contacted. */
+// #define configNET_MASK0 255
+// #define configNET_MASK1 0
+// #define configNET_MASK2 0
+// #define configNET_MASK3 0
 
 /* The UDP port to which print messages are sent. */
 #define configPRINT_PORT (15000)

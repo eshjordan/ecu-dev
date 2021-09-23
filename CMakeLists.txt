@@ -24,6 +24,10 @@ add_executable(rtos_bin ${RTOS_TEST_SRC})
 
 target_link_libraries(rtos_bin pthread rtos)
 
-add_executable(network_client client/client.cpp)
+add_executable(network_client client/TCPEchoClient.cpp)
 
-target_link_libraries(network_client pthread pcap)
+target_link_libraries(network_client pthread pcap rtos)
+
+add_executable(network_server client/srv.cpp)
+
+target_link_libraries(network_server pthread pcap)

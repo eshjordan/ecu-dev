@@ -33,6 +33,12 @@ void init(void);
 void run(void);
 
 /**
+ * @brief 
+ * 
+ */
+void shutdown(void);
+
+/**
  * @brief Get the value of an existing parameter given its name.
  *
  * @tparam T Type of the Parameter's value. Set explicitly to avoid runtime errors.

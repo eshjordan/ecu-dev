@@ -34,4 +34,11 @@ void run(void)
     vTaskStartScheduler();
 }
 
+void shutdown(void)
+{
+    System::Impl::Server::shutdown();
+    // /* Stop the RTOS schedule, stop tasks and timers running. */
+    // vTaskEndScheduler();
+}
+
 } // namespace System
