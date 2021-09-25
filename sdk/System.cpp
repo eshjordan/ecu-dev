@@ -10,20 +10,10 @@
 
 namespace System {
 
-/**
- * @brief Signal handler for Ctrl_C to cause the program to exit.
- *
- * @param signal
- */
-static void handle_sigint(int signal) {
-    System::shutdown();
-    exit(signal);
-}
-
 void run(void)
 {
     /* SIGINT is not blocked by the posix port */
-    signal(SIGINT, handle_sigint);
+    signal(SIGINT, shutdown);
 
     if (!System::Impl::initialised)
     {
@@ -45,11 +35,13 @@ void run(void)
     vTaskStartScheduler();
 }
 
-void shutdown(void)
+void shutdown(int signal)
 {
     System::Impl::Server::shutdown();
     // /* Stop the RTOS schedule, stop tasks and timers running. */
     // vTaskEndScheduler();
+    
+    exit(0);
 }
 
 } // namespace System

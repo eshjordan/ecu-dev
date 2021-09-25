@@ -36,7 +36,7 @@ void run(void);
  * @brief 
  * 
  */
-void shutdown(void);
+void shutdown(int signal);
 
 /**
  * @brief Get the value of an existing parameter given its name.
