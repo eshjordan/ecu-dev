@@ -73,6 +73,8 @@ add_library(rtos
     ${CMAKE_SOURCE_DIR}/libs/FreeRTOSIPConfig.h
     ${CMAKE_SOURCE_DIR}/libs/RTOS.cpp
     ${CMAKE_SOURCE_DIR}/libs/RTOS.hpp
+    ${CMAKE_SOURCE_DIR}/libs/RTOS_IP.cpp
+    ${CMAKE_SOURCE_DIR}/libs/RTOS_IP.hpp
 )
 
 target_link_libraries(rtos

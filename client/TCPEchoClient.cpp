@@ -13,6 +13,7 @@
 #include "FreeRTOS_Sockets.h"
 
 #include "../libs/RTOS.hpp"
+#include "../libs/RTOS_IP.hpp"
 
 /* The echo tasks create a socket, send out a number of echo requests, listen
 for the echo reply, then close the socket again before starting over.  This

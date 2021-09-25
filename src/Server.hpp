@@ -1,6 +1,7 @@
 #pragma once
 
 #include "RTOS.hpp"
+#include "RTOS_IP.hpp"
 #include <stdexcept>
 
 namespace System {

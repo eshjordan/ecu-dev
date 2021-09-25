@@ -1,7 +1,12 @@
 #include "Server.hpp"
 #include "RTOS.hpp"
+#include "RTOS_IP.hpp"
+#include "System.hpp"
 #include "portmacro.h"
 #include "projdefs.h"
+#include "utils.hpp"
+#include <iostream>
+#include <string>
 #include <sys/socket.h>
 
 #define SERVER_PORT_NUM 8000
@@ -226,6 +231,38 @@ void System::Impl::Server::connection_task(void *arg) {
       /* Data was received, process it here. */
       vLoggingPrintf("Tick!\n");
       vLoggingPrintf("My data: %s\n", rx_data);
+
+      auto out = split(rx_data, '/');
+
+      std::cout << "Parameters:\n";
+      for (auto &i : out) {
+        std::cout << i << std::endl;
+      }
+      std::cout << "\n";
+
+      if (out.size() > 0) {
+        if (out[0] == "ecu") {
+          if (out.size() > 1) {
+            if (out[1] == "param") {
+              if (out.size() > 2) {
+                auto name = out[2];
+                if (out.size() > 3) {
+                  if (out[3] == "get") {
+                    vLoggingPrintf("Parameter %s: %lf\n", name.c_str(),
+                                   System::get_parameter<double>(name));
+                  }
+                  if (out[3] == "set" && out.size() > 4) {
+                    double value = std::stod(out[4]);
+                    System::set_parameter(name, value);
+                    vLoggingPrintf("Parameter %s set to %.2lf\n", name.c_str(),
+                                   value);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
 
     vTaskDelay(pdMS_TO_TICKS(100));
