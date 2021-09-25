@@ -1,31 +1,12 @@
-/* Standard includes. */
-#include <csignal>
-
-#include "RTOS.hpp"
-
 /* System includes. */
 #include "System.hpp"
-
-/**
- * @brief Signal handler for Ctrl_C to cause the program to exit.
- *
- * @param signal
- */
-static void handle_sigint(int signal) {
-    System::shutdown();
-    exit(signal);
-}
 
 int main(int argc, char *argv[])
 {
     (void)argc;
     (void)argv;
 
-    /* SIGINT is not blocked by the posix port */
-    signal(SIGINT, handle_sigint);
-
     /* Add tasks here. */
-    System::init();
     System::run();
 
     /* If all is well, the scheduler will now be running, and the following

@@ -5,12 +5,26 @@
 #include <cstddef>
 #include <cstring>
 #include <string>
+#include <csignal>
 #include <unistd.h>
 
 namespace System {
 
-void init(void)
+/**
+ * @brief Signal handler for Ctrl_C to cause the program to exit.
+ *
+ * @param signal
+ */
+static void handle_sigint(int signal) {
+    System::shutdown();
+    exit(signal);
+}
+
+void run(void)
 {
+    /* SIGINT is not blocked by the posix port */
+    signal(SIGINT, handle_sigint);
+
     if (!System::Impl::initialised)
     {
 
@@ -26,10 +40,7 @@ void init(void)
     }
 
     System::Impl::initialised = true;
-}
 
-void run(void)
-{
     /* Start the RTOS schedule, set tasks and timers running. */
     vTaskStartScheduler();
 }

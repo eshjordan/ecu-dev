@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-project(RTOS_TEST)
+project(ECU_SDK)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -14,20 +14,22 @@ include(libs/CMakeLists.txt)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(RTOS_TEST_INCLUDE src)
+set(ECU_SDK_INCLUDE sdk)
 
-file(GLOB RTOS_TEST_SRC src/*.c src/*.cpp)
+file(GLOB ECU_SDK_SRC sdk/*.c sdk/*.cpp)
 
-include_directories(${RTOS_TEST_INCLUDE} ${FreeRTOS_INCLUDE_DIRS})
+include_directories(${ECU_SDK_INCLUDE} ${FreeRTOS_INCLUDE_DIRS})
 
-add_executable(rtos_bin ${RTOS_TEST_SRC})
+add_library(ecu_sdk ${ECU_SDK_SRC})
 
-target_link_libraries(rtos_bin pthread rtos)
+target_link_libraries(ecu_sdk pthread rtos)
 
-add_executable(network_client client/TCPEchoClient.cpp)
+set(ECU_INCLUDE sdk)
 
-target_link_libraries(network_client pthread pcap rtos)
+file(GLOB ECU_SRC src/*.c src/*.cpp)
 
-add_executable(network_server client/srv.cpp)
+include_directories(${ECU_INCLUDE})
 
-target_link_libraries(network_server pthread pcap)
+add_executable(rtos_bin ${ECU_SRC})
+
+target_link_libraries(rtos_bin pthread ecu_sdk)
