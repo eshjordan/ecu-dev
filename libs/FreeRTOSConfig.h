@@ -151,12 +151,12 @@ extern void vAssertCalled(const char *const pcFileName, unsigned long ulLine);
  * accessing the raw Ethernet/WiFi data to and from a real network connection on the host PC.  See the
  * configNETWORK_INTERFACE_TO_USE definition above for information on how to configure the real network connection to
  * use. */
-#define configMAC_ADDR0 0xa8
-#define configMAC_ADDR1 0xa1
-#define configMAC_ADDR2 0x59
-#define configMAC_ADDR3 0x31
-#define configMAC_ADDR4 0xb4
-#define configMAC_ADDR5 0x2b
+#define configMAC_ADDR0 0x00
+#define configMAC_ADDR1 0x21
+#define configMAC_ADDR2 0x6b
+#define configMAC_ADDR3 0xdd
+#define configMAC_ADDR4 0xa5
+#define configMAC_ADDR5 0x22
 
 /* Default IP address configuration.  Used in ipconfigUSE_DNS is set to 0, or ipconfigUSE_DNS is set to 1 but a DNS
  * server cannot be contacted. */
@@ -164,7 +164,7 @@ extern void vAssertCalled(const char *const pcFileName, unsigned long ulLine);
 #define configIP_ADDR0 192
 #define configIP_ADDR1 168
 #define configIP_ADDR2 10
-#define configIP_ADDR3 33
+#define configIP_ADDR3 116
 
 /* Default gateway IP address configuration.  Used in ipconfigUSE_DNS is set to 0, or ipconfigUSE_DNS is set to 1 but a
  * DNS server cannot be contacted. */
