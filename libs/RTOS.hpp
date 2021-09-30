@@ -91,8 +91,7 @@ void vAssertCalled(const char *const pcFileName, unsigned long ulLine);
  * @param ppxIdleTaskStackBuffer
  * @param pulIdleTaskStackSize
  */
-void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer,
-                                   StackType_t **ppxIdleTaskStackBuffer,
+void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer,
                                    uint32_t *pulIdleTaskStackSize);
 
 /**
@@ -105,12 +104,9 @@ void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer,
  * @param ppxTimerTaskStackBuffer
  * @param pulTimerTaskStackSize
  */
-void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer,
-                                    StackType_t **ppxTimerTaskStackBuffer,
+void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer, StackType_t **ppxTimerTaskStackBuffer,
                                     uint32_t *pulTimerTaskStackSize);
 
 /* timers.h must be included after declaring the prototypes. */
 #include "timers.h"
-
-
 }

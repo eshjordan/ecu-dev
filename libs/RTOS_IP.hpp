@@ -58,10 +58,8 @@ UBaseType_t uxRand(void);
  * @param usDestinationPort
  * @return uint32_t
  */
-uint32_t ulApplicationGetNextSequenceNumber(uint32_t ulSourceAddress,
-                                            uint16_t usSourcePort,
-                                            uint32_t ulDestinationAddress,
-                                            uint16_t usDestinationPort);
+uint32_t ulApplicationGetNextSequenceNumber(uint32_t ulSourceAddress, uint16_t usSourcePort,
+                                            uint32_t ulDestinationAddress, uint16_t usDestinationPort);
 
 /**
  * @brief Supply a random number to FreeRTOS+TCP stack. THIS IS ONLY A DUMMY

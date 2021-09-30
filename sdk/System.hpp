@@ -27,14 +27,14 @@ static bool network_up = false;
 void init(void);
 
 /**
- * @brief 
- * 
+ * @brief
+ *
  */
 void run(void);
 
 /**
- * @brief 
- * 
+ * @brief
+ *
  */
 void shutdown(int signal);
 

@@ -210,7 +210,8 @@ extern void vAssertCalled(const char *const pcFileName, unsigned long ulLine);
 // #define configIP_ADDR2 0
 // #define configIP_ADDR3 1
 
-// /* Default gateway IP address configuration.  Used in ipconfigUSE_DNS is set to 0, or ipconfigUSE_DNS is set to 1 but a
+// /* Default gateway IP address configuration.  Used in ipconfigUSE_DNS is set to 0, or ipconfigUSE_DNS is set to 1 but
+// a
 //  * DNS server cannot be contacted. */
 
 // #define configGATEWAY_ADDR0 127
@@ -218,7 +219,8 @@ extern void vAssertCalled(const char *const pcFileName, unsigned long ulLine);
 // #define configGATEWAY_ADDR2 0
 // #define configGATEWAY_ADDR3 1
 
-// /* Default DNS server configuration.  OpenDNS addresses are 208.67.222.222 and 208.67.220.220.  Used in ipconfigUSE_DNS
+// /* Default DNS server configuration.  OpenDNS addresses are 208.67.222.222 and 208.67.220.220.  Used in
+// ipconfigUSE_DNS
 //  * is set to 0, or ipconfigUSE_DNS is set to 1 but a DNS server cannot be contacted.*/
 
 // #define configDNS_SERVER_ADDR0 127
@@ -226,7 +228,8 @@ extern void vAssertCalled(const char *const pcFileName, unsigned long ulLine);
 // #define configDNS_SERVER_ADDR2 0
 // #define configDNS_SERVER_ADDR3 1
 
-// /* Default netmask configuration.  Used if ipconfigUSE_DNS is set to 0, or ipconfigUSE_DNS is set to 1 but a DNS server
+// /* Default netmask configuration.  Used if ipconfigUSE_DNS is set to 0, or ipconfigUSE_DNS is set to 1 but a DNS
+// server
 //  * cannot be contacted. */
 // #define configNET_MASK0 255
 // #define configNET_MASK1 0
