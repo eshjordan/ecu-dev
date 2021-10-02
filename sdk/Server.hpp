@@ -1,8 +1,9 @@
 #pragma once
 
+#include "Message.h"
 #include "RTOS.hpp"
 #include "RTOS_IP.hpp"
-#include <stdexcept>
+#include <string>
 
 namespace System {
 namespace Impl {
@@ -21,6 +22,10 @@ private:
     static void listen_task(void *arg);
 
     static void connection_task(void *arg);
+
+    static void process_message(const Message_t &message);
+
+    static void process_command(const std::string &command);
 
 public:
     static void init(void);
