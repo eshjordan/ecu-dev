@@ -1,12 +1,11 @@
 #include "System.hpp"
-#include "FreeRTOS_IP.h"
-#include "RTOS.hpp"
-#include "projdefs.h"
 #include <csignal>
-#include <cstddef>
-#include <cstring>
-#include <string>
-#include <unistd.h>
+
+#ifdef ECU_ENABLE_NETWORKING
+#include "CRC.h"
+#include "FreeRTOS_IP.h"
+#include "Server.hpp"
+#endif
 
 namespace System {
 
@@ -20,6 +19,7 @@ void run(void)
 
 #ifdef ECU_ENABLE_NETWORKING
 
+        init_crc();
         System::Impl::Server::init();
 
 #endif
@@ -37,7 +37,9 @@ void run(void)
 
 void shutdown(int signal)
 {
+#ifdef ECU_ENABLE_NETWORKING
     System::Impl::Server::shutdown();
+#endif
     // /* Stop the RTOS schedule, stop tasks and timers running. */
     // vTaskEndScheduler();
 

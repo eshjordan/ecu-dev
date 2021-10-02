@@ -2,7 +2,9 @@
 
 #include "ParameterList.hpp"
 #include "RoutineManager.hpp"
+#ifdef ECU_ENABLE_NETWORKING
 #include "Server.hpp"
+#endif
 
 /**
  * @brief Hide the implementation of the system from the user. Expose only the simplest part of the interface.

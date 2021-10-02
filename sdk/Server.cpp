@@ -1,4 +1,5 @@
 #include "Server.hpp"
+#include "Message.h"
 #include "RTOS.hpp"
 #include "RTOS_IP.hpp"
 #include "System.hpp"
