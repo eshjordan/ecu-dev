@@ -22,3 +22,5 @@ add_subdirectory(src/sdk)
 include_directories(${ECU_SDK_INCLUDE})
 
 add_subdirectory(src/program)
+
+add_subdirectory(src/client)

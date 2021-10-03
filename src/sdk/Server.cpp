@@ -171,6 +171,8 @@ void System::Impl::Server::connection_task(void *arg)
     {
 
         bytes_received = FreeRTOS_recv(connected_socket, rx_data, ipconfigNETWORK_MTU, 0);
+        struct timespec ts{};
+        timespec_get(&ts, TIME_UTC);
 
         FreeRTOS_send(connected_socket, (void *)rx_data, bytes_received, 0);
 
@@ -184,7 +186,12 @@ void System::Impl::Server::connection_task(void *arg)
             {
                 Message_t msg;
                 vLoggingPrintf("Looks like a message!\n");
-                memcpy(&msg, rx_data, bytes_received);
+                memcpy(&msg, rx_data, sizeof(Message_t));
+                long s = ts.tv_sec - msg.stamp.tv_sec;
+                long n = ts.tv_nsec - msg.stamp.tv_nsec;
+
+                printf("Time diff: s: %ld\nn: %ld\n", s, n);
+
                 process_message(msg);
             } else
             {
@@ -216,7 +223,15 @@ void System::Impl::Server::start(void)
                 &listen_task_handle);              /* Keep the task handle. */
 }
 
-void System::Impl::Server::process_message(const Message_t &message) {}
+void System::Impl::Server::process_message(const Message_t &message)
+{
+    printf("Received Message:\nName: %s\nID: %u\nCommand: %u\nData: %ld\n",
+        message.name,
+        message.id,
+        message.command,
+        *(long*)message.data
+    );
+}
 
 void System::Impl::Server::process_command(const std::string &command)
 {
