@@ -109,4 +109,7 @@ void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer, StackT
 
 /* timers.h must be included after declaring the prototypes. */
 #include "timers.h"
+
+#include "projdefs.h"
+
 }

@@ -34,6 +34,10 @@
 #ifndef FREERTOS_IP_CONFIG_H
 #define FREERTOS_IP_CONFIG_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Prototype for the function used to print out.  In this case it prints to the
 console before the network is connected then a UDP port after the network has
 connected. */
@@ -310,5 +314,9 @@ disconnecting stage will timeout after a period of non-activity. */
 
 /* Register our hostname with the DHCP server. */
 #define ipconfigDHCP_REGISTER_HOSTNAME 1
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* FREERTOS_IP_CONFIG_H */

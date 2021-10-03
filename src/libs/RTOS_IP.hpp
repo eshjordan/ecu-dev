@@ -9,8 +9,6 @@ extern "C" {
 #include "task.h"
 #include "timers.h"
 
-#ifdef ECU_ENABLE_NETWORKING
-
 extern const uint8_t ucMACAddress[6];
 extern const uint8_t ucIPAddress[4];
 extern const uint8_t ucNetMask[4];
@@ -117,5 +115,4 @@ const char *pcApplicationHostnameHook(void);
  */
 void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent);
 
-#endif
 }

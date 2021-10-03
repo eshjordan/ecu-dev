@@ -2,8 +2,6 @@
 #include <cstdarg>
 #include <cstdio>
 
-#ifdef ECU_ENABLE_NETWORKING
-
 /* The default IP and MAC address used by the demo.  The address configuration
  * defined here will be used if ipconfigUSE_DHCP is 0, or if ipconfigUSE_DHCP is
  * 1 but a DHCP server could not be contacted.  See the online documentation for
@@ -187,5 +185,3 @@ void print_network_stats(void)
 
     vLoggingPrintf(buffer);
 }
-
-#endif

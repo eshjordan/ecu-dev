@@ -35,6 +35,8 @@ enum class TYPE_ID {
     UNDEFINED
 };
 
+// clang-format off
+
 /**
  * @brief Given a type, return the corresponding TYPE_ID.
  *
@@ -43,64 +45,44 @@ enum class TYPE_ID {
  */
 template <typename T> constexpr TYPE_ID type_hash(void)
 {
-    TYPE_ID type_id = TYPE_ID::UNDEFINED;
-    if ((bool)std::is_same<T, short int>::value)
-    {
-        type_id = TYPE_ID::SHORT_INT;
-    } else if ((bool)std::is_same<T, int>::value)
-    {
-        type_id = TYPE_ID::INT;
-    } else if ((bool)std::is_same<T, unsigned int>::value)
-    {
-        type_id = TYPE_ID::UNSIGNED_INT;
-    } else if ((bool)std::is_same<T, unsigned long int>::value)
-    {
-        type_id = TYPE_ID::UNSIGNED_LONG_INT;
-    } else if ((bool)std::is_same<T, long long int>::value)
-    {
-        type_id = TYPE_ID::LONG_LONG_INT;
-    } else if ((bool)std::is_same<T, unsigned long long int>::value)
-    {
-        type_id = TYPE_ID::UNSIGNED_LONG_LONG_INT;
-    } else if ((bool)std::is_same<T, bool>::value)
-    {
-        type_id = TYPE_ID::BOOL;
-    } else if ((bool)std::is_same<T, signed char>::value)
-    {
-        type_id = TYPE_ID::SIGNED_CHAR;
-    } else if ((bool)std::is_same<T, unsigned char>::value)
-    {
-        type_id = TYPE_ID::UNSIGNED_CHAR;
-    } else if ((bool)std::is_same<T, char>::value)
-    {
-        type_id = TYPE_ID::CHAR;
-    } else if ((bool)std::is_same<T, wchar_t>::value)
-    {
-        type_id = TYPE_ID::WCHAR;
-    } else if ((bool)std::is_same<T, char16_t>::value)
-    {
-        type_id = TYPE_ID::CHAR16;
-    } else if ((bool)std::is_same<T, char32_t>::value)
-    {
-        type_id = TYPE_ID::CHAR32;
-    } else if ((bool)std::is_same<T, float>::value)
-    {
-        type_id = TYPE_ID::FLOAT;
-    } else if ((bool)std::is_same<T, double>::value)
-    {
-        type_id = TYPE_ID::DOUBLE;
-    } else if ((bool)std::is_same<T, long double>::value)
-    {
-        type_id = TYPE_ID::LONG_DOUBLE;
-    } else if ((bool)std::is_same<T, std::string>::value)
-    {
-        type_id = TYPE_ID::STRING;
-    } else
-    {
-        type_id = TYPE_ID::UNDEFINED;
-    }
-    return type_id;
+    return ((bool)std::is_same<T, short int>::value) ? TYPE_ID::SHORT_INT : (
+        ((bool)std::is_same<T, int>::value) ? TYPE_ID::INT : (
+            ((bool)std::is_same<T, unsigned int>::value) ? TYPE_ID::UNSIGNED_INT : (
+                ((bool)std::is_same<T, unsigned long int>::value) ? TYPE_ID::UNSIGNED_LONG_INT : (
+                    ((bool)std::is_same<T, long long int>::value) ? TYPE_ID::LONG_LONG_INT : (
+                        ((bool)std::is_same<T, unsigned long long int>::value) ? TYPE_ID::UNSIGNED_LONG_LONG_INT : (
+                            ((bool)std::is_same<T, bool>::value) ? TYPE_ID::BOOL : (
+                                ((bool)std::is_same<T, signed char>::value) ? TYPE_ID::SIGNED_CHAR : (
+                                    ((bool)std::is_same<T, unsigned char>::value) ? TYPE_ID::UNSIGNED_CHAR : (
+                                        ((bool)std::is_same<T, char>::value) ? TYPE_ID::CHAR : (
+                                            ((bool)std::is_same<T, wchar_t>::value) ? TYPE_ID::WCHAR : (
+                                                ((bool)std::is_same<T, char16_t>::value) ? TYPE_ID::CHAR16 : (
+                                                    ((bool)std::is_same<T, char32_t>::value) ? TYPE_ID::CHAR32 : (
+                                                        ((bool)std::is_same<T, float>::value) ? TYPE_ID::FLOAT : (
+                                                            ((bool)std::is_same<T, double>::value) ? TYPE_ID::DOUBLE : (
+                                                                ((bool)std::is_same<T, long double>::value) ? TYPE_ID::LONG_DOUBLE : (
+                                                                    ((bool)std::is_same<T, std::string>::value) ? TYPE_ID::STRING : (
+                                                                        TYPE_ID::UNDEFINED
+                                                                    )
+                                                                )
+                                                            )
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    );
 }
+
+// clang-format on
 
 /**
  * @brief Base class for all templated Parameters to inherit from, used for polymorphism.

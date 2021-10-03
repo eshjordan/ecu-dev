@@ -26,6 +26,10 @@
 #ifndef FREERTOS_CONFIG_H
 #define FREERTOS_CONFIG_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*-----------------------------------------------------------
  * Application specific definitions.
  *
@@ -140,8 +144,6 @@ extern void vAssertCalled(const char *const pcFileName, unsigned long ulLine);
 
 /* Networking Definitions */
 
-#ifdef ECU_ENABLE_NETWORKING
-
 #define configMAC_ISR_SIMULATOR_PRIORITY (configMAX_PRIORITIES - 1)
 #define configNETWORK_INTERFACE_TO_USE 1L
 
@@ -239,6 +241,8 @@ extern void vAssertCalled(const char *const pcFileName, unsigned long ulLine);
 /* The UDP port to which print messages are sent. */
 #define configPRINT_PORT (15000)
 
-#endif /* ECU_ENABLE_NETWORKING */
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* FREERTOS_CONFIG_H */
