@@ -8,3 +8,5 @@ compile_commands.json
 **.dump
 **.ctu-info
 src/cppcheck-addon-ctu-file-list
+bin/
+lib/

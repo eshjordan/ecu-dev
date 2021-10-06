@@ -187,8 +187,8 @@ void System::Impl::Server::connection_task(void *arg)
                 Message_t msg;
                 vLoggingPrintf("Looks like a message!\n");
                 memcpy(&msg, rx_data, sizeof(Message_t));
-                long s = ts.tv_sec - msg.stamp.tv_sec;
-                long n = ts.tv_nsec - msg.stamp.tv_nsec;
+                long s = ts.tv_sec - msg.header.stamp.tv_sec;
+                long n = ts.tv_nsec - msg.header.stamp.tv_nsec;
 
                 printf("Time diff: s: %ld\nn: %ld\n", s, n);
 
@@ -227,7 +227,7 @@ void System::Impl::Server::process_message(const Message_t &message)
 {
     printf("Received Message:\nName: %s\nID: %u\nCommand: %u\nData: %ld\n",
         message.name,
-        message.id,
+        message.header.id,
         message.command,
         *(long*)message.data
     );

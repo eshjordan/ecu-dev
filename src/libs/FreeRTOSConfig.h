@@ -171,10 +171,10 @@ extern void vAssertCalled(const char *const pcFileName, unsigned long ulLine);
 /* Default gateway IP address configuration.  Used in ipconfigUSE_DNS is set to 0, or ipconfigUSE_DNS is set to 1 but a
  * DNS server cannot be contacted. */
 
-#define configGATEWAY_ADDR0 10
-#define configGATEWAY_ADDR1 0
-#define configGATEWAY_ADDR2 0
-#define configGATEWAY_ADDR3 138
+#define configGATEWAY_ADDR0 192
+#define configGATEWAY_ADDR1 168
+#define configGATEWAY_ADDR2 10
+#define configGATEWAY_ADDR3 254
 
 /* Default DNS server configuration.  OpenDNS addresses are 208.67.222.222 and 208.67.220.220.  Used in ipconfigUSE_DNS
  * is set to 0, or ipconfigUSE_DNS is set to 1 but a DNS server cannot be contacted.*/
