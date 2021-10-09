@@ -104,6 +104,16 @@ const char *pcApplicationHostnameHook(void);
 #include "FreeRTOS_IP.h"
 #include "FreeRTOS_Sockets.h"
 
+void print_bind_err(BaseType_t status);
+
+void print_listen_err(BaseType_t status);
+
+void print_accept_err(Socket_t status);
+
+void print_recv_err(BaseType_t status);
+
+void print_send_err(BaseType_t status);
+
 /**
  * @brief If ipconfigUSE_NETWORK_EVENT_HOOK is set to 1 then FreeRTOS+TCP will
  * call the network event hook at the appropriate times. If

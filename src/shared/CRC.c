@@ -20,10 +20,7 @@
 #define WIDTH (8U * sizeof(CRC))
 #define TOPBIT 1U << (WIDTH - 1U)
 
-typedef unsigned char uint8_t;
-typedef unsigned char byte_t;
-typedef unsigned short int uint16_t;
-typedef unsigned int uint32_t;
+typedef uint8_t byte_t;
 
 static CRC crcTable[256] = {0};
 static uint8_t inited    = 0;

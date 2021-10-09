@@ -1,5 +1,7 @@
 #include "RTOS_IP.hpp"
+#include "portmacro.h"
 #include <cstdarg>
+#include <cstddef>
 #include <cstdio>
 
 /* The default IP and MAC address used by the demo.  The address configuration
@@ -184,4 +186,115 @@ void print_network_stats(void)
             ip, netmask, gateway, dns, mac);
 
     vLoggingPrintf(buffer);
+}
+
+void print_bind_err(BaseType_t status)
+{
+    switch (status)
+    {
+    case 0: {
+        vLoggingPrintf("No bind error - successful!\n");
+    }
+    case -FREERTOS_EINVAL: {
+        vLoggingPrintf("bind failed: The socket did not get bound, probably because the specified port number was "
+                       "already in use.\n");
+        break;
+    }
+    default: {
+        vLoggingPrintf(
+            "bind failed: The calling RTOS task did not get a response from the IP RTOS task to the bind request.\n");
+        break;
+    }
+    }
+}
+
+void print_listen_err(BaseType_t status)
+{
+    switch (status)
+    {
+    case 0: {
+        vLoggingPrintf("No listen error - successful!\n");
+    }
+    case -pdFREERTOS_ERRNO_EOPNOTSUPP: {
+        vLoggingPrintf(
+            "listen failed: Socket is not a valid TCP socket or socket is not in bound, but closed state!\n");
+        break;
+    }
+    default: {
+        vLoggingPrintf("listen failed: Unknown error!\n");
+        break;
+    }
+    }
+}
+
+void print_accept_err(Socket_t status)
+{
+    if (status == nullptr)
+    {
+        vLoggingPrintf("accept failed - Connection timeout\n");
+    } else if (status == FREERTOS_INVALID_SOCKET)
+    {
+        vLoggingPrintf("accept failed - Socket is not a valid TCP socket, or socket is not in the Listening state!\n");
+    } else
+    {
+        vLoggingPrintf("No accept error - successful!\n");
+    }
+}
+
+void print_recv_err(BaseType_t status)
+{
+    switch (status)
+    {
+    case 0: {
+        vLoggingPrintf("recv failed: Timeout!\n");
+        break;
+    }
+    case -pdFREERTOS_ERRNO_ENOMEM: {
+        vLoggingPrintf("recv failed: Not enough memory!\n");
+        break;
+    }
+    case -pdFREERTOS_ERRNO_ENOTCONN: {
+        vLoggingPrintf("recv failed: Socket closed!\n");
+        break;
+    }
+    case -pdFREERTOS_ERRNO_EINTR: {
+        vLoggingPrintf("recv failed: Read aborted!\n");
+        break;
+    }
+    case -pdFREERTOS_ERRNO_EINVAL: {
+        vLoggingPrintf("recv failed: Socket is not valid, is not a TCP socket, or is not bound!\n");
+        break;
+    }
+    default: {
+        vLoggingPrintf("recv failed: Unknown error! - %d\n", status);
+        break;
+    }
+    }
+}
+
+void print_send_err(BaseType_t status)
+{
+    switch (status)
+    {
+    case -pdFREERTOS_ERRNO_ENOTCONN: {
+        vLoggingPrintf("send failed: Socket closed!\n");
+        break;
+    }
+    case -pdFREERTOS_ERRNO_ENOMEM: {
+        vLoggingPrintf("send failed: Not enough memory!\n");
+        break;
+    }
+    case -pdFREERTOS_ERRNO_EINVAL: {
+        vLoggingPrintf("send failed: Socket is not a valid TCP socket!\n");
+        break;
+    }
+    case -pdFREERTOS_ERRNO_ENOSPC: {
+        vLoggingPrintf("send failed: Timeout!\n");
+        break;
+    }
+    default: {
+        vLoggingPrintf("send failed: Unknown error! - %d\n", status);
+        break;
+    }
+    }
 }

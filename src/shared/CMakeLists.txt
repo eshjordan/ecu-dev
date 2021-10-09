@@ -14,7 +14,7 @@ include_directories(
     ${ECU_SHARED_INCLUDE}
 )
 
-add_library(ecu_shared SHARED
+add_library(ecu_shared ${BUILD_LIBS_AS}
     ${ECU_SHARED_SRC}
 )
 

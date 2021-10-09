@@ -75,7 +75,7 @@ include_directories(
     ${FreeRTOS_INCLUDE_DIRS}
 )
 
-add_library(rtos SHARED
+add_library(rtos ${BUILD_LIBS_AS}
     ${FreeRTOS_SRC}
 )
 

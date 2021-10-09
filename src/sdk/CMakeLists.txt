@@ -14,7 +14,7 @@ include_directories(
     ${ECU_SDK_INCLUDE}
 )
 
-add_library(ecu_sdk SHARED
+add_library(ecu_sdk ${BUILD_LIBS_AS}
     ${ECU_SDK_SRC}
 )
 

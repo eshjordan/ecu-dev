@@ -1,0 +1,10 @@
+#!/bin/bash
+root_dir=$(dirname $(readlink -f $0))
+
+rm -rf ${root_dir}/build/raspi/*
+rm -rf ${root_dir}/lib/raspi/*
+rm -rf ${root_dir}/bin/raspi/*
+
+rm -rf ${root_dir}/build/amd64/*
+rm -rf ${root_dir}/lib/amd64/*
+rm -rf ${root_dir}/bin/amd64/*

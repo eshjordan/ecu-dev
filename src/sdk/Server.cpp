@@ -1,4 +1,5 @@
 #include "Server.hpp"
+#include "Connection.hpp"
 #include "Message.h"
 #include "RTOS.hpp"
 #include "RTOS_IP.hpp"
@@ -7,6 +8,7 @@
 #include "projdefs.h"
 #include "utils.hpp"
 #include <iostream>
+#include <memory>
 #include <string>
 #include <sys/socket.h>
 
@@ -15,10 +17,10 @@
 using byte_t = uint8_t;
 
 bool System::Impl::Server::server_started             = false;
-Socket_t System::Impl::Server::client_socket          = nullptr;
+Socket_t System::Impl::Server::server_socket          = nullptr;
 TaskHandle_t System::Impl::Server::listen_task_handle = nullptr;
-
-void vStartTCPEchoClientTasks_SingleTasks(uint16_t usTaskStackSize, UBaseType_t uxTaskPriority);
+std::vector<std::shared_ptr<System::Impl::Connection>> System::Impl::Server::connections =
+    std::vector<std::shared_ptr<System::Impl::Connection>>();
 
 void System::Impl::Server::init(void)
 {
@@ -41,20 +43,20 @@ void System::Impl::Server::start_task(void *arg)
     print_network_stats();
 
     /* Create a new socket. */
-    client_socket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_STREAM, FREERTOS_IPPROTO_TCP);
-    while (client_socket == FREERTOS_INVALID_SOCKET)
+    server_socket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_STREAM, FREERTOS_IPPROTO_TCP);
+    while (server_socket == FREERTOS_INVALID_SOCKET)
     {
         vLoggingPrintf("Failed to create socket, retrying...\n");
         vTaskDelay(pdMS_TO_TICKS(100));
-        client_socket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_STREAM, FREERTOS_IPPROTO_TCP);
+        server_socket = FreeRTOS_socket(FREERTOS_AF_INET, FREERTOS_SOCK_STREAM, FREERTOS_IPPROTO_TCP);
     }
 
     vLoggingPrintf("Socket created.\n");
 
     /* Set the send and receive timouts for the socket. */
     static constexpr TickType_t xTimeOut = pdMS_TO_TICKS(4000);
-    FreeRTOS_setsockopt(client_socket, 0, FREERTOS_SO_RCVTIMEO, (void *)&xTimeOut, sizeof(xTimeOut));
-    FreeRTOS_setsockopt(client_socket, 0, FREERTOS_SO_SNDTIMEO, (void *)&xTimeOut, sizeof(xTimeOut));
+    FreeRTOS_setsockopt(server_socket, 0, FREERTOS_SO_RCVTIMEO, (void *)&xTimeOut, sizeof(xTimeOut));
+    FreeRTOS_setsockopt(server_socket, 0, FREERTOS_SO_SNDTIMEO, (void *)&xTimeOut, sizeof(xTimeOut));
 
     /* Use a sockaddr struct to set the server address. */
     freertos_sockaddr server_address{};
@@ -63,27 +65,14 @@ void System::Impl::Server::start_task(void *arg)
 
     /* Bind the socket to a port. */
     long bindStatus = 0;
-    bindStatus      = FreeRTOS_bind(client_socket, &server_address, sizeof(freertos_sockaddr));
+    bindStatus      = FreeRTOS_bind(server_socket, &server_address, sizeof(freertos_sockaddr));
 
     while (bindStatus != 0)
     {
-        vLoggingPrintf("Failed to bind socket to address: ");
-        switch (bindStatus)
-        {
-        case -FREERTOS_EINVAL: {
-            vLoggingPrintf("The socket did not get bound, probably because the "
-                           "specified port number was already in use.\n");
-            break;
-        }
-        default: {
-            vLoggingPrintf("The calling RTOS task did not get a response from the IP "
-                           "RTOS task to the bind request.\n");
-            break;
-        }
-        }
+        print_bind_err(bindStatus);
         vLoggingPrintf("Retrying...\n");
         vTaskDelay(pdMS_TO_TICKS(100));
-        bindStatus = FreeRTOS_bind(client_socket, nullptr, sizeof(freertos_sockaddr));
+        bindStatus = FreeRTOS_bind(server_socket, nullptr, sizeof(freertos_sockaddr));
     }
 
     vLoggingPrintf("Bound socket successfully.\n");
@@ -96,29 +85,14 @@ void System::Impl::Server::start_task(void *arg)
 void System::Impl::Server::listen_task(void *arg)
 {
     freertos_sockaddr client_address{};
-    uint32_t address_size     = sizeof(freertos_sockaddr);
-    Socket_t connected_socket = 0;
+    uint32_t address_size = sizeof(freertos_sockaddr);
 
-    long listenStatus = 0;
-
-    listenStatus = FreeRTOS_listen(client_socket, 20);
+    long listenStatus = FreeRTOS_listen(server_socket, 20);
 
     while (listenStatus != 0)
     {
-        switch (listenStatus)
-        {
-        case -pdFREERTOS_ERRNO_EOPNOTSUPP: {
-            vLoggingPrintf("Socket is not a valid TCP socket or socket is not in "
-                           "bound but closed state. Retrying...\n");
-            break;
-        }
-        default: {
-            vLoggingPrintf("Listen error. Retrying...\n");
-            break;
-        }
-        }
-
-        listenStatus = FreeRTOS_listen(client_socket, 20);
+        print_listen_err(listenStatus);
+        listenStatus = FreeRTOS_listen(server_socket, 20);
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 
@@ -128,82 +102,34 @@ void System::Impl::Server::listen_task(void *arg)
         {
             vLoggingPrintf("Listening!\n");
 
-            connected_socket = FreeRTOS_accept(client_socket, &client_address, &address_size);
+            Socket_t connected_socket = FreeRTOS_accept(server_socket, &client_address, &address_size);
 
-            if (connected_socket == FREERTOS_INVALID_SOCKET)
+            if (connected_socket && connected_socket != FREERTOS_INVALID_SOCKET)
             {
-                vLoggingPrintf("Socket is not a valid TCP socket, or socket is not in "
-                               "the Listening state. %hu\n",
-                               connected_socket);
-            } else if (connected_socket == nullptr)
-            {
-                vLoggingPrintf("Connection timeout.\n");
+                // Create a new Connection instance
+                std::shared_ptr<Connection> connection = std::make_shared<Connection>(connected_socket, client_address);
+                connections.push_back(connection);
             } else
             {
-                vLoggingPrintf("Client connected!\n");
-
-                /* Spawn a RTOS task to handle the connection. */
-                void **connection_info = (void **)pvPortMalloc(2 * sizeof(void *));
-                connection_info[0]     = (void *)connected_socket;
-                connection_info[1]     = (void *)&client_address;
-
-                xTaskCreate(connection_task, "connection_task", 10000, /* Stack size in words, not bytes. */
-                            (void *)connection_info,                   /* Parameter passed into the task. */
-                            tskIDLE_PRIORITY,                          /* Priority of the task. */
-                            nullptr);                                  /* Task handle. */
+                print_accept_err(connected_socket);
             }
         }
+
+        // Clear dead connections
+        for (auto connection = connections.begin(); connection != connections.end();)
+        {
+            if (!(*connection)->is_connected())
+            {
+                (*connection)->disconnect();
+                connection = connections.erase(connection);
+            } else
+            {
+                ++connection;
+            }
+        }
+
         vTaskDelay(pdMS_TO_TICKS(10));
     }
-}
-
-void System::Impl::Server::connection_task(void *arg)
-{
-    auto container                   = (void **)arg;
-    Socket_t connected_socket        = (Socket_t)container[0];
-    freertos_sockaddr client_address = *(freertos_sockaddr *)container[1];
-    static byte_t rx_data[ipconfigNETWORK_MTU];
-    BaseType_t bytes_received = 0;
-
-    vLoggingPrintf("Connection opened! - %s\n", ip_to_str(client_address.sin_addr));
-
-    while (true)
-    {
-
-        bytes_received = FreeRTOS_recv(connected_socket, rx_data, ipconfigNETWORK_MTU, 0);
-        struct timespec ts{};
-        timespec_get(&ts, TIME_UTC);
-
-        FreeRTOS_send(connected_socket, (void *)rx_data, bytes_received, 0);
-
-        if (bytes_received > 0)
-        {
-            /* Data was received, process it here. */
-            vLoggingPrintf("Tick!\n");
-            vLoggingPrintf("My data: %s\n", rx_data);
-
-            if (looks_like_message(rx_data, bytes_received))
-            {
-                Message_t msg;
-                vLoggingPrintf("Looks like a message!\n");
-                memcpy(&msg, rx_data, sizeof(Message_t));
-                long s = ts.tv_sec - msg.header.stamp.tv_sec;
-                long n = ts.tv_nsec - msg.header.stamp.tv_nsec;
-
-                printf("Time diff: s: %ld\nn: %ld\n", s, n);
-
-                process_message(msg);
-            } else
-            {
-                vLoggingPrintf("Processing as a command...\n");
-                process_command((const char *)rx_data);
-            }
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
-
-    vTaskDelete(nullptr);
 }
 
 void System::Impl::Server::start(void)
@@ -223,63 +149,16 @@ void System::Impl::Server::start(void)
                 &listen_task_handle);              /* Keep the task handle. */
 }
 
-void System::Impl::Server::process_message(const Message_t &message)
-{
-    printf("Received Message:\nName: %s\nID: %u\nCommand: %u\nData: %ld\n",
-        message.name,
-        message.header.id,
-        message.command,
-        *(long*)message.data
-    );
-}
-
-void System::Impl::Server::process_command(const std::string &command)
-{
-    auto out = split(command, '/');
-
-    std::cout << "Parameters:\n";
-    for (auto &i : out)
-    {
-        std::cout << i << std::endl;
-    }
-    std::cout << "\n";
-
-    if (out.size() > 0)
-    {
-        if (out[0] == "ecu")
-        {
-            if (out.size() > 1)
-            {
-                if (out[1] == "param")
-                {
-                    if (out.size() > 2)
-                    {
-                        auto name = out[2];
-                        if (out.size() > 3)
-                        {
-                            if (out[3] == "get")
-                            {
-                                vLoggingPrintf("Parameter %s: %lf\n", name.c_str(),
-                                               System::get_parameter<double>(name));
-                            }
-                            if (out[3] == "set" && out.size() > 4)
-                            {
-                                double value = std::stod(out[4]);
-                                System::set_parameter(name, value);
-                                vLoggingPrintf("Parameter %s set to %.2lf\n", name.c_str(), value);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 void System::Impl::Server::shutdown(void)
 {
     vTaskDelete(listen_task_handle);
-    FreeRTOS_shutdown(client_socket, FREERTOS_SHUT_RDWR);
-    FreeRTOS_closesocket(client_socket);
+
+    for (const auto &connection : connections)
+    {
+        connection->disconnect();
+    }
+
+    FreeRTOS_shutdown(server_socket, FREERTOS_SHUT_RDWR);
+    FreeRTOS_closesocket(server_socket);
     vLoggingPrintf("Network Down!\n");
 }

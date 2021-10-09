@@ -1,9 +1,12 @@
 #pragma once
 
+#include "Connection.hpp"
 #include "Message.h"
 #include "RTOS.hpp"
 #include "RTOS_IP.hpp"
+#include <memory>
 #include <string>
+#include <vector>
 
 namespace System {
 namespace Impl {
@@ -13,19 +16,15 @@ class Server
 private:
     static bool server_started;
 
-    static Socket_t client_socket;
+    static Socket_t server_socket;
 
     static TaskHandle_t listen_task_handle;
+
+    static std::vector<std::shared_ptr<Connection>> connections;
 
     static void start_task(void *arg);
 
     static void listen_task(void *arg);
-
-    static void connection_task(void *arg);
-
-    static void process_message(const Message_t &message);
-
-    static void process_command(const std::string &command);
 
 public:
     static void init(void);

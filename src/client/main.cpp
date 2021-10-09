@@ -1,17 +1,17 @@
 #include "Message.h"
+#include "RTOS_IP.hpp"
 #include <arpa/inet.h>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <errno.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
 
 int main()
 {
-    char b[8];
-    gets(b);
-
     int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
     if (sock < 0)
     {
@@ -218,27 +218,121 @@ int main()
         return 1;
     }
 
-    Message_t msg;
-    msg.header.id = 1;
-    strncpy(msg.name, "Test Message", 64);
-    msg.command       = Message_t::VALUE;
-    *(long *)msg.data = 123456789;
+    char b[8];
+    gets(b);
 
-    printf("Received Message:\nName: %s\nID: %u\nCommand: %u\nData: %ld\n", msg.name, msg.header.id, msg.command,
-           *(long *)msg.data);
+    Message_t init_msg;
+    uint32_t id              = 0;
+    Time_t stamp             = get_time_now();
+    const char *name         = "Test Message";
+    uint64_t sync_count      = 10;
+    Message_t::Command_t cmd = Message_t::SYNC;
+    make_message(&init_msg, id, stamp, name, &sync_count, cmd);
 
-    timespec_get(&msg.header.stamp, TIME_UTC);
-    calc_checksum(&msg);
-
-    if (send(sock, &msg, sizeof(Message_t), 0) < 0)
+    if (send(sock, &init_msg, sizeof(Message_t), 0) < 0)
     {
-        puts("Send failed");
+        puts("Init send failed");
         return 1;
     }
 
-    puts("Sent ok!");
+    uint8_t buf[1024];
 
-    printf("Current time: %ld.%09ld UTC\n", msg.header.stamp.tv_sec, msg.header.stamp.tv_nsec);
+    // Wait for server to acknowledge
+    if (recv(sock, buf, sizeof(Message_t), 0) < 0)
+    {
+        puts("ACK recv failed");
+        return 1;
+    }
+
+    char str[128];
+
+    // Start pinging
+    for (int i = 0; i < sync_count; i++)
+    {
+        Message_t msg;
+        id++;
+        Time_t stamp             = get_time_now();
+        const char *name         = "Test Message";
+        uint64_t data            = 0;
+        Message_t::Command_t cmd = Message_t::PING;
+        make_message(&msg, id, stamp, name, &data, cmd);
+
+        if (send(sock, &msg, sizeof(Message_t), 0) < 0)
+        {
+            printf("send %d failed\n", i);
+            return 1;
+        }
+
+        // Wait for server to acknowledge
+        if (recv(sock, buf, sizeof(Message_t), 0) < 0)
+        {
+            puts("ACK recv failed");
+            return 1;
+        }
+    }
+
+    Message_t sync_status;
+    ssize_t bytes_received = 0;
+
+    if ((bytes_received = recv(sock, &sync_status, sizeof(Message_t), 0)) < 0)
+    {
+        puts("Sec recv failed");
+        return 1;
+    }
+
+    if (!looks_like_message(&sync_status, bytes_received))
+    {
+        puts("Received message is not a message");
+        return 1;
+    }
+
+    auto seconds = *reinterpret_cast<int64_t *>(sync_status.data);
+
+    if ((bytes_received = recv(sock, &sync_status, sizeof(Message_t), 0)) < 0)
+    {
+        puts("Nsec recv failed");
+        return 1;
+    }
+
+    if (!looks_like_message(&sync_status, bytes_received))
+    {
+        puts("Received message is not a message");
+        return 1;
+    }
+
+    auto nanoseconds = *reinterpret_cast<int64_t *>(sync_status.data);
+
+    if (nanoseconds < 0)
+    {
+        seconds--;
+        nanoseconds += 1000000000;
+    }
+
+    printf("Round trip time diff: %ld.%09ld sec\n", seconds, nanoseconds);
+
+    // Time_t send_time = msg.header.stamp;
+
+    // if (recv(sock, &msg, sizeof(Message_t), 0) < 0)
+    // {
+    //     puts("Receive failed");
+    //     return 1;
+    // }
+
+    // Time_t now = get_time_now();
+
+    // puts("Received ok!");
+
+    // int64_t seconds     = now.tv_sec - send_time.tv_sec;
+    // int64_t nanoseconds = now.tv_nsec - send_time.tv_nsec;
+    // if (nanoseconds < 0)
+    // {
+    //     seconds--;
+    //     nanoseconds += 1000000000;
+    // }
+
+    // printf("Send time: %lld.%09lld UTC\n", send_time.tv_sec, send_time.tv_nsec);
+    // printf("Current time: %lld.%09lld UTC\n", now.tv_sec, now.tv_nsec);
+    // printf("Round trip time diff: %lld.%09lld sec\n", seconds, nanoseconds);
 
     return 0;
 }
