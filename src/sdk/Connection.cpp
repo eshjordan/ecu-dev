@@ -1,12 +1,4 @@
 #include "Connection.hpp"
-#include "Message.h"
-#include "RTOS_IP.hpp"
-#include "System.hpp"
-#include "portmacro.h"
-#include "utils.hpp"
-#include <cstdint>
-#include <cstring>
-#include <iostream>
 
 namespace System {
 namespace Impl {
@@ -60,7 +52,7 @@ void Connection::process_message(const Message_t &message)
     {
     case Message_t::ECHO:
     case Message_t::PING: {
-        send_message(message);
+        send_message(&message);
         break;
     }
     case Message_t::SYNC: {

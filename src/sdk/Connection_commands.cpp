@@ -1,12 +1,14 @@
+#include "CRC.h"
 #include "Connection.hpp"
+#include "FreeRTOSConfig.h"
+#include "FreeRTOSIPConfig.h"
 #include "Message.h"
 #include "RTOS_IP.hpp"
-#include "System.hpp"
+#include "portable.h"
 #include "portmacro.h"
-#include "utils.hpp"
 #include <cstdint>
 #include <cstring>
-#include <iostream>
+#include <vector>
 
 namespace System {
 namespace Impl {
@@ -31,7 +33,7 @@ void Connection::synchronize_connection(const Message_t &message)
     );
 
     // Send acknowledgement
-    if (send_message(ack_msg) < 0)
+    if (send_message(&ack_msg) < 0)
     {
         disconnect();
         return;
@@ -92,7 +94,7 @@ void Connection::synchronize_connection(const Message_t &message)
                      Message_t::ACK /* Command. */
         );
 
-        BaseType_t tx_bytes = send_message(ack_msg);
+        BaseType_t tx_bytes = send_message(&ack_msg);
         if (tx_bytes < 0)
         {
             disconnect();
@@ -139,7 +141,7 @@ void Connection::synchronize_connection(const Message_t &message)
     );
 
     // Send seconds offset
-    BaseType_t tx_bytes = send_message(seconds_msg);
+    BaseType_t tx_bytes = send_message(&seconds_msg);
     if (tx_bytes < 0)
     {
         disconnect();
@@ -155,7 +157,7 @@ void Connection::synchronize_connection(const Message_t &message)
     );
 
     // Send nanoseconds offset
-    tx_bytes = send_message(nanoseconds_msg);
+    tx_bytes = send_message(&nanoseconds_msg);
     if (tx_bytes < 0)
     {
         disconnect();
@@ -163,7 +165,83 @@ void Connection::synchronize_connection(const Message_t &message)
     }
 }
 
-void Connection::update_firmware(const Message_t &message) {}
+void Connection::update_firmware(const Message_t &message)
+{
+    auto firmware_size = ((uint32_t *)&message.data)[0];
+    auto firmware_crc  = ((uint32_t *)&message.data)[1];
+
+    printf("Firmware size: %u\n", firmware_size);
+    printf("Firmware CRC: %u\n", firmware_crc);
+
+    auto *received_firmware = (uint8_t *)pvPortMalloc(firmware_size);
+
+    Message_t ack_msg;
+    make_message(&ack_msg,      /* Destination message. */
+                 m_seq++,       /* Message ID number. */
+                 "sync_ack",    /* Message name. */
+                 nullptr,       /* Message data, set to zero. */
+                 Message_t::ACK /* Command. */
+    );
+
+    // Send acknowledgement
+    if (send_message(&ack_msg) < 0)
+    {
+        disconnect();
+        return;
+    }
+
+    BaseType_t success_count = 0;
+    int failed_count         = 0;
+    while (success_count < firmware_size)
+    {
+        BaseType_t rx_bytes = FreeRTOS_recv(m_socket, m_rx_buffer, sizeof(m_rx_buffer), 0);
+
+        if (rx_bytes < 0)
+        {
+            print_recv_err(rx_bytes);
+            disconnect();
+            return;
+        }
+
+        memcpy(received_firmware + success_count, m_rx_buffer, rx_bytes);
+        success_count += rx_bytes;
+
+        // Send acknowledgement
+        Message_t ack_msg_1;
+        make_message(&ack_msg_1,    /* Destination message. */
+                     m_seq++,       /* Message ID number. */
+                     "sync_ack",    /* Message name. */
+                     nullptr,       /* Message data, set to zero. */
+                     Message_t::ACK /* Command. */
+        );
+
+        BaseType_t tx_bytes = send_message(&ack_msg_1);
+        if (tx_bytes < 0)
+        {
+            disconnect();
+            return;
+        }
+
+        success_count++;
+    }
+
+    printf("Received %ld bytes\n", success_count);
+
+    // if (success_count != firmware_size)
+    // {
+    //     puts("Missing messages, disconnecting...");
+    //     disconnect();
+    //     return;
+    // }
+
+    // Check CRC
+    uint32_t received_crc = calc_crc(received_firmware, firmware_size);
+    if (received_crc != firmware_crc)
+    {
+        vLoggingPrintf("Firmware CRC mismatch: %u != %u\n", received_crc, firmware_crc);
+        return;
+    }
+}
 
 } // namespace Impl
 } // namespace System

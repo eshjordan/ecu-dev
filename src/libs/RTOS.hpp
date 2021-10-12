@@ -8,6 +8,8 @@ extern "C" {
 #include "portmacro.h"
 #include "task.h"
 
+// extern void *memcpy(void *__restrict __dest, const void *__restrict __src, size_t __n) __THROW __nonnull((1, 2));
+
 /* Prototypes for the standard FreeRTOS extern callback/hook functions we should
  * implement (some we don't need atm). */
 
@@ -111,5 +113,4 @@ void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer, StackT
 #include "timers.h"
 
 #include "projdefs.h"
-
 }

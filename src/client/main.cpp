@@ -1,8 +1,10 @@
+#include "CRC.h"
 #include "Message.h"
 #include "RTOS_IP.hpp"
 #include <arpa/inet.h>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <errno.h>
 #include <sys/socket.h>
@@ -10,17 +12,257 @@
 #include <time.h>
 #include <unistd.h>
 
+int sock;
+struct sockaddr_in server;
+// struct sockaddr_in client;
+
+int init();
+void echo_test() {}
+void sync_test();
+void firmware_update_test();
+void software_update_test() {}
+
 int main()
 {
-    int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
-    if (sock < 0)
+    if (!init())
     {
-
-        puts("open error");
-        return 1;
+        puts("Failed to initialize");
+        return -1;
     }
 
-    // struct sockaddr_in client;
+    puts("Test options:\n"
+         "\t1) echo_test\n"
+         "\t2) sync_test\n"
+         "\t3) firmware_update_test\n"
+         "\t4) software_update_test\n"
+         "\tq) quit\n");
+
+    char b[256];
+
+    while (true)
+    {
+        gets(b);
+
+        switch (b[0])
+        {
+        case '1': {
+            echo_test();
+            break;
+        }
+        case '2': {
+            sync_test();
+            break;
+        }
+        case '3': {
+            firmware_update_test();
+            break;
+        }
+        case '4': {
+            software_update_test();
+            break;
+        }
+        case 'q': {
+            return 0;
+        }
+        default: {
+            break;
+        }
+        }
+    }
+
+    return 0;
+}
+
+void sync_test()
+{
+    Message_t init_msg;
+    uint32_t id         = 0;
+    uint64_t sync_count = 10;
+
+    make_message(&init_msg, id++, "Test Message", &sync_count, Message_t::SYNC);
+
+    if (send(sock, &init_msg, sizeof(Message_t), 0) < 0)
+    {
+        puts("Init send failed");
+        return;
+    }
+
+    uint8_t buf[1024];
+
+    // Wait for server to acknowledge
+    if (recv(sock, buf, sizeof(Message_t), 0) < 0)
+    {
+        puts("ACK recv failed");
+        return;
+    }
+
+    // Start pinging
+    for (int i = 0; i < sync_count; i++)
+    {
+        Message_t msg;
+        make_message(&msg, id++, "Test Message", nullptr, Message_t::PING);
+
+        if (send(sock, &msg, sizeof(Message_t), 0) < 0)
+        {
+            printf("send %d failed\n", i);
+            return;
+        }
+
+        // Wait for server to acknowledge
+        if (recv(sock, buf, sizeof(Message_t), 0) < 0)
+        {
+            puts("ACK recv failed");
+            return;
+        }
+    }
+
+    Message_t sync_status;
+    ssize_t bytes_received = 0;
+
+    if ((bytes_received = recv(sock, &sync_status, sizeof(Message_t), 0)) < 0)
+    {
+        puts("Sec recv failed");
+        return;
+    }
+
+    if (check_message(&sync_status) < 0)
+    {
+        puts("Received message is not a message");
+        return;
+    }
+
+    auto seconds = *reinterpret_cast<int64_t *>(sync_status.data);
+
+    if ((bytes_received = recv(sock, &sync_status, sizeof(Message_t), 0)) < 0)
+    {
+        puts("Nsec recv failed");
+        return;
+    }
+
+    if (check_message(&sync_status) < 0)
+    {
+        puts("Received message is not a message");
+        return;
+    }
+
+    auto nanoseconds = *reinterpret_cast<int64_t *>(sync_status.data);
+
+    if (nanoseconds < 0)
+    {
+        seconds--;
+        nanoseconds += 1000000000;
+    }
+
+    printf("Round trip time diff: %ld.%09ld sec\n", seconds, nanoseconds);
+}
+
+void firmware_update_test()
+{
+
+    uint8_t buf[1024];
+
+    // Fill with random data
+    for (unsigned char &byte : buf)
+    {
+        byte = rand() % 256;
+    }
+
+    Message_t init_msg;
+    uint32_t id            = 0;
+    uint32_t firmware_size = sizeof(buf);
+    uint32_t firmware_crc  = calc_crc(buf, sizeof(buf));
+    printf("Calced crc: %u\n", firmware_crc);
+    uint8_t data[4];
+
+    ((uint32_t *)data)[0] = firmware_size;
+    ((uint32_t *)data)[1] = firmware_crc;
+
+    make_message(&init_msg, id++, "Test Message", data, Message_t::FIRMWARE_UPDATE);
+
+    if (send(sock, &init_msg, sizeof(Message_t), 0) < 0)
+    {
+        puts("Init send failed");
+        return;
+    }
+
+    Message_t ack_msg;
+
+    // Wait for server to acknowledge
+    if (recv(sock, &ack_msg, sizeof(Message_t), 0) < 0)
+    {
+        puts("ACK recv failed");
+        return;
+    }
+
+    // Start sending firmware
+    uint32_t tx_bytes = 0;
+    while (tx_bytes < firmware_size)
+    {
+        uint32_t bytes_to_send = firmware_size - tx_bytes;
+
+        if (send(sock, buf + tx_bytes, bytes_to_send < 1500 ? bytes_to_send : 1500, 0) < 0)
+        {
+            printf("send %d failed\n", tx_bytes);
+            return;
+        }
+
+        // Wait for server to acknowledge
+        if (recv(sock, buf, sizeof(Message_t), 0) < 0)
+        {
+            puts("ACK recv failed");
+            return;
+        }
+    }
+
+    // Message_t sync_status;
+    // ssize_t bytes_received = 0;
+
+    // if ((bytes_received = recv(sock, &sync_status, sizeof(Message_t), 0)) < 0)
+    // {
+    //     puts("Sec recv failed");
+    //     return;
+    // }
+
+    // if (check_message(&sync_status) < 0)
+    // {
+    //     puts("Received message is not a message");
+    //     return;
+    // }
+
+    // auto seconds = *reinterpret_cast<int64_t *>(sync_status.data);
+
+    // if ((bytes_received = recv(sock, &sync_status, sizeof(Message_t), 0)) < 0)
+    // {
+    //     puts("Nsec recv failed");
+    //     return;
+    // }
+
+    // if (check_message(&sync_status) < 0)
+    // {
+    //     puts("Received message is not a message");
+    //     return;
+    // }
+
+    // auto nanoseconds = *reinterpret_cast<int64_t *>(sync_status.data);
+
+    // if (nanoseconds < 0)
+    // {
+    //     seconds--;
+    //     nanoseconds += 1000000000;
+    // }
+
+    // printf("Round trip time diff: %ld.%09ld sec\n", seconds, nanoseconds);
+}
+
+int init()
+{
+    sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+    if (sock < 0)
+    {
+        puts("open error");
+        return 0;
+    }
+
     // client.sin_addr.s_addr = inet_addr("192.168.10.33"); // INADDR_LOOPBACK
     // client.sin_family      = AF_INET;
     // client.sin_port        = htons(8001);
@@ -94,7 +336,6 @@ int main()
     //     return 1;
     // }
 
-    struct sockaddr_in server;
     server.sin_addr.s_addr = inet_addr("192.168.10.116");
     server.sin_family      = AF_INET;
     server.sin_port        = htons(8000);
@@ -215,91 +456,8 @@ int main()
         }
 
         printf("connect error: %d\n", errno);
-        return 1;
+        return 0;
     }
 
-    char b[8];
-    gets(b);
-
-    Message_t init_msg;
-    uint32_t id         = 0;
-    uint64_t sync_count = 10;
-
-    make_message(&init_msg, id++, "Test Message", &sync_count, Message_t::SYNC);
-
-    if (send(sock, &init_msg, sizeof(Message_t), 0) < 0)
-    {
-        puts("Init send failed");
-        return 1;
-    }
-
-    uint8_t buf[1024];
-
-    // Wait for server to acknowledge
-    if (recv(sock, buf, sizeof(Message_t), 0) < 0)
-    {
-        puts("ACK recv failed");
-        return 1;
-    }
-
-    // Start pinging
-    for (int i = 0; i < sync_count; i++)
-    {
-        Message_t msg;
-        make_message(&msg, id++, "Test Message", nullptr, Message_t::PING);
-
-        if (send(sock, &msg, sizeof(Message_t), 0) < 0)
-        {
-            printf("send %d failed\n", i);
-            return 1;
-        }
-
-        // Wait for server to acknowledge
-        if (recv(sock, buf, sizeof(Message_t), 0) < 0)
-        {
-            puts("ACK recv failed");
-            return 1;
-        }
-    }
-
-    Message_t sync_status;
-    ssize_t bytes_received = 0;
-
-    if ((bytes_received = recv(sock, &sync_status, sizeof(Message_t), 0)) < 0)
-    {
-        puts("Sec recv failed");
-        return 1;
-    }
-
-    if (check_message(&sync_status) < 0)
-    {
-        puts("Received message is not a message");
-        return 1;
-    }
-
-    auto seconds = *reinterpret_cast<int64_t *>(sync_status.data);
-
-    if ((bytes_received = recv(sock, &sync_status, sizeof(Message_t), 0)) < 0)
-    {
-        puts("Nsec recv failed");
-        return 1;
-    }
-
-    if (check_message(&sync_status) < 0)
-    {
-        puts("Received message is not a message");
-        return 1;
-    }
-
-    auto nanoseconds = *reinterpret_cast<int64_t *>(sync_status.data);
-
-    if (nanoseconds < 0)
-    {
-        seconds--;
-        nanoseconds += 1000000000;
-    }
-
-    printf("Round trip time diff: %ld.%09ld sec\n", seconds, nanoseconds);
-
-    return 0;
+    return 1;
 }

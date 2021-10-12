@@ -47,6 +47,21 @@ void operator delete(void *ptr) noexcept { vPortFree(ptr); }
  */
 void operator delete[](void *ptr) noexcept { vPortFree(ptr); }
 
+// extern void *memcpy(void *__restrict __dest, const void *__restrict __src, size_t __n)
+// {
+//     unsigned char *pcDest = (unsigned char *)__dest, *pcSource = (unsigned char *)__src;
+//     size_t x;
+
+//     for (x = 0; x < __n; x++)
+//     {
+//         *pcDest = *pcSource;
+//         pcDest++;
+//         pcSource++;
+//     }
+
+//     return __dest;
+// }
+
 void vApplicationIdleHook(void) { usleep(15000); }
 
 void vApplicationMallocFailedHook(void) { vAssertCalled(__FILE__, __LINE__); }

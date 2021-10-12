@@ -2,8 +2,6 @@
 
 #include "Message.h"
 #include "RTOS_IP.hpp"
-#include "portmacro.h"
-#include <string>
 
 namespace System {
 namespace Impl {
@@ -26,16 +24,16 @@ private:
 
     void process_message(const Message_t &message);
 
-    inline BaseType_t receive_message(const Message_t *message)
+    inline BaseType_t receive_message(Message_t *const message)
     {
-        BaseType_t rx_bytes = FreeRTOS_recv(m_socket, (void *)message, sizeof(Message_t), 0);
+        BaseType_t rx_bytes = FreeRTOS_recv(m_socket, message, sizeof(Message_t), 0);
         if (rx_bytes < 0) { print_recv_err(rx_bytes); }
         return rx_bytes;
     }
 
-    inline BaseType_t send_message(const Message_t &message)
+    inline BaseType_t send_message(const Message_t *const message)
     {
-        BaseType_t tx_bytes = FreeRTOS_send(m_socket, &message, sizeof(Message_t), 0);
+        BaseType_t tx_bytes = FreeRTOS_send(m_socket, message, sizeof(Message_t), 0);
         if (tx_bytes < 0) { print_send_err(tx_bytes); }
         return tx_bytes;
     }
