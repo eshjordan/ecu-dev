@@ -222,12 +222,10 @@ int main()
     gets(b);
 
     Message_t init_msg;
-    uint32_t id              = 0;
-    Time_t stamp             = get_time_now();
-    const char *name         = "Test Message";
-    uint64_t sync_count      = 10;
-    Message_t::Command_t cmd = Message_t::SYNC;
-    make_message(&init_msg, id, stamp, name, &sync_count, cmd);
+    uint32_t id         = 0;
+    uint64_t sync_count = 10;
+
+    make_message(&init_msg, id++, "Test Message", &sync_count, Message_t::SYNC);
 
     if (send(sock, &init_msg, sizeof(Message_t), 0) < 0)
     {
@@ -244,18 +242,11 @@ int main()
         return 1;
     }
 
-    char str[128];
-
     // Start pinging
     for (int i = 0; i < sync_count; i++)
     {
         Message_t msg;
-        id++;
-        Time_t stamp             = get_time_now();
-        const char *name         = "Test Message";
-        uint64_t data            = 0;
-        Message_t::Command_t cmd = Message_t::PING;
-        make_message(&msg, id, stamp, name, &data, cmd);
+        make_message(&msg, id++, "Test Message", nullptr, Message_t::PING);
 
         if (send(sock, &msg, sizeof(Message_t), 0) < 0)
         {
@@ -280,7 +271,7 @@ int main()
         return 1;
     }
 
-    if (!looks_like_message(&sync_status, bytes_received))
+    if (check_message(&sync_status) < 0)
     {
         puts("Received message is not a message");
         return 1;
@@ -294,7 +285,7 @@ int main()
         return 1;
     }
 
-    if (!looks_like_message(&sync_status, bytes_received))
+    if (check_message(&sync_status) < 0)
     {
         puts("Received message is not a message");
         return 1;
@@ -309,30 +300,6 @@ int main()
     }
 
     printf("Round trip time diff: %ld.%09ld sec\n", seconds, nanoseconds);
-
-    // Time_t send_time = msg.header.stamp;
-
-    // if (recv(sock, &msg, sizeof(Message_t), 0) < 0)
-    // {
-    //     puts("Receive failed");
-    //     return 1;
-    // }
-
-    // Time_t now = get_time_now();
-
-    // puts("Received ok!");
-
-    // int64_t seconds     = now.tv_sec - send_time.tv_sec;
-    // int64_t nanoseconds = now.tv_nsec - send_time.tv_nsec;
-    // if (nanoseconds < 0)
-    // {
-    //     seconds--;
-    //     nanoseconds += 1000000000;
-    // }
-
-    // printf("Send time: %lld.%09lld UTC\n", send_time.tv_sec, send_time.tv_nsec);
-    // printf("Current time: %lld.%09lld UTC\n", now.tv_sec, now.tv_nsec);
-    // printf("Round trip time diff: %lld.%09lld sec\n", seconds, nanoseconds);
 
     return 0;
 }

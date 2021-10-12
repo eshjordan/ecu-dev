@@ -2,6 +2,7 @@
 
 #include "Message.h"
 #include "RTOS_IP.hpp"
+#include "portmacro.h"
 #include <string>
 
 namespace System {
@@ -13,6 +14,7 @@ class Connection
 private:
     const Socket_t m_socket{};
     const freertos_sockaddr m_address{};
+    uint32_t m_seq{0};
     TaskHandle_t m_run_task{};
     bool m_destroy                           = false;
     uint8_t m_rx_buffer[ipconfigNETWORK_MTU] = {0};
@@ -22,11 +24,13 @@ private:
 
     static void manage_connection(void *arg);
 
-    void receive(void);
+    BaseType_t receive_message(const Message_t *message);
+
+    BaseType_t send_message(const Message_t &message);
 
     void process_message(const Message_t &message);
 
-    void process_command(const std::string &command);
+    void echo_message(const Message_t &message);
 
     void synchronize_connection(const uint64_t &num_messages);
 
