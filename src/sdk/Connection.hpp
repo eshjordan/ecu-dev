@@ -22,16 +22,16 @@ private:
 
     static void manage_connection(void *arg);
 
-    void process_message(const Message_t &message);
+    void process_message(Message_t *message);
 
-    inline BaseType_t receive_message(Message_t *const message)
+    inline BaseType_t receive_message(Message_t *message)
     {
         BaseType_t rx_bytes = FreeRTOS_recv(m_socket, message, sizeof(Message_t), 0);
         if (rx_bytes < 0) { print_recv_err(rx_bytes); }
         return rx_bytes;
     }
 
-    inline BaseType_t send_message(const Message_t *const message)
+    inline BaseType_t send_message(Message_t *message)
     {
         BaseType_t tx_bytes = FreeRTOS_send(m_socket, message, sizeof(Message_t), 0);
         if (tx_bytes < 0) { print_send_err(tx_bytes); }
@@ -40,9 +40,9 @@ private:
 
     /* Functions to handle specific requests. */
 
-    void synchronize_connection(const Message_t &num_messages);
+    void synchronize_connection(Message_t *num_messages);
 
-    void update_firmware(const Message_t &message);
+    void update_firmware(Message_t *message);
 
 public:
     Connection(const Socket_t &socket, const freertos_sockaddr &address);

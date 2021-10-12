@@ -13,9 +13,9 @@
 namespace System {
 namespace Impl {
 
-void Connection::synchronize_connection(const Message_t &message)
+void Connection::synchronize_connection(Message_t *message)
 {
-    auto num_messages = *(uint64_t *)&message.data;
+    auto num_messages = *(uint64_t *)&message->data;
 
     vLoggingPrintf("Synchronizing connection to %s, with %lld msgs...\n", ip_to_str(m_address.sin_addr), num_messages);
 
@@ -165,15 +165,16 @@ void Connection::synchronize_connection(const Message_t &message)
     }
 }
 
-void Connection::update_firmware(const Message_t &message)
+void Connection::update_firmware(Message_t *message)
 {
-    auto firmware_size = ((uint32_t *)&message.data)[0];
-    auto firmware_crc  = ((uint32_t *)&message.data)[1];
+    auto firmware_size = ((uint32_t *)&message->data)[0];
+    auto firmware_crc  = ((uint32_t *)&message->data)[1];
 
     printf("Firmware size: %u\n", firmware_size);
     printf("Firmware CRC: %u\n", firmware_crc);
 
     auto *received_firmware = (uint8_t *)pvPortMalloc(firmware_size);
+    memset(received_firmware, 0, firmware_size);
 
     Message_t ack_msg;
     make_message(&ack_msg,      /* Destination message. */
@@ -192,9 +193,11 @@ void Connection::update_firmware(const Message_t &message)
 
     BaseType_t success_count = 0;
     int failed_count         = 0;
+    int i                    = 0;
     while (success_count < firmware_size)
     {
-        BaseType_t rx_bytes = FreeRTOS_recv(m_socket, m_rx_buffer, sizeof(m_rx_buffer), 0);
+        memset(m_rx_buffer, 0, sizeof(m_rx_buffer));
+        BaseType_t rx_bytes = FreeRTOS_recv(m_socket, m_rx_buffer, ipconfigNETWORK_MTU, 0);
 
         if (rx_bytes < 0)
         {
@@ -205,6 +208,11 @@ void Connection::update_firmware(const Message_t &message)
 
         memcpy(received_firmware + success_count, m_rx_buffer, rx_bytes);
         success_count += rx_bytes;
+
+        printf("%d rx_bytes: %ld\n", i, rx_bytes);
+        printf("%d success_count: %ld\n", i, success_count);
+
+        if (success_count >= firmware_size) { break; }
 
         // Send acknowledgement
         Message_t ack_msg_1;
@@ -222,10 +230,29 @@ void Connection::update_firmware(const Message_t &message)
             return;
         }
 
-        success_count++;
+        i++;
     }
 
     printf("Received %ld bytes\n", success_count);
+
+    for (int i = 0; i < firmware_size; i++)
+    {
+        printf("%02x ", received_firmware[i]);
+    }
+
+    for (int i = 0; i < (success_count - sizeof(uint32_t)) / 2; i++)
+    {
+        auto val = ((uint16_t *)(received_firmware + sizeof(uint32_t)))[i];
+        if (val != (i % 256))
+        {
+            printf("Str repr 1: %c\n", (received_firmware + sizeof(uint32_t))[i]);
+            printf("Str repr 2: %c\n", (received_firmware + sizeof(uint32_t))[i + 1]);
+            printf("Failed at %d\n", i);
+            break;
+        }
+
+        printf("%d: %d\n", i, val);
+    }
 
     // if (success_count != firmware_size)
     // {
@@ -235,10 +262,11 @@ void Connection::update_firmware(const Message_t &message)
     // }
 
     // Check CRC
-    uint32_t received_crc = calc_crc(received_firmware, firmware_size);
-    if (received_crc != firmware_crc)
+    uint32_t transmitted_crc = ((uint32_t *)received_firmware)[0];
+    uint32_t received_crc    = calc_crc(received_firmware + sizeof(uint32_t), firmware_size - sizeof(uint32_t));
+    if (received_crc != transmitted_crc)
     {
-        vLoggingPrintf("Firmware CRC mismatch: %u != %u\n", received_crc, firmware_crc);
+        vLoggingPrintf("Firmware CRC mismatch: %u != %u\n", received_crc, transmitted_crc);
         return;
     }
 }

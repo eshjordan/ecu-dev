@@ -8,7 +8,7 @@
 #include <time.h>
 
 #define START_BYTE 0x9DU
-#define ALIGNMENT_SIZE 4U
+#define ALIGNMENT_SIZE 8U
 
 #define ERR_CRC_FAILED 1
 #define ERR_INVALID_LENGTH 2

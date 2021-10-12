@@ -39,20 +39,20 @@ void Connection::manage_connection(void *arg)
                 continue;
             }
 
-            connection->process_message(msg);
+            connection->process_message(&msg);
         }
     }
 
     vTaskDelete(nullptr);
 }
 
-void Connection::process_message(const Message_t &message)
+void Connection::process_message(Message_t *message)
 {
-    switch (message.command)
+    switch (message->command)
     {
     case Message_t::ECHO:
     case Message_t::PING: {
-        send_message(&message);
+        send_message(message);
         break;
     }
     case Message_t::SYNC: {
@@ -69,8 +69,8 @@ void Connection::process_message(const Message_t &message)
     }
     }
 
-    printf("Received Message:\nName: %s\nID: %u\nCommand: %u\nData: %lld\n", message.name, message.header.id,
-           message.command, (const uint64_t &)message.data);
+    printf("Received Message:\nName: %s\nID: %u\nCommand: %u\nData: %lld\n", message->name, message->header.id,
+           message->command, (const uint64_t &)message->data);
 }
 
 } // namespace Impl

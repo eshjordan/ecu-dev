@@ -158,20 +158,23 @@ void sync_test()
 
 void firmware_update_test()
 {
+    Message_t init_msg;
+    uint32_t id = 0;
 
-    uint8_t buf[1024];
-
+    uint8_t buf[1024] = {0};
     // Fill with random data
-    for (unsigned char &byte : buf)
+    for (int i = 0; i < (sizeof(buf) - sizeof(uint32_t)) / 2; i++)
     {
-        byte = rand() % 256;
+        ((uint16_t *)(buf + sizeof(uint32_t)))[i] = i % 256;
     }
 
-    Message_t init_msg;
-    uint32_t id            = 0;
     uint32_t firmware_size = sizeof(buf);
-    uint32_t firmware_crc  = calc_crc(buf, sizeof(buf));
-    printf("Calced crc: %u\n", firmware_crc);
+    uint32_t firmware_crc  = calc_crc(buf + sizeof(uint32_t), firmware_size - sizeof(uint32_t));
+
+    ((uint32_t *)buf)[0] = firmware_crc;
+
+    // printf("buffer: %16s\n", buf);
+    // printf("Calced crc: %u\n", firmware_crc);
     uint8_t data[4];
 
     ((uint32_t *)data)[0] = firmware_size;
@@ -195,16 +198,25 @@ void firmware_update_test()
     }
 
     // Start sending firmware
-    uint32_t tx_bytes = 0;
+    int tx_bytes = 0;
     while (tx_bytes < firmware_size)
     {
-        uint32_t bytes_to_send = firmware_size - tx_bytes;
+        auto bytes_to_send = (int)firmware_size - (int)tx_bytes;
 
-        if (send(sock, buf + tx_bytes, bytes_to_send < 1500 ? bytes_to_send : 1500, 0) < 0)
+        for (int i = 0; i < sizeof(buf); i++)
+        {
+            printf("%02x ", buf[i]);
+        }
+
+        ssize_t tx = send(sock, buf + tx_bytes, bytes_to_send < 1200 ? bytes_to_send : 1200, 0);
+
+        if (tx < 0)
         {
             printf("send %d failed\n", tx_bytes);
             return;
         }
+
+        tx_bytes += tx;
 
         // Wait for server to acknowledge
         if (recv(sock, buf, sizeof(Message_t), 0) < 0)
