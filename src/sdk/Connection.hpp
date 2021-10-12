@@ -24,26 +24,30 @@ private:
 
     static void manage_connection(void *arg);
 
-    BaseType_t receive_message(const Message_t *message);
-
-    BaseType_t send_message(const Message_t &message);
-
     void process_message(const Message_t &message);
 
-    void echo_message(const Message_t &message);
+    inline BaseType_t receive_message(const Message_t *message)
+    {
+        BaseType_t rx_bytes = FreeRTOS_recv(m_socket, (void *)message, sizeof(Message_t), 0);
+        if (rx_bytes < 0) { print_recv_err(rx_bytes); }
+        return rx_bytes;
+    }
 
-    void synchronize_connection(const uint64_t &num_messages);
+    inline BaseType_t send_message(const Message_t &message)
+    {
+        BaseType_t tx_bytes = FreeRTOS_send(m_socket, &message, sizeof(Message_t), 0);
+        if (tx_bytes < 0) { print_send_err(tx_bytes); }
+        return tx_bytes;
+    }
+
+    /* Functions to handle specific requests. */
+
+    void synchronize_connection(const Message_t &num_messages);
+
+    void update_firmware(const Message_t &message);
 
 public:
-    Connection(const Socket_t &socket, const freertos_sockaddr &address) : m_socket(socket), m_address(address)
-    {
-        init();
-
-        xTaskCreate(manage_connection, "connection_task", 10000, /* Stack size in words, not bytes. */
-                    (void *)this,                                /* Parameter passed into the task. */
-                    tskIDLE_PRIORITY,                            /* Priority of the task. */
-                    &m_run_task);                                /* Task handle. */
-    }
+    Connection(const Socket_t &socket, const freertos_sockaddr &address);
 
     ~Connection(void)
     {
