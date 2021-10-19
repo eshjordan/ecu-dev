@@ -7,7 +7,11 @@
 #include "portable.h"
 #include "portmacro.h"
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
+#include <ctime>
+#include <fstream>
+#include <unistd.h>
 #include <vector>
 
 namespace System {
@@ -173,9 +177,6 @@ void Connection::update_firmware(Message_t *message)
     printf("Firmware size: %u\n", firmware_size);
     printf("Firmware CRC: %u\n", firmware_crc);
 
-    auto *received_firmware = (uint8_t *)pvPortMalloc(firmware_size);
-    memset(received_firmware, 0, firmware_size);
-
     Message_t ack_msg;
     make_message(&ack_msg,      /* Destination message. */
                  m_seq++,       /* Message ID number. */
@@ -191,84 +192,126 @@ void Connection::update_firmware(Message_t *message)
         return;
     }
 
+    auto *received_firmware = (uint8_t *)pvPortMalloc(firmware_size);
+    memset(received_firmware, 0, firmware_size);
+
     BaseType_t success_count = 0;
     int failed_count         = 0;
     int i                    = 0;
     while (success_count < firmware_size)
     {
         memset(m_rx_buffer, 0, sizeof(m_rx_buffer));
-        BaseType_t rx_bytes = FreeRTOS_recv(m_socket, m_rx_buffer, ipconfigNETWORK_MTU, 0);
+        BaseType_t rx_bytes = FreeRTOS_recv(m_socket, received_firmware + success_count, ipconfigTCP_MSS, 0);
 
         if (rx_bytes < 0)
         {
             print_recv_err(rx_bytes);
+            vPortFree(received_firmware);
             disconnect();
             return;
         }
 
-        memcpy(received_firmware + success_count, m_rx_buffer, rx_bytes);
         success_count += rx_bytes;
 
-        printf("%d rx_bytes: %ld\n", i, rx_bytes);
-        printf("%d success_count: %ld\n", i, success_count);
-
-        if (success_count >= firmware_size) { break; }
+        // printf("%d rx_bytes: %ld\n", i, rx_bytes);
+        // printf("%d success_count: %ld\n", i, success_count);
 
         // Send acknowledgement
-        Message_t ack_msg_1;
-        make_message(&ack_msg_1,    /* Destination message. */
-                     m_seq++,       /* Message ID number. */
-                     "sync_ack",    /* Message name. */
-                     nullptr,       /* Message data, set to zero. */
-                     Message_t::ACK /* Command. */
-        );
+        // Message_t ack_msg_1;
+        // make_message(&ack_msg_1,    /* Destination message. */
+        //              m_seq++,       /* Message ID number. */
+        //              "sync_ack",    /* Message name. */
+        //              nullptr,       /* Message data, set to zero. */
+        //              Message_t::ACK /* Command. */
+        // );
 
-        BaseType_t tx_bytes = send_message(&ack_msg_1);
-        if (tx_bytes < 0)
-        {
-            disconnect();
-            return;
-        }
+        // BaseType_t tx_bytes = send_message(&ack_msg_1);
+        // if (tx_bytes < 0)
+        // {
+        //     disconnect();
+        //     return;
+        // }
 
         i++;
     }
 
     printf("Received %ld bytes\n", success_count);
 
-    for (int i = 0; i < firmware_size; i++)
-    {
-        printf("%02x ", received_firmware[i]);
-    }
-
-    for (int i = 0; i < (success_count - sizeof(uint32_t)) / 2; i++)
-    {
-        auto val = ((uint16_t *)(received_firmware + sizeof(uint32_t)))[i];
-        if (val != (i % 256))
-        {
-            printf("Str repr 1: %c\n", (received_firmware + sizeof(uint32_t))[i]);
-            printf("Str repr 2: %c\n", (received_firmware + sizeof(uint32_t))[i + 1]);
-            printf("Failed at %d\n", i);
-            break;
-        }
-
-        printf("%d: %d\n", i, val);
-    }
-
-    // if (success_count != firmware_size)
+    // for (int i = 0; i < firmware_size; i++)
     // {
-    //     puts("Missing messages, disconnecting...");
-    //     disconnect();
-    //     return;
+    //     printf("%02x ", received_firmware[i]);
+    // }
+
+    // for (int i = 0; i < (success_count - sizeof(uint32_t)) / 2; i++)
+    // {
+    //     auto val = ((uint16_t *)(received_firmware + sizeof(uint32_t)))[i];
+    //     if (val != (i % 256))
+    //     {
+    //         printf("Str repr 1: %c\n", (received_firmware + sizeof(uint32_t))[i]);
+    //         printf("Str repr 2: %c\n", (received_firmware + sizeof(uint32_t))[i + 1]);
+    //         printf("Failed at %d\n", i);
+    //         break;
+    //     }
+
+    //     printf("%d: %d\n", i, val);
     // }
 
     // Check CRC
-    uint32_t transmitted_crc = ((uint32_t *)received_firmware)[0];
-    uint32_t received_crc    = calc_crc(received_firmware + sizeof(uint32_t), firmware_size - sizeof(uint32_t));
+    CRC transmitted_crc = *(CRC *)&received_firmware[firmware_size - sizeof(CRC)];
+    CRC received_crc    = calc_crc(received_firmware, firmware_size - sizeof(CRC));
     if (received_crc != transmitted_crc)
     {
         vLoggingPrintf("Firmware CRC mismatch: %u != %u\n", received_crc, transmitted_crc);
+        vPortFree(received_firmware);
         return;
     }
+
+    make_message(&ack_msg,      /* Destination message. */
+                 m_seq++,       /* Message ID number. */
+                 "sync_ack",    /* Message name. */
+                 nullptr,       /* Message data, set to zero. */
+                 Message_t::ACK /* Command. */
+    );
+    
+    // Send acknowledgement
+    if (send_message(&ack_msg) < 0)
+    {
+        vPortFree(received_firmware);
+        disconnect();
+        return;
+    }
+
+    puts("Received OK!");
+
+    vPortFree(received_firmware);
+
+    // std::fstream output_f("/tmp/firmware.bin", std::ios::out | std::ios::binary);
+    // output_f.write((char *)&received_firmware[0], success_count);
+    // output_f.close();
+
+    // if (!output_f.good())
+    // {
+    //     vLoggingPrintf("Error writing to file!");
+    //     return;
+    // }
+
+    // pid_t pid = fork();
+
+    // if (pid == 0)
+    // {
+    //     // Child process
+    //     execl("/usr/bin/sudo", "tmp.bin", (char *)nullptr);
+    // } else if (pid > 0)
+    // {
+    //     // Parent process
+    //     vLoggingPrintf("New firmware started, PID: %d\n", pid);
+    //     exit(EXIT_SUCCESS);
+    //     puts("I should never be called!");
+    // } else
+    // {
+    //     vLoggingPrintf("Fork failed: %d\n", errno);
+    //     return;
+    // }
 }
 
 } // namespace Impl

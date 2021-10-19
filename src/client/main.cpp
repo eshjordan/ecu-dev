@@ -2,19 +2,25 @@
 #include "Message.h"
 #include "RTOS_IP.hpp"
 #include <arpa/inet.h>
+#include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <errno.h>
+#include <fstream>
+#include <iostream>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
+#include <vector>
 
 int sock;
 struct sockaddr_in server;
 // struct sockaddr_in client;
+
+#define ipconfigTCP_MSS 1400
 
 int init();
 void echo_test() {}
@@ -37,13 +43,12 @@ int main()
          "\t4) software_update_test\n"
          "\tq) quit\n");
 
-    char b[256];
-
     while (true)
     {
-        gets(b);
+        std::string s;
+        std::cin >> s;
 
-        switch (b[0])
+        switch (s[0])
         {
         case '1': {
             echo_test();
@@ -161,23 +166,23 @@ void firmware_update_test()
     Message_t init_msg;
     uint32_t id = 0;
 
-    uint8_t buf[1024] = {0};
-    // Fill with random data
-    for (int i = 0; i < (sizeof(buf) - sizeof(uint32_t)) / 2; i++)
+    std::string filename = "/home/jordan/Documents/2021/ecu-dev/bin/raspi/ecu_program";
+
+    std::ifstream input_file(filename, std::ios::in | std::ios::binary);
+    std::vector<uint8_t> buf((std::istreambuf_iterator<char>(input_file)), std::istreambuf_iterator<char>());
+    buf.reserve(buf.size() + sizeof(CRC));
+
+    CRC firmware_crc = calc_crc(buf.data(), buf.size());
+
+    for (int i = 0; i < sizeof(CRC); i++)
     {
-        ((uint16_t *)(buf + sizeof(uint32_t)))[i] = i % 256;
+        buf.push_back(((uint8_t *)&firmware_crc)[i]);
     }
 
-    uint32_t firmware_size = sizeof(buf);
-    uint32_t firmware_crc  = calc_crc(buf + sizeof(uint32_t), firmware_size - sizeof(uint32_t));
+    printf("Calced crc: %u\n", firmware_crc);
 
-    ((uint32_t *)buf)[0] = firmware_crc;
-
-    // printf("buffer: %16s\n", buf);
-    // printf("Calced crc: %u\n", firmware_crc);
-    uint8_t data[4];
-
-    ((uint32_t *)data)[0] = firmware_size;
+    uint8_t data[8];
+    ((uint32_t *)data)[0] = buf.size();
     ((uint32_t *)data)[1] = firmware_crc;
 
     make_message(&init_msg, id++, "Test Message", data, Message_t::FIRMWARE_UPDATE);
@@ -197,18 +202,15 @@ void firmware_update_test()
         return;
     }
 
+    puts("recv OK!");
+
     // Start sending firmware
-    int tx_bytes = 0;
-    while (tx_bytes < firmware_size)
+    auto bytes_to_send = buf.size();
+    int tx_bytes       = 0;
+    while (tx_bytes < buf.size())
     {
-        auto bytes_to_send = (int)firmware_size - (int)tx_bytes;
 
-        for (int i = 0; i < sizeof(buf); i++)
-        {
-            printf("%02x ", buf[i]);
-        }
-
-        ssize_t tx = send(sock, buf + tx_bytes, bytes_to_send < 1200 ? bytes_to_send : 1200, 0);
+        ssize_t tx = send(sock, &buf[tx_bytes], bytes_to_send < ipconfigTCP_MSS ? bytes_to_send : ipconfigTCP_MSS, 0);
 
         if (tx < 0)
         {
@@ -217,53 +219,19 @@ void firmware_update_test()
         }
 
         tx_bytes += tx;
-
-        // Wait for server to acknowledge
-        if (recv(sock, buf, sizeof(Message_t), 0) < 0)
-        {
-            puts("ACK recv failed");
-            return;
-        }
+        bytes_to_send -= tx;
     }
 
-    // Message_t sync_status;
-    // ssize_t bytes_received = 0;
+    assert(tx_bytes == buf.size());
 
-    // if ((bytes_received = recv(sock, &sync_status, sizeof(Message_t), 0)) < 0)
-    // {
-    //     puts("Sec recv failed");
-    //     return;
-    // }
+    // Wait for server to acknowledge
+    if (recv(sock, &ack_msg, sizeof(Message_t), 0) < 0)
+    {
+        puts("ACK recv failed");
+        return;
+    }
 
-    // if (check_message(&sync_status) < 0)
-    // {
-    //     puts("Received message is not a message");
-    //     return;
-    // }
-
-    // auto seconds = *reinterpret_cast<int64_t *>(sync_status.data);
-
-    // if ((bytes_received = recv(sock, &sync_status, sizeof(Message_t), 0)) < 0)
-    // {
-    //     puts("Nsec recv failed");
-    //     return;
-    // }
-
-    // if (check_message(&sync_status) < 0)
-    // {
-    //     puts("Received message is not a message");
-    //     return;
-    // }
-
-    // auto nanoseconds = *reinterpret_cast<int64_t *>(sync_status.data);
-
-    // if (nanoseconds < 0)
-    // {
-    //     seconds--;
-    //     nanoseconds += 1000000000;
-    // }
-
-    // printf("Round trip time diff: %ld.%09ld sec\n", seconds, nanoseconds);
+    puts("Sent OK!");
 }
 
 int init()

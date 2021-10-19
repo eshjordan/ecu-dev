@@ -48,6 +48,9 @@ void Connection::manage_connection(void *arg)
 
 void Connection::process_message(Message_t *message)
 {
+    printf("Received Message:\nName: %s\nID: %u\nCommand: %u\nData: %lld\n", message->name, message->header.id,
+           message->command, (const uint64_t &)message->data);
+
     switch (message->command)
     {
     case Message_t::ECHO:
@@ -68,9 +71,6 @@ void Connection::process_message(Message_t *message)
         break;
     }
     }
-
-    printf("Received Message:\nName: %s\nID: %u\nCommand: %u\nData: %lld\n", message->name, message->header.id,
-           message->command, (const uint64_t &)message->data);
 }
 
 } // namespace Impl

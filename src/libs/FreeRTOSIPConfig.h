@@ -221,8 +221,8 @@ aborted. */
 #define ipconfigALLOW_SOCKET_SEND_WITHOUT_BIND 1
 
 /* Defines the Time To Live (TTL) values used in outgoing UDP packets. */
-#define ipconfigUDP_TIME_TO_LIVE 128
-#define ipconfigTCP_TIME_TO_LIVE 128 /* also defined in FreeRTOSIPConfigDefaults.h */
+#define ipconfigUDP_TIME_TO_LIVE 1024
+#define ipconfigTCP_TIME_TO_LIVE 1024 /* also defined in FreeRTOSIPConfigDefaults.h */
 
 /* USE_TCP: Use TCP and all its features */
 #define ipconfigUSE_TCP (1)
@@ -230,12 +230,15 @@ aborted. */
 /* USE_WIN: Let TCP use windowing mechanism. */
 #define ipconfigUSE_TCP_WIN (1)
 
+/* Reduce CPU load during heavy network traffic. */
+#define ipconfigUSE_LINKED_RX_MESSAGES 1
+
 /* The MTU is the maximum number of bytes the payload of a network frame can
 contain.  For normal Ethernet V2 frames the maximum MTU is 1500.  Setting a
 lower value can save RAM, depending on the buffer management scheme used.  If
 ipconfigCAN_FRAGMENT_OUTGOING_PACKETS is 1 then (ipconfigNETWORK_MTU - 28) must
 be divisible by 8. */
-#define ipconfigNETWORK_MTU 1500U
+#define ipconfigNETWORK_MTU 1526U
 
 /* Set ipconfigUSE_DNS to 1 to include a basic DNS client/resolver.  DNS is used
 through the FreeRTOS_gethostbyname() API function. */
@@ -286,10 +289,10 @@ simultaneously, one could define TCP_WIN_SEG_COUNT as 120. */
 
 /* Each TCP socket has a circular buffers for Rx and Tx, which have a fixed
 maximum size.  Define the size of Rx buffer for TCP sockets. */
-#define ipconfigTCP_RX_BUFFER_LENGTH (1000)
+#define ipconfigTCP_RX_BUFFER_LENGTH ( 16 * ipconfigTCP_MSS )
 
 /* Define the size of Tx buffer for TCP sockets. */
-#define ipconfigTCP_TX_BUFFER_LENGTH (1000)
+#define ipconfigTCP_TX_BUFFER_LENGTH ( 16 * ipconfigTCP_MSS )
 
 /* When using call-back handlers, the driver may check if the handler points to
 real program memory (RAM or flash) or just has a random non-zero value. */
