@@ -2,7 +2,6 @@
 
 #include "ParameterList.hpp"
 #include "RoutineManager.hpp"
-#include "Server.hpp"
 
 /**
  * @brief Hide the implementation of the system from the user. Expose only the simplest part of the interface.
@@ -12,25 +11,48 @@ namespace System {
 
 namespace Impl {
 
+static int s_argc = 0;
+
+static std::vector<std::string> s_argv;
+
 /** @brief Stop chat users from resetting everything accidentally. */
 static bool initialised = false;
 
 /** @brief The routine manager. */
 static bool network_up = false;
 
+/**
+ * @brief Get the executable path object
+ *
+ * @return std::string Path to the executable, from argv[0]
+ */
+std::string get_executable_path();
+
 } // namespace Impl
 
 /**
- * @brief Called upon program start. Set up parameters, etc. here, don't want users to add new ones in control loops.
+ * @brief
  *
  */
-void init(void);
+void init(int argc, char **argv);
 
 /**
  * @brief
  *
  */
 void run(void);
+
+/**
+ * @brief
+ *
+ */
+void restart(int signal);
+
+/**
+ * @brief
+ *
+ */
+inline void restart(void *signal) { restart(*reinterpret_cast<int *>(signal)); }
 
 /**
  * @brief

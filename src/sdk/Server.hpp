@@ -1,11 +1,7 @@
 #pragma once
 
 #include "Connection.hpp"
-#include "Message.h"
-#include "RTOS.hpp"
-#include "RTOS_IP.hpp"
 #include <memory>
-#include <string>
 #include <vector>
 
 namespace System {

@@ -1,16 +1,7 @@
 #include "Server.hpp"
-#include "Connection.hpp"
-#include "Message.h"
 #include "RTOS.hpp"
 #include "RTOS_IP.hpp"
 #include "System.hpp"
-#include "portmacro.h"
-#include "projdefs.h"
-#include "utils.hpp"
-#include <iostream>
-#include <memory>
-#include <string>
-#include <sys/socket.h>
 
 #define SERVER_PORT_NUM 8000
 
@@ -79,14 +70,17 @@ void System::Impl::Server::start_task(void *arg)
 
     server_started = true;
 
+    // Start the listen task.
+    xTaskCreate(listen_task, "listen_task", 10000, /* Stack size in words, not bytes. */
+                nullptr,                           /* Parameter passed into the task. */
+                tskIDLE_PRIORITY,                  /* Priority of the task. */
+                &listen_task_handle);              /* Keep the task handle. */
+
     vTaskDelete(NULL);
 }
 
 void System::Impl::Server::listen_task(void *arg)
 {
-    freertos_sockaddr client_address{};
-    uint32_t address_size = sizeof(freertos_sockaddr);
-
     long listenStatus = FreeRTOS_listen(server_socket, 20);
 
     while (listenStatus != 0)
@@ -96,31 +90,31 @@ void System::Impl::Server::listen_task(void *arg)
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 
-    while (true)
+    while (server_started)
     {
-        if (server_started)
+        vLoggingPrintf("Listening!\n");
+
+        auto *connected_socket = new Socket_t;
+        auto *client_address   = new freertos_sockaddr;
+        uint32_t address_size  = sizeof(freertos_sockaddr);
+
+        *connected_socket = FreeRTOS_accept(server_socket, client_address, &address_size);
+
+        if (*connected_socket && *connected_socket != FREERTOS_INVALID_SOCKET)
         {
-            vLoggingPrintf("Listening!\n");
-
-            Socket_t connected_socket = FreeRTOS_accept(server_socket, &client_address, &address_size);
-
-            if (connected_socket && connected_socket != FREERTOS_INVALID_SOCKET)
-            {
-                // Create a new Connection instance
-                std::shared_ptr<Connection> connection = std::make_shared<Connection>(connected_socket, client_address);
-                connections.push_back(connection);
-            } else
-            {
-                print_accept_err(connected_socket);
-            }
+            // Create a new Connection instance
+            std::shared_ptr<Connection> connection = std::make_shared<Connection>(connected_socket, client_address);
+            connections.push_back(connection);
+        } else
+        {
+            print_accept_err(*connected_socket);
         }
 
-        // Clear dead connections
+        // Remove connection from list if it is not open
         for (auto connection = connections.begin(); connection != connections.end();)
         {
-            if (!(*connection)->is_connected())
+            if (!(*connection)->is_open())
             {
-                (*connection)->disconnect();
                 connection = connections.erase(connection);
             } else
             {
@@ -130,6 +124,8 @@ void System::Impl::Server::listen_task(void *arg)
 
         vTaskDelay(pdMS_TO_TICKS(10));
     }
+
+    vTaskDelete(nullptr);
 }
 
 void System::Impl::Server::start(void)
@@ -142,23 +138,20 @@ void System::Impl::Server::start(void)
                 nullptr,                         /* Parameter passed into the task. */
                 tskIDLE_PRIORITY,                /* Priority of the task. */
                 nullptr);                        /* Don't need to keep the task handle. */
-
-    xTaskCreate(listen_task, "listen_task", 10000, /* Stack size in words, not bytes. */
-                nullptr,                           /* Parameter passed into the task. */
-                tskIDLE_PRIORITY,                  /* Priority of the task. */
-                &listen_task_handle);              /* Keep the task handle. */
 }
 
 void System::Impl::Server::shutdown(void)
 {
-    vTaskDelete(listen_task_handle);
+    server_started = false;
 
-    for (const auto &connection : connections)
+    for (int i = 0; i < connections.size(); i++)
     {
-        connection->disconnect();
+        vLoggingPrintf("Closing connection %d\n", i);
+        connections[i]->close();
     }
 
     FreeRTOS_shutdown(server_socket, FREERTOS_SHUT_RDWR);
     FreeRTOS_closesocket(server_socket);
+    vTaskDelay(pdMS_TO_TICKS(10));
     vLoggingPrintf("Network Down!\n");
 }

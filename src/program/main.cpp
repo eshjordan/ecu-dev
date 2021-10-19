@@ -3,8 +3,7 @@
 
 int main(int argc, char *argv[])
 {
-    (void)argc;
-    (void)argv;
+    System::init(argc, argv);
 
     /* Add tasks here. */
     System::run();

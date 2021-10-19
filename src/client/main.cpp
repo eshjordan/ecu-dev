@@ -3,6 +3,7 @@
 #include "RTOS_IP.hpp"
 #include <arpa/inet.h>
 #include <cassert>
+#include <csignal>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -10,38 +11,88 @@
 #include <errno.h>
 #include <fstream>
 #include <iostream>
+#include <pwd.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
 #include <vector>
 
-int sock;
-struct sockaddr_in server;
-// struct sockaddr_in client;
-
 #define ipconfigTCP_MSS 1400
 
+static int sock;
+static struct sockaddr_in server;
+// static struct sockaddr_in client;
+
+static int s_argc = 0;
+static std::vector<std::string> s_argv;
+
 int init();
-void echo_test() {}
+
+void echo_test()
+{
+    Message_t msg;
+    make_message(&msg, 0, "ping", nullptr, Message_t::ECHO);
+    send(sock, &msg, sizeof(Message_t), 0);
+}
+
+void restart();
+
+void disconnect()
+{
+    shutdown(sock, SHUT_RDWR);
+    close(sock);
+}
+
+int reconnect()
+{
+    disconnect();
+    return init();
+}
+
+void remote_restart() {}
+
 void sync_test();
+
 void firmware_update_test();
+
 void software_update_test() {}
 
-int main()
+void end(int signal)
 {
+    disconnect();
+    exit(0);
+}
+
+int main(int argc, char **argv)
+{
+    signal(SIGINT, end);
+
+    s_argc = argc;
+    for (int i = 0; i < argc; i++)
+    {
+        s_argv.emplace_back(argv[i]);
+    }
+
     if (!init())
     {
         puts("Failed to initialize");
         return -1;
     }
 
-    puts("Test options:\n"
-         "\t1) echo_test\n"
-         "\t2) sync_test\n"
-         "\t3) firmware_update_test\n"
-         "\t4) software_update_test\n"
-         "\tq) quit\n");
+    auto print_options = []() {
+        puts("Test options:\n"
+             "\t1) restart\n"
+             "\t2) reconnect\n"
+             "\t3) remote_restart\n"
+             "\t4) sync_test\n"
+             "\t5) firmware_update_test\n"
+             "\t6) software_update_test\n"
+             "\tq) quit\n");
+    };
+
+    print_options();
 
     while (true)
     {
@@ -51,23 +102,37 @@ int main()
         switch (s[0])
         {
         case '1': {
-            echo_test();
+            restart();
+            print_options();
             break;
         }
         case '2': {
-            sync_test();
+            if (reconnect()) { puts("Reconnected!"); }
+            print_options();
             break;
         }
         case '3': {
-            firmware_update_test();
+            remote_restart();
+            print_options();
             break;
         }
         case '4': {
+            sync_test();
+            print_options();
+            break;
+        }
+        case '5': {
+            firmware_update_test();
+            print_options();
+            break;
+        }
+        case '6': {
             software_update_test();
+            print_options();
             break;
         }
         case 'q': {
-            return 0;
+            end(0);
         }
         default: {
             break;
@@ -76,6 +141,55 @@ int main()
     }
 
     return 0;
+}
+
+void restart()
+{
+    const char *client_filename = "/home/jordan/Documents/2021/ecu-dev/bin/amd64/ecu_client";
+
+    struct stat file_status = {};
+    stat(client_filename, &file_status);
+    unlink(client_filename);
+
+    // Retain the file permissions
+    chown(client_filename, file_status.st_uid, file_status.st_gid);
+    chmod(client_filename, file_status.st_mode);
+
+    puts("Restarting!");
+
+    execl(client_filename, client_filename, (char *)nullptr);
+
+    puts("Shutdown ok");
+
+    /* Restart the program */
+
+    char **argv = new char *[s_argc + 1];
+    for (int i = 0; i < s_argc; i++)
+    {
+        argv[i] = new char[s_argv[i].size() + 1];
+        strcpy(argv[i], s_argv[i].c_str());
+        std::cout << argv[i] << std::endl;
+    }
+    argv[s_argc] = nullptr;
+
+    std::cout << "Restarting - " << argv[0] << std::endl;
+
+    // Currently the child becomes an orphan. This is apparently ok? as it gets adopted by init at the highest level.
+    bool parent = false;
+    bool child  = false;
+
+    pid_t pid_1 = fork();
+
+    parent = pid_1 != 0;
+    child  = pid_1 == 0;
+
+    if (child)
+    {
+        setsid();
+        execv(argv[0], argv);
+    }
+
+    if (child) { exit(0); }
 }
 
 void sync_test()
@@ -232,6 +346,12 @@ void firmware_update_test()
     }
 
     puts("Sent OK!");
+
+    // Disconnect from server
+    shutdown(sock, SHUT_RDWR);
+    close(sock);
+
+    puts("Restarting client...");
 }
 
 int init()

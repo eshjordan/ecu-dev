@@ -1,16 +1,8 @@
-#include "CRC.h"
 #include "Connection.hpp"
-#include "FreeRTOSConfig.h"
-#include "FreeRTOSIPConfig.h"
-#include "Message.h"
-#include "RTOS_IP.hpp"
-#include "portable.h"
-#include "portmacro.h"
-#include <cstdint>
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
+#include "System.hpp"
 #include <fstream>
+#include <string>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <vector>
 
@@ -21,7 +13,7 @@ void Connection::synchronize_connection(Message_t *message)
 {
     auto num_messages = *(uint64_t *)&message->data;
 
-    vLoggingPrintf("Synchronizing connection to %s, with %lld msgs...\n", ip_to_str(m_address.sin_addr), num_messages);
+    vLoggingPrintf("Synchronizing connection to %s, with %lld msgs...\n", ip_to_str(m_address->sin_addr), num_messages);
 
     std::vector<Time_t> sent_times;
     sent_times.reserve(num_messages);
@@ -39,7 +31,7 @@ void Connection::synchronize_connection(Message_t *message)
     // Send acknowledgement
     if (send_message(&ack_msg) < 0)
     {
-        disconnect();
+        close();
         return;
     }
 
@@ -49,8 +41,8 @@ void Connection::synchronize_connection(Message_t *message)
     {
         if (failed_count > 10)
         {
-            vLoggingPrintf("Failed to receive %d messages, disconnecting...\n", failed_count);
-            disconnect();
+            vLoggingPrintf("Failed to receive %d messages, closing connection...\n", failed_count);
+            close();
             return;
         }
 
@@ -58,7 +50,7 @@ void Connection::synchronize_connection(Message_t *message)
         BaseType_t rx_bytes = receive_message(&recv_msg);
         if (rx_bytes < 0)
         {
-            disconnect();
+            close();
             return;
         }
 
@@ -101,7 +93,7 @@ void Connection::synchronize_connection(Message_t *message)
         BaseType_t tx_bytes = send_message(&ack_msg);
         if (tx_bytes < 0)
         {
-            disconnect();
+            close();
             return;
         }
 
@@ -134,7 +126,7 @@ void Connection::synchronize_connection(Message_t *message)
     int64_t seconds     = avg_time / 1000000000;
     int64_t nanoseconds = avg_time % 1000000000;
 
-    vLoggingPrintf("Time offset - %s: %lld.%lld sec\n", ip_to_str(m_address.sin_addr), seconds, nanoseconds);
+    vLoggingPrintf("Time offset - %s: %lld.%lld sec\n", ip_to_str(m_address->sin_addr), seconds, nanoseconds);
 
     Message_t seconds_msg;
     make_message(&seconds_msg,    /* Destination message. */
@@ -148,7 +140,7 @@ void Connection::synchronize_connection(Message_t *message)
     BaseType_t tx_bytes = send_message(&seconds_msg);
     if (tx_bytes < 0)
     {
-        disconnect();
+        close();
         return;
     }
 
@@ -164,12 +156,12 @@ void Connection::synchronize_connection(Message_t *message)
     tx_bytes = send_message(&nanoseconds_msg);
     if (tx_bytes < 0)
     {
-        disconnect();
+        close();
         return;
     }
 }
 
-void Connection::update_firmware(Message_t *message)
+void Connection::download_firmware(Message_t *message)
 {
     auto firmware_size = ((uint32_t *)&message->data)[0];
     auto firmware_crc  = ((uint32_t *)&message->data)[1];
@@ -188,7 +180,7 @@ void Connection::update_firmware(Message_t *message)
     // Send acknowledgement
     if (send_message(&ack_msg) < 0)
     {
-        disconnect();
+        close();
         return;
     }
 
@@ -201,60 +193,22 @@ void Connection::update_firmware(Message_t *message)
     while (success_count < firmware_size)
     {
         memset(m_rx_buffer, 0, sizeof(m_rx_buffer));
-        BaseType_t rx_bytes = FreeRTOS_recv(m_socket, received_firmware + success_count, ipconfigTCP_MSS, 0);
+        BaseType_t rx_bytes = FreeRTOS_recv(*m_socket, received_firmware + success_count, ipconfigTCP_MSS, 0);
 
         if (rx_bytes < 0)
         {
             print_recv_err(rx_bytes);
             vPortFree(received_firmware);
-            disconnect();
+            close();
             return;
         }
 
         success_count += rx_bytes;
 
-        // printf("%d rx_bytes: %ld\n", i, rx_bytes);
-        // printf("%d success_count: %ld\n", i, success_count);
-
-        // Send acknowledgement
-        // Message_t ack_msg_1;
-        // make_message(&ack_msg_1,    /* Destination message. */
-        //              m_seq++,       /* Message ID number. */
-        //              "sync_ack",    /* Message name. */
-        //              nullptr,       /* Message data, set to zero. */
-        //              Message_t::ACK /* Command. */
-        // );
-
-        // BaseType_t tx_bytes = send_message(&ack_msg_1);
-        // if (tx_bytes < 0)
-        // {
-        //     disconnect();
-        //     return;
-        // }
-
         i++;
     }
 
     printf("Received %ld bytes\n", success_count);
-
-    // for (int i = 0; i < firmware_size; i++)
-    // {
-    //     printf("%02x ", received_firmware[i]);
-    // }
-
-    // for (int i = 0; i < (success_count - sizeof(uint32_t)) / 2; i++)
-    // {
-    //     auto val = ((uint16_t *)(received_firmware + sizeof(uint32_t)))[i];
-    //     if (val != (i % 256))
-    //     {
-    //         printf("Str repr 1: %c\n", (received_firmware + sizeof(uint32_t))[i]);
-    //         printf("Str repr 2: %c\n", (received_firmware + sizeof(uint32_t))[i + 1]);
-    //         printf("Failed at %d\n", i);
-    //         break;
-    //     }
-
-    //     printf("%d: %d\n", i, val);
-    // }
 
     // Check CRC
     CRC transmitted_crc = *(CRC *)&received_firmware[firmware_size - sizeof(CRC)];
@@ -272,46 +226,39 @@ void Connection::update_firmware(Message_t *message)
                  nullptr,       /* Message data, set to zero. */
                  Message_t::ACK /* Command. */
     );
-    
+
     // Send acknowledgement
     if (send_message(&ack_msg) < 0)
     {
         vPortFree(received_firmware);
-        disconnect();
+        close();
         return;
     }
 
     puts("Received OK!");
 
+    std::string filename = System::Impl::get_executable_path();
+
+    struct stat file_status = {};
+    stat(filename.c_str(), &file_status);
+    unlink(filename.c_str());
+
+    std::fstream output_f(filename, std::ios::out | std::ios::trunc | std::ios::binary);
+    output_f.write((char *)&received_firmware[0], success_count);
+
     vPortFree(received_firmware);
 
-    // std::fstream output_f("/tmp/firmware.bin", std::ios::out | std::ios::binary);
-    // output_f.write((char *)&received_firmware[0], success_count);
-    // output_f.close();
+    if (!output_f.good())
+    {
+        vLoggingPrintf("Error writing to file!");
+        return;
+    }
 
-    // if (!output_f.good())
-    // {
-    //     vLoggingPrintf("Error writing to file!");
-    //     return;
-    // }
+    output_f.close();
 
-    // pid_t pid = fork();
-
-    // if (pid == 0)
-    // {
-    //     // Child process
-    //     execl("/usr/bin/sudo", "tmp.bin", (char *)nullptr);
-    // } else if (pid > 0)
-    // {
-    //     // Parent process
-    //     vLoggingPrintf("New firmware started, PID: %d\n", pid);
-    //     exit(EXIT_SUCCESS);
-    //     puts("I should never be called!");
-    // } else
-    // {
-    //     vLoggingPrintf("Fork failed: %d\n", errno);
-    //     return;
-    // }
+    // Retain the file permissions
+    chown(filename.c_str(), file_status.st_uid, file_status.st_gid);
+    chmod(filename.c_str(), file_status.st_mode);
 }
 
 } // namespace Impl
