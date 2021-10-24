@@ -114,6 +114,8 @@ void print_recv_err(BaseType_t status);
 
 void print_send_err(BaseType_t status);
 
+extern void rtos_ip_start(void);
+
 /**
  * @brief If ipconfigUSE_NETWORK_EVENT_HOOK is set to 1 then FreeRTOS+TCP will
  * call the network event hook at the appropriate times. If

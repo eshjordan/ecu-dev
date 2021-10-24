@@ -1,5 +1,4 @@
 #include "RTOS_IP.hpp"
-#include "portmacro.h"
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
@@ -100,16 +99,7 @@ const char *pcApplicationHostnameHook(void) { return "jordan-ecu"; }
 
 #endif /* ipconfigDHCP_REGISTER_HOSTNAME */
 
-/* Forward declare the Server::start() function. */
-namespace System {
-namespace Impl {
-class Server
-{
-public:
-    static void start();
-};
-} // namespace Impl
-} // namespace System
+void rtos_ip_start(void){}
 
 void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent)
 {
@@ -122,7 +112,7 @@ void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent)
         been created. */
         if (xTasksAlreadyCreated == pdFALSE)
         {
-            System::Impl::Server::start();
+            rtos_ip_start();
 
             /*
              * For convenience, tasks that use FreeRTOS+TCP can be created here

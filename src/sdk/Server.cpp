@@ -1,7 +1,4 @@
 #include "Server.hpp"
-#include "RTOS.hpp"
-#include "RTOS_IP.hpp"
-#include "System.hpp"
 
 #define SERVER_PORT_NUM 8000
 
@@ -154,4 +151,8 @@ void System::Impl::Server::shutdown(void)
     FreeRTOS_closesocket(server_socket);
     vTaskDelay(pdMS_TO_TICKS(10));
     vLoggingPrintf("Network Down!\n");
+}
+
+extern "C" {
+void rtos_ip_start(void) { System::Impl::Server::start(); }
 }

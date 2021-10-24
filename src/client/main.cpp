@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 
     auto print_options = []() {
         puts("Test options:\n"
-             "\t1) restart\n"
+             "\t1) make and restart\n"
              "\t2) reconnect\n"
              "\t3) remote_restart\n"
              "\t4) sync_test\n"
@@ -102,6 +102,7 @@ int main(int argc, char **argv)
         switch (s[0])
         {
         case '1': {
+            disconnect();
             restart();
             print_options();
             break;
@@ -145,6 +146,29 @@ int main(int argc, char **argv)
 
 void restart()
 {
+    FILE *fp;
+    system("");
+
+    char path[1024];
+
+    /* Open the command for reading. */
+    fp = popen("/bin/bash /home/jordan/Documents/2021/ecu-dev/make", "r");
+
+    if (fp == nullptr)
+    {
+        printf("Failed to run command\n");
+        return;
+    }
+
+    /* Read the output a line at a time - output it. */
+    while (fgets(path, sizeof(path), fp) != nullptr)
+    {
+        printf("%s", path);
+    }
+
+    /* close */
+    pclose(fp);
+
     const char *client_filename = "/home/jordan/Documents/2021/ecu-dev/bin/amd64/ecu_client";
 
     struct stat file_status = {};
