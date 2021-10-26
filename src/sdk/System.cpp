@@ -1,6 +1,8 @@
 #include "System.hpp"
-#include "Server.hpp"
+#include "CRC.h"
+#include "RTOS.hpp"
 #include <csignal>
+#include <cstring>
 #include <iostream>
 #include <unistd.h>
 
@@ -11,6 +13,20 @@ static void end(int signal)
 }
 
 namespace System {
+
+namespace Impl {
+
+class Server
+{
+public:
+    static void init(void);
+
+    static void start(void);
+
+    static void shutdown(void);
+};
+
+} // namespace Impl
 
 std::string System::Impl::get_executable_path() { return System::Impl::s_argv[0]; }
 

@@ -7,6 +7,7 @@ set(TOOLCHAIN /usr/bin/arm-linux-gnueabihf)
 
 set(CMAKE_C_COMPILER ${TOOLCHAIN}-gcc)
 set(CMAKE_CXX_COMPILER ${TOOLCHAIN}-g++)
+set(CMAKE_STRIP ${TOOLCHAIN}-strip)
 
 set(CMAKE_SYSROOT $ENV{HOME}/raspberrypi/rootfs)
 SET(CMAKE_FIND_ROOT_PATH ${CMAKE_SYSROOT})
@@ -40,6 +41,6 @@ set(C_FLGS " \
     -mno-unaligned-access"
 )
 
-set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} ${COMMON_FLAGS} -k")
+set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} ${COMMON_FLAGS}")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS} ${C_FLGS} -std=gnu99 -Wno-implicit")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS} ${C_FLGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS} ${C_FLGS} -std=c++11")

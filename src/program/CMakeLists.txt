@@ -21,6 +21,13 @@ target_link_libraries(ecu_program
     ecu_sdk
 )
 
+if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    add_custom_command(TARGET ecu_program POST_BUILD
+        COMMAND ${CMAKE_STRIP} -g -S -d --strip-debug
+        "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/ecu_program"
+    )
+endif()
+
 set(ECU_PROGRAM_INCLUDE
     ${ECU_PROGRAM_INCLUDE}
     PARENT_SCOPE

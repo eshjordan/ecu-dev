@@ -101,10 +101,6 @@ const char *pcApplicationHostnameHook(void) { return "jordan-ecu"; }
 
 #endif /* ipconfigDHCP_REGISTER_HOSTNAME */
 
-#ifndef STATIC_PROGRAM
-void rtos_ip_start(void) {}
-#endif
-
 void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent)
 {
     static BaseType_t xTasksAlreadyCreated = pdFALSE;

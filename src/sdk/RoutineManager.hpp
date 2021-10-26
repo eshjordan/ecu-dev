@@ -1,8 +1,10 @@
 #pragma once
 
+#include "RTOS.hpp"
 #include "Routine.hpp"
 #include <cstdint>
 #include <cstring>
+#include <string>
 
 namespace System {
 namespace Impl {

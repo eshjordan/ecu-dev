@@ -99,6 +99,13 @@ target_link_libraries(rtos
     pcap
 )
 
+if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    add_custom_command(TARGET rtos POST_BUILD
+        COMMAND ${CMAKE_STRIP} -g -S -d --strip-debug
+        "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/librtos.so"
+    )
+endif()
+
 set(FreeRTOS_INCLUDE_DIRS
     ${FreeRTOS_INCLUDE_DIRS}
     PARENT_SCOPE

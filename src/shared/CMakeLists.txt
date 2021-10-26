@@ -22,6 +22,13 @@ target_link_libraries(ecu_shared
     pthread
 )
 
+if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    add_custom_command(TARGET ecu_shared POST_BUILD
+        COMMAND ${CMAKE_STRIP} -g -S -d --strip-debug
+        "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libecu_shared.so"
+    )
+endif()
+
 set(ECU_SHARED_INCLUDE
     ${ECU_SHARED_INCLUDE}
     PARENT_SCOPE
