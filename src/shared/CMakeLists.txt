@@ -14,13 +14,12 @@ include_directories(
     ${ECU_SHARED_INCLUDE}
 )
 
-add_library(ecu_shared ${BUILD_LIBS_AS}
+add_library(ecu_shared
     ${ECU_SHARED_SRC}
 )
 
 target_link_libraries(ecu_shared
     pthread
-    rtos
 )
 
 set(ECU_SHARED_INCLUDE

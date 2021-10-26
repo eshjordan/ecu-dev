@@ -2,6 +2,7 @@
 
 #include "Routine.hpp"
 #include <cstdint>
+#include <cstring>
 
 namespace System {
 namespace Impl {
@@ -14,96 +15,43 @@ class RoutineManager
 {
 
 private:
-    /**
-     * @brief Get the single instance of the System object. Shouldn't be accessed outside the class.
-     *
-     * @return System* Pointer to the System object.
-     */
-    static RoutineManager *get_instance(void)
-    {
-        static RoutineManager instance; // Guaranteed to be destroyed.
-                                        // Instantiated on first use.
-        return &instance;
-    }
-
-    /** Rule of Six */
-
-    /**
-     * @brief Default constructor. Construct the RoutineManager instance. Private because the class is a singleton.
-     *
-     */
-    RoutineManager(void) = default;
-
-    /**
-     * @brief Destructor. Destroy the RoutineManager instance. Private because the class is a singleton.
-     *
-     */
-    ~RoutineManager(void) = default;
-
-public:
-    /**
-     * @brief Copy constructor. Deleted because the class is a singleton.
-     *
-     */
-    RoutineManager(const RoutineManager &other) = delete;
-
-    /**
-     * @brief Copy assignment operator. Deleted because the class is a singleton.
-     *
-     */
-    RoutineManager &operator=(RoutineManager const &other) = delete;
-
-    /**
-     * @brief Move constructor. Deleted because the class is a singleton.
-     *
-     * @param other Other System object to move.
-     */
-    RoutineManager(RoutineManager &&other) = delete;
-
-    /**
-     * @brief Move assignment operator. Deleted because the class is a singleton.
-     *
-     */
-    RoutineManager &operator=(RoutineManager &&other) = delete;
-
-private:
     /** Member variables */
 
     /**
      * @brief List of routines to be executed.
      *
      */
-    Routine **m_routines = static_cast<Routine **>(pvPortMalloc(1000UL * sizeof(Routine *)));
+    static Routine* m_routines[];
 
     /**
      * @brief List of tasks under execution.
      *
      */
-    TaskHandle_t *m_tasks = static_cast<TaskHandle_t *>(pvPortMalloc(1000UL * sizeof(TaskHandle_t)));
+    static TaskHandle_t* m_tasks[];
 
     /**
      * @brief List of timers under execution.
      *
      */
-    TimerHandle_t *m_timers = static_cast<TimerHandle_t *>(pvPortMalloc(1000UL * sizeof(TimerHandle_t)));
+    static TimerHandle_t* m_timers[];
 
     /**
      * @brief The number of routines in the system.
      *
      */
-    uint32_t m_routines_count{};
+    static uint32_t m_routines_count;
 
     /**
      * @brief The number of tasks in the system.
      *
      */
-    uint32_t m_tasks_count{};
+    static uint32_t m_tasks_count;
 
     /**
      * @brief The number of timers in the system.
      *
      */
-    uint32_t m_timers_count{};
+    static uint32_t m_timers_count;
 
 public:
     /**
@@ -114,21 +62,24 @@ public:
      * @param factory Used to create an instance of the generated class, which contains the FunctionBody.
      * @return Routine* Pointer to the created routine (as Routine class).
      */
-    template <typename T> static Routine *register_routine(RoutineFactory<T> *factory)
+    template <typename T> static Routine* register_routine(RoutineFactory<T> *factory)
     {
         /* Register Routine */
-
-        RoutineManager *manager = RoutineManager::get_instance();
         T *rout                 = factory->create_routine();
 
-        manager->m_routines[manager->m_routines_count] = rout;
-        manager->m_routines_count++;
+        RoutineManager::m_routines[RoutineManager::m_routines_count] = rout;
+        RoutineManager::m_routines_count++;
 
         /* Register its Task */
 
+        char task_name[128] = "";
+        char timer_name[128] = "";
+        strncat(strncpy(task_name, rout->m_name.data(), sizeof(task_name)), "_task", sizeof(task_name) - strlen(task_name));
+        strncat(strncpy(timer_name, rout->m_name.data(), sizeof(timer_name)), "_timer", sizeof(timer_name) - strlen(timer_name));
+
         TaskHandle_t task = nullptr;
         xTaskCreate(rout->task_cb,                    /* Function that implements the task. */
-                    (rout->m_name + "_task").c_str(), /* Name of the task. */
+                    task_name, /* Name of the task. */
                     10000,                            /* Stack size in words, not bytes. */
                     nullptr,                          /* Parameter passed into the task. */
                     tskIDLE_PRIORITY,                 /* Priority of the task. */
@@ -137,15 +88,15 @@ public:
 
         rout->task_handle = task;
 
-        manager->m_tasks[manager->m_tasks_count] = rout->task_handle;
-        manager->m_tasks_count++;
+        RoutineManager::m_tasks[RoutineManager::m_tasks_count] = &rout->task_handle;
+        RoutineManager::m_tasks_count++;
 
         /* Register its Timer */
 
         const auto period      = (size_t)(1000.0 / rout->m_frequency);
         const TickType_t ticks = pdMS_TO_TICKS(period);
 
-        rout->timer_handle = xTimerCreate(rout->m_name.c_str(), /* The text name assigned to the software timer - for
+        rout->timer_handle = xTimerCreate(timer_name, /* The text name assigned to the software timer - for
                                                                    debug only as it is not used by the kernel. */
                                           ticks,                /* The period of the software timer in ticks. */
                                           true,                 /* xAutoReload is set to pdTRUE. */
@@ -153,8 +104,8 @@ public:
                                           rout->timer_cb        /* The function executed when the timer expires. */
         );
 
-        manager->m_timers[manager->m_timers_count] = rout->timer_handle;
-        manager->m_timers_count++;
+        RoutineManager::m_timers[RoutineManager::m_timers_count] = &rout->timer_handle;
+        RoutineManager::m_timers_count++;
 
         xTimerStart(rout->timer_handle, 0);
 

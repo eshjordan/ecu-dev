@@ -73,7 +73,7 @@ public:
      *
      * @return Routine* Pointer to the newly generated Routine.
      */
-    virtual Routine *create_routine(void) = 0;
+    virtual Routine* create_routine(void) = 0;
 };
 
 /**
@@ -83,6 +83,9 @@ public:
  */
 template <class RoutineClass> class RoutineFactory : RoutineFactoryBase
 {
+private:
+    RoutineClass m_routine_class_instance{};
+
 public:
     /**
      * @brief Construct a new Routine Factory object.
@@ -95,11 +98,26 @@ public:
      *
      * @return RoutineClass* Pointer to the newly generated Routine.
      */
-    RoutineClass *create_routine(void) override { return new RoutineClass; }
+    RoutineClass* create_routine(void) override { return &m_routine_class_instance; }
 };
 
 } // namespace Impl
 } // namespace System
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // clang-format off
 
@@ -133,6 +151,7 @@ public: \
  \
 private: \
     const static System::Impl::Routine *const result_; \
+    static System::Impl::RoutineFactory<name##_t> factory_; \
     friend class System::Impl::RoutineManager; \
 }; \
 } /* namespace Generated */ \
@@ -154,8 +173,9 @@ void System::Generated::name##_t::timer_cb(TimerHandle_t xTimer) \
     xTaskNotify(res->task_handle, 0, eNoAction); \
 } \
  \
+System::Impl::RoutineFactory<System::Generated::name##_t> System::Generated::name##_t::factory_{}; \
 const System::Impl::Routine *const System::Generated::name##_t::result_ = \
-    System::Impl::RoutineManager::register_routine(new System::Impl::RoutineFactory<name##_t>); \
+    System::Impl::RoutineManager::register_routine(&System::Generated::name##_t::factory_); \
 void System::Generated::name##_t::FunctionBody()
 
 // clang-format on

@@ -1,4 +1,5 @@
 #include "Server.hpp"
+#include "portmacro.h"
 
 #define SERVER_PORT_NUM 8000
 
@@ -78,6 +79,14 @@ void System::Impl::Server::start_task(void *arg)
 
 void System::Impl::Server::listen_task(void *arg)
 {
+    // TickType_t timeout = 0;
+
+    // FreeRTOS_setsockopt(server_socket,        /* The socket being modified. */
+    //                     0,                    /* Not used. */
+    //                     FREERTOS_SO_RCVTIMEO, /* Setting receive timeout. */
+    //                     &timeout,             /* The timeout value. */
+    //                     0);                   /* Not used. */
+
     long listenStatus = FreeRTOS_listen(server_socket, 20);
 
     while (listenStatus != 0)
@@ -91,20 +100,19 @@ void System::Impl::Server::listen_task(void *arg)
     {
         vLoggingPrintf("Listening!\n");
 
-        auto *connected_socket = new Socket_t;
-        auto *client_address   = new freertos_sockaddr;
-        uint32_t address_size  = sizeof(freertos_sockaddr);
+        freertos_sockaddr client_address = {};
+        uint32_t address_size            = sizeof(freertos_sockaddr);
 
-        *connected_socket = FreeRTOS_accept(server_socket, client_address, &address_size);
+        Socket_t connected_socket = FreeRTOS_accept(server_socket, &client_address, &address_size);
 
-        if (*connected_socket && *connected_socket != FREERTOS_INVALID_SOCKET)
+        if (connected_socket && connected_socket != FREERTOS_INVALID_SOCKET)
         {
             // Create a new Connection instance
             std::shared_ptr<Connection> connection = std::make_shared<Connection>(connected_socket, client_address);
             connections.push_back(connection);
         } else
         {
-            print_accept_err(*connected_socket);
+            print_accept_err(connected_socket);
         }
 
         // Remove connection from list if it is not open

@@ -13,6 +13,15 @@ cd ${root_dir}/build/amd64
 cmake ${root_dir}
 make -j$(nproc)
 
-scp -i ~/.ssh/id_rsa ${root_dir}/lib/raspi/* pi@192.168.10.112:/home/pi/ecu/lib
-scp -i ~/.ssh/id_rsa ${root_dir}/bin/raspi/* pi@192.168.10.112:/home/pi/ecu/bin
-ssh pi@192.168.10.112 "sudo bash -c 'echo /home/pi/ecu/lib > /etc/ld.so.conf.d/ecu.conf; ldconfig'"
+eval `ssh-agent -s` > /dev/null
+ssh-add
+
+ssh pi@raspi "/bin/bash -c '\
+rm -r /home/pi/ecu/; \
+mkdir -p /home/pi/ecu/{bin,lib} \
+'"
+
+rsync -rvaz --exclude "*.a" ${root_dir}/lib/raspi/* pi@raspi:/home/pi/ecu/lib
+rsync -rvaz ${root_dir}/bin/raspi/* pi@raspi:/home/pi/ecu/bin
+
+# ssh pi@raspi "sudo bash -c 'echo /home/pi/ecu/lib > /etc/ld.so.conf.d/ecu.conf; ldconfig'"

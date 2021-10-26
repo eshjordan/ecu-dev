@@ -9,8 +9,23 @@ file(GLOB FreeRTOS_CORE_SRC
     ${CMAKE_SOURCE_DIR}/src/libs/FreeRTOS/Source/list.c
     ${CMAKE_SOURCE_DIR}/src/libs/FreeRTOS/Source/portable/ThirdParty/GCC/Posix/port.c
     ${CMAKE_SOURCE_DIR}/src/libs/FreeRTOS/Source/portable/ThirdParty/GCC/Posix/utils/wait_for_event.c
-    ${CMAKE_SOURCE_DIR}/src/libs/FreeRTOS/Source/portable/MemMang/heap_4.c
 )
+
+if(${STATIC_PROGRAM})
+    file(GLOB FreeRTOS_CORE_SRC
+        ${FreeRTOS_CORE_SRC}
+        ${CMAKE_SOURCE_DIR}/src/libs/FreeRTOS/Source/portable/MemMang/heap_1.c
+    )
+
+    # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,-wrap,vPortFree")
+
+else()
+    file(GLOB FreeRTOS_CORE_SRC
+        ${FreeRTOS_CORE_SRC}
+        ${CMAKE_SOURCE_DIR}/src/libs/FreeRTOS/Source/portable/MemMang/heap_4.c
+    )
+
+endif()
 
 file(GLOB FreeRTOS_OPT_SRC
     # Optional
@@ -40,7 +55,7 @@ file(GLOB FreeRTOS_TCP_INTERFACE_SRC
 
 file(GLOB FreeRTOS_TCP_BUFFER_SRC
     # Buffer Management
-    ${CMAKE_SOURCE_DIR}/src/libs/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/BufferManagement/BufferAllocation_2.c
+    ${CMAKE_SOURCE_DIR}/src/libs/FreeRTOS-Plus/Source/FreeRTOS-Plus-TCP/portable/BufferManagement/BufferAllocation_1.c
 )
 
 file(GLOB FreeRTOS_SRC
@@ -75,7 +90,7 @@ include_directories(
     ${FreeRTOS_INCLUDE_DIRS}
 )
 
-add_library(rtos ${BUILD_LIBS_AS}
+add_library(rtos
     ${FreeRTOS_SRC}
 )
 

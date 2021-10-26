@@ -13,7 +13,7 @@ void Connection::synchronize_connection(Message_t *message)
 {
     auto num_messages = *(uint64_t *)&message->data;
 
-    vLoggingPrintf("Synchronizing connection to %s, with %lld msgs...\n", ip_to_str(m_address->sin_addr), num_messages);
+    vLoggingPrintf("Synchronizing connection to %s, with %lld msgs...\n", m_ip_str, num_messages);
 
     std::vector<Time_t> sent_times;
     sent_times.reserve(num_messages);
@@ -126,7 +126,7 @@ void Connection::synchronize_connection(Message_t *message)
     int64_t seconds     = avg_time / 1000000000;
     int64_t nanoseconds = avg_time % 1000000000;
 
-    vLoggingPrintf("Time offset - %s: %lld.%lld sec\n", ip_to_str(m_address->sin_addr), seconds, nanoseconds);
+    vLoggingPrintf("Time offset - %s: %lld.%lld sec\n", m_ip_str, seconds, nanoseconds);
 
     Message_t seconds_msg;
     make_message(&seconds_msg,    /* Destination message. */
@@ -184,7 +184,7 @@ void Connection::download_firmware(Message_t *message)
         return;
     }
 
-    auto *received_firmware = (uint8_t *)pvPortMalloc(firmware_size);
+    auto *received_firmware = new uint8_t[firmware_size];
     memset(received_firmware, 0, firmware_size);
 
     BaseType_t success_count = 0;
@@ -193,12 +193,12 @@ void Connection::download_firmware(Message_t *message)
     while (success_count < firmware_size)
     {
         memset(m_rx_buffer, 0, sizeof(m_rx_buffer));
-        BaseType_t rx_bytes = FreeRTOS_recv(*m_socket, received_firmware + success_count, ipconfigTCP_MSS, 0);
+        BaseType_t rx_bytes = FreeRTOS_recv(m_socket, received_firmware + success_count, ipconfigTCP_MSS, 0);
 
         if (rx_bytes < 0)
         {
             print_recv_err(rx_bytes);
-            vPortFree(received_firmware);
+            delete[] received_firmware;
             close();
             return;
         }
@@ -216,7 +216,7 @@ void Connection::download_firmware(Message_t *message)
     if (received_crc != transmitted_crc)
     {
         vLoggingPrintf("Firmware CRC mismatch: %u != %u\n", received_crc, transmitted_crc);
-        vPortFree(received_firmware);
+        delete[] received_firmware;
         return;
     }
 
@@ -230,7 +230,7 @@ void Connection::download_firmware(Message_t *message)
     // Send acknowledgement
     if (send_message(&ack_msg) < 0)
     {
-        vPortFree(received_firmware);
+        delete[] received_firmware;
         close();
         return;
     }
@@ -246,7 +246,7 @@ void Connection::download_firmware(Message_t *message)
     std::fstream output_f(filename, std::ios::out | std::ios::trunc | std::ios::binary);
     output_f.write((char *)&received_firmware[0], success_count);
 
-    vPortFree(received_firmware);
+    delete[] received_firmware;
 
     if (!output_f.good())
     {

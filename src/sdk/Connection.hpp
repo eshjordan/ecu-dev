@@ -10,14 +10,15 @@ class Connection
 {
 
 private:
-    const Socket_t *m_socket{};
-    const freertos_sockaddr *m_address{};
-    uint32_t m_seq{0};
-    TaskHandle_t m_run_task{};
-    bool m_connected                         = false;
-    bool m_open                              = false;
-    uint8_t m_rx_buffer[ipconfigNETWORK_MTU] = {0};
-    uint8_t m_tx_buffer[ipconfigNETWORK_MTU] = {0};
+    const Socket_t m_socket                      = {};
+    const freertos_sockaddr m_address            = {};
+    const char m_ip_str[16]                      = {0};
+    const struct tskTaskControlBlock *m_run_task = {};
+    uint32_t m_seq                               = {0};
+    bool m_connected                             = false;
+    bool m_open                                  = false;
+    uint8_t m_rx_buffer[ipconfigNETWORK_MTU]     = {0};
+    uint8_t m_tx_buffer[ipconfigNETWORK_MTU]     = {0};
 
     void init(void);
 
@@ -36,7 +37,7 @@ private:
     void download_firmware(Message_t *message);
 
 public:
-    Connection(const Socket_t *socket, const freertos_sockaddr *address);
+    Connection(const Socket_t &socket, const freertos_sockaddr &address);
 
     ~Connection(void) { close(); }
 

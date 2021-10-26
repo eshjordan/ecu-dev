@@ -52,7 +52,7 @@ extern "C" {
 #define configMINIMAL_STACK_SIZE                                                                                       \
     ((unsigned short)70) /* In this simulated case, the stack only has to hold one small structure as the real stack   \
                             is part of the win32 thread. */
-#define configTOTAL_HEAP_SIZE ((size_t)(64 * 1024 * 1024))
+#define configTOTAL_HEAP_SIZE ((size_t)(64 * 1024 * 1024 + 7324800*1.5))
 #define configMAX_TASK_NAME_LEN (12)
 #define configUSE_TRACE_FACILITY 0
 #define configUSE_16_BIT_TICKS 0
@@ -166,7 +166,7 @@ extern void vAssertCalled(const char *const pcFileName, unsigned long ulLine);
 #define configIP_ADDR0 192
 #define configIP_ADDR1 168
 #define configIP_ADDR2 10
-#define configIP_ADDR3 116
+#define configIP_ADDR3 112
 
 /* Default gateway IP address configuration.  Used in ipconfigUSE_DNS is set to 0, or ipconfigUSE_DNS is set to 1 but a
  * DNS server cannot be contacted. */

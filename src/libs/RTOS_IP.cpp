@@ -1,6 +1,8 @@
 #include "RTOS_IP.hpp"
+#include "FreeRTOS_IP_Private.h"
 #include <cstdarg>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 
 /* The default IP and MAC address used by the demo.  The address configuration
@@ -99,7 +101,9 @@ const char *pcApplicationHostnameHook(void) { return "jordan-ecu"; }
 
 #endif /* ipconfigDHCP_REGISTER_HOSTNAME */
 
-void rtos_ip_start(void){}
+#ifndef STATIC_PROGRAM
+void rtos_ip_start(void) {}
+#endif
 
 void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent)
 {
@@ -123,19 +127,34 @@ void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent)
     }
 }
 
-char *ip_to_str(const uint32_t ip_value)
+void vNetworkInterfaceAllocateRAMToBuffers(
+    NetworkBufferDescriptor_t pxNetworkBuffers[ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS])
+{
+    for (int x = 0; x < ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS; x++)
+    {
+        NetworkBufferDescriptor_t *current = &pxNetworkBuffers[x];
+        auto *buf                          = (uint8_t *)pvPortMalloc(ipTOTAL_ETHERNET_FRAME_SIZE + ipBUFFER_PADDING);
+        current->pucEthernetBuffer         = buf + ipBUFFER_PADDING;
+
+        // See https://www.freertos.org/FreeRTOS-Plus/FreeRTOS_Plus_TCP/Embedded_Ethernet_Porting.html#vNetworkInterfaceAllocateRAMToBuffers
+        *((NetworkBufferDescriptor_t **)buf) = &(pxNetworkBuffers[x]);
+
+        // current->xDataLength = ipconfigNETWORK_MTU;
+    }
+
+    // auto a = sizeof(NetworkBufferDescriptor_t) * ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS * ipconfigNETWORK_MTU;
+}
+
+void ip_to_str(char dst[16], const uint32_t ip_value)
 {
     uint8_t ip_written = 0;
-    char *ip           = (char *)pvPortMalloc(sizeof(char) * 16);
 
     for (int i = 0; i < ipIP_ADDRESS_LENGTH_BYTES; i++)
     {
-        ip_written += sprintf(ip + ip_written, "%u.", ip_value >> (8U * i) & 0xFFU);
+        ip_written += sprintf(dst + ip_written, "%u.", ip_value >> (8U * i) & 0xFFU);
     }
 
-    ip[ip_written - 1] = '\0';
-
-    return ip;
+    dst[ip_written - 1] = '\0';
 }
 
 void print_network_stats(void)

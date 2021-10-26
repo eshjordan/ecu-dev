@@ -1,28 +1,30 @@
 #include "Connection.hpp"
+#include "RTOS_IP.hpp"
 #include "System.hpp"
 
 namespace System {
 namespace Impl {
 
-Connection::Connection(const Socket_t *socket, const freertos_sockaddr *address) : m_socket(socket), m_address(address)
+Connection::Connection(const Socket_t &socket, const freertos_sockaddr &address) : m_socket(socket), m_address(address)
 {
     init();
 
     xTaskCreate(manage_connection, "connection_task", 10000, /* Stack size in words, not bytes. */
                 (void *)this,                                /* Parameter passed into the task. */
                 tskIDLE_PRIORITY,                            /* Priority of the task. */
-                &m_run_task);                                /* Task handle. */
+                const_cast<TaskHandle_t *>(&m_run_task));    /* Task handle. */
 }
 
 void Connection::init(void)
 {
-    m_connected = m_open = FreeRTOS_issocketconnected(*m_socket);
-    vLoggingPrintf("Connection opened! - %s\n", ip_to_str(m_address->sin_addr));
+    ip_to_str(const_cast<char *>(m_ip_str), m_address.sin_addr);
+    m_connected = m_open = FreeRTOS_issocketconnected(m_socket);
+    vLoggingPrintf("Connection opened! - %s\n", m_ip_str);
 }
 
 BaseType_t Connection::receive_message(Message_t *message)
 {
-    BaseType_t rx_bytes = FreeRTOS_recv(*m_socket, message, sizeof(Message_t), 0);
+    BaseType_t rx_bytes = FreeRTOS_recv(m_socket, message, sizeof(Message_t), 0);
     if (rx_bytes < 0)
     {
         print_recv_err(rx_bytes);
@@ -33,7 +35,7 @@ BaseType_t Connection::receive_message(Message_t *message)
 
 BaseType_t Connection::send_message(Message_t *message)
 {
-    BaseType_t tx_bytes = FreeRTOS_send(*m_socket, message, sizeof(Message_t), 0);
+    BaseType_t tx_bytes = FreeRTOS_send(m_socket, message, sizeof(Message_t), 0);
     if (tx_bytes < 0)
     {
         print_send_err(tx_bytes);
@@ -46,15 +48,15 @@ void Connection::disconnect(void)
 {
     if (!is_open())
     {
-        vLoggingPrintf("Already disconnected! - %s\n", ip_to_str(m_address->sin_addr));
+        vLoggingPrintf("Already disconnected! - %s\n", m_ip_str);
         return;
     }
 
     m_open = false;
 
-    FreeRTOS_shutdown(*m_socket, FREERTOS_SHUT_RDWR);
+    FreeRTOS_shutdown(m_socket, FREERTOS_SHUT_RDWR);
 
-    vLoggingPrintf("Disconnected! - %s\n", ip_to_str(m_address->sin_addr));
+    vLoggingPrintf("Disconnected! - %s\n", m_ip_str);
 }
 
 void Connection::close(void)
@@ -63,15 +65,15 @@ void Connection::close(void)
 
     if (!is_connected())
     {
-        vLoggingPrintf("Already closed! - %s\n", ip_to_str(m_address->sin_addr));
+        vLoggingPrintf("Already closed! - %s\n", m_ip_str);
         return;
     }
 
     m_connected = false;
 
-    FreeRTOS_closesocket(*m_socket);
+    FreeRTOS_closesocket(m_socket);
 
-    vLoggingPrintf("Connection closed! - %s\n", ip_to_str(m_address->sin_addr));
+    vLoggingPrintf("Connection closed! - %s\n", m_ip_str);
 
     // vTaskDelete(m_run_task);
 }

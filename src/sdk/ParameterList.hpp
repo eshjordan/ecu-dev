@@ -15,69 +15,12 @@ namespace Impl {
 class ParameterList
 {
 private:
-    /**
-     * @brief Get the single instance of the ParameterList object. Shouldn't be accessed outside the class.
-     *
-     * @return ParameterList* Pointer to the ParameterList object.
-     */
-    static ParameterList *get_instance(void)
-    {
-        static ParameterList instance; // Guaranteed to be destroyed.
-                                       // Instantiated on first use.
-        return &instance;
-    }
-
-    /** Rule of Six */
-
-    /**
-     * @brief Default constructor. Construct the ParameterList instance. Private because the class is a singleton.
-     *
-     */
-    ParameterList(void) = default;
-
-    /**
-     * @brief Default destructor. Destroy the ParameterList instance. Private because the class is a singleton.
-     *
-     */
-    ~ParameterList(void) = default;
-
-public:
-    /**
-     * @brief Copy constructor. Deleted because the class is a singleton.
-     *
-     */
-    ParameterList(ParameterList const &other) = delete;
-
-    /**
-     * @brief Copy assignment operator. Deleted because the class is a singleton.
-     *
-     */
-    void operator=(ParameterList const &other) = delete;
-
-    /**
-     * @brief Move constructor. Deleted because the class is a singleton.
-     *
-     */
-    ParameterList(ParameterList &&other) = delete;
-
-    /**
-     * @brief Move assignment operator. Deleted because the class is a singleton.
-     *
-     */
-    ParameterList &operator=(ParameterList &&other) = delete;
-
-private:
     /** Member variables */
 
-    /**
-     * @brief Utility function to get the internal list of Parameters (within class only).
-     *
-     * @return std::vector<ParameterBase *>& Mutable reference to the internal list of Parameters.
-     */
-    static std::vector<ParameterBase *> &get_list(void) { return ParameterList::get_instance()->m_parameters; }
-
     /** @brief List of ParameterBase pointers. */
-    std::vector<ParameterBase *> m_parameters{};
+    static ParameterBase* m_parameters[];
+
+    static uint32_t m_parameter_count;
 
 public:
     /**
@@ -108,37 +51,29 @@ public:
     template <typename T> static void set_parameter(const std::string &name, const T &value);
 
     /**
-     * @brief Return a constant reference to the internal list of Parameters.
-     *
-     * @return const std::vector<const ParameterBase *>& Constant reference to the internal list of Parameters.
-     */
-    static const std::vector<const ParameterBase *> &parameter_list(void)
-    {
-        return *reinterpret_cast<std::vector<const ParameterBase *> *>(&(get_instance()->m_parameters));
-    }
-
-    /**
      * @brief Get the number of Parameters in the ParameterList.
      *
      * @return size_t Number of Parameters in the ParameterList.
      */
-    [[nodiscard]] static inline size_t get_size(void) { return ParameterList::get_instance()->m_parameters.size(); }
+    [[nodiscard]] static inline size_t get_size(void) { return m_parameter_count; }
 };
 
 template <typename T> void ParameterList::add_parameter(const std::string &name, const T &value)
 {
-    for (auto *parameter : get_list())
+    for (int i = 0; i < m_parameter_count; i++)
     {
+        auto *parameter = m_parameters[i];
         if (parameter->get_name() == name) { throw std::runtime_error("Parameter '" + name + "' already registered."); }
     }
-    auto *parameter = new Parameter<T>(name, value);
-    get_list().push_back(parameter);
+    
+    m_parameters[m_parameter_count++] = new Parameter<T>(name, value);
 }
 
 template <typename T> [[nodiscard]] T ParameterList::get_parameter(const std::string &name)
 {
-    for (auto *parameter : get_list())
+    for (int i = 0; i < m_parameter_count; i++)
     {
+        auto *parameter = m_parameters[i];
         if (parameter->get_name() == name) { return dynamic_cast<Parameter<T> *>(parameter)->get_value(); }
     }
 
@@ -147,8 +82,9 @@ template <typename T> [[nodiscard]] T ParameterList::get_parameter(const std::st
 
 template <typename T> void ParameterList::set_parameter(const std::string &name, const T &value)
 {
-    for (auto *parameter : get_list())
+    for (int i = 0; i < m_parameter_count; i++)
     {
+        auto *parameter = m_parameters[i];
         if (parameter->get_name() == name)
         {
             if (type_hash<T>() != parameter->get_type())

@@ -68,7 +68,7 @@ static size_t xNextFreeByte = ( size_t ) 0;
 
 /*-----------------------------------------------------------*/
 
-void * pvPortMalloc( size_t xWantedSize )
+void * __pvPortMalloc( size_t xWantedSize )
 {
     void * pvReturn = NULL;
     static uint8_t * pucAlignedHeap = NULL;
@@ -128,7 +128,7 @@ void * pvPortMalloc( size_t xWantedSize )
 }
 /*-----------------------------------------------------------*/
 
-void vPortFree( void * pv )
+void __vPortFree( void * pv )
 {
     /* Memory cannot be freed using this scheme.  See heap_2.c, heap_3.c and
      * heap_4.c for alternative implementations, and the memory management pages of
@@ -138,6 +138,7 @@ void vPortFree( void * pv )
     /* Force an assert as it is invalid to call this function. */
     configASSERT( pv == NULL );
 }
+
 /*-----------------------------------------------------------*/
 
 void vPortInitialiseBlocks( void )

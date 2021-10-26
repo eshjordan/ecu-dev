@@ -169,11 +169,50 @@ void vPortDefineHeapRegions( const HeapRegion_t * const pxHeapRegions ) PRIVILEG
  */
 void vPortGetHeapStats( HeapStats_t * pxHeapStats );
 
+#ifndef STATIC_PROGRAM
+
 /*
  * Map to the memory management routines required for the port.
  */
 void * pvPortMalloc( size_t xSize ) PRIVILEGED_FUNCTION;
 void vPortFree( void * pv ) PRIVILEGED_FUNCTION;
+
+#else
+
+#include <stdio.h>
+
+/*
+ * Map to the memory management routines required for the port.
+ */
+void * __pvPortMalloc( size_t xSize ) PRIVILEGED_FUNCTION;
+void __vPortFree( void * pv ) PRIVILEGED_FUNCTION;
+
+inline void * _pvPortMalloc( size_t xSize, const char *func, const char *file, int line ) PRIVILEGED_FUNCTION
+{
+#ifdef LOG_STATIC_ALLOCATION_REQUESTS
+    printf("vPortMalloc called in function %s at %s:%d\n", func, file, line);
+#endif
+    return __pvPortMalloc(xSize);
+}
+
+inline void _vPortFree( void * pv, const char *func, const char *file, int line ) PRIVILEGED_FUNCTION
+{
+    /* Memory cannot be freed using this scheme.  See heap_2.c, heap_3.c and
+     * heap_4.c for alternative implementations, and the memory management pages of
+     * https://www.FreeRTOS.org for more information. */
+    ( void ) pv;
+
+#ifdef LOG_STATIC_ALLOCATION_REQUESTS
+    printf("vPortFree called in function %s at %s:%d\n", func, file, line);
+#endif
+}
+
+// Wrap the memory managers with our own versions that log the allocation requests for stack tracing.
+#define pvPortMalloc( xSize ) _pvPortMalloc( xSize, __FUNCTION__, __FILE__, __LINE__ )
+#define vPortFree( pv ) _vPortFree( pv, __FUNCTION__, __FILE__, __LINE__ )
+
+#endif
+
 void vPortInitialiseBlocks( void ) PRIVILEGED_FUNCTION;
 size_t xPortGetFreeHeapSize( void ) PRIVILEGED_FUNCTION;
 size_t xPortGetMinimumEverFreeHeapSize( void ) PRIVILEGED_FUNCTION;

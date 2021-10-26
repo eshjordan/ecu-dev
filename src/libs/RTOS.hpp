@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdio>
+
 extern "C" {
 
 /* FreeRTOS Kernel includes */
@@ -9,6 +11,10 @@ extern "C" {
 #include "task.h"
 
 // extern void *memcpy(void *__restrict __dest, const void *__restrict __src, size_t __n) __THROW __nonnull((1, 2));
+
+#ifdef STATIC_PROGRAM
+void __wrap_vPortFree(void *pv) PRIVILEGED_FUNCTION;
+#endif
 
 /* Prototypes for the standard FreeRTOS extern callback/hook functions we should
  * implement (some we don't need atm). */

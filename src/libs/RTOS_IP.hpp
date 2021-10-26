@@ -81,7 +81,7 @@ BaseType_t xApplicationDNSQueryHook(const char *pcName);
  * @brief Get string repr of IP address.
  *
  */
-char *ip_to_str(const uint32_t ip_value);
+void ip_to_str(char dst[16], uint32_t ip_value);
 
 /**
  * @brief Print network statistics.
@@ -104,6 +104,9 @@ const char *pcApplicationHostnameHook(void);
 #include "FreeRTOS_IP.h"
 #include "FreeRTOS_Sockets.h"
 
+void vNetworkInterfaceAllocateRAMToBuffers(
+    NetworkBufferDescriptor_t pxNetworkBuffers[ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS]);
+
 void print_bind_err(BaseType_t status);
 
 void print_listen_err(BaseType_t status);
@@ -114,7 +117,7 @@ void print_recv_err(BaseType_t status);
 
 void print_send_err(BaseType_t status);
 
-extern void rtos_ip_start(void);
+void rtos_ip_start(void);
 
 /**
  * @brief If ipconfigUSE_NETWORK_EVENT_HOOK is set to 1 then FreeRTOS+TCP will
@@ -126,5 +129,4 @@ extern void rtos_ip_start(void);
  * @param eNetworkEvent
  */
 void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent);
-
 }

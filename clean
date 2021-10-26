@@ -8,3 +8,8 @@ rm -rf ${root_dir}/bin/raspi/*
 rm -rf ${root_dir}/build/amd64/*
 rm -rf ${root_dir}/lib/amd64/*
 rm -rf ${root_dir}/bin/amd64/*
+
+ssh pi@raspi "/bin/bash -c '\
+rm -r /home/pi/ecu/; \
+mkdir -p /home/pi/ecu/{bin,lib} \
+'"

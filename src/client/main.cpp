@@ -1,6 +1,5 @@
 #include "CRC.h"
 #include "Message.h"
-#include "RTOS_IP.hpp"
 #include <arpa/inet.h>
 #include <cassert>
 #include <csignal>
