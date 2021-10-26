@@ -136,13 +136,10 @@ void vNetworkInterfaceAllocateRAMToBuffers(
         auto *buf                          = (uint8_t *)pvPortMalloc(ipTOTAL_ETHERNET_FRAME_SIZE + ipBUFFER_PADDING);
         current->pucEthernetBuffer         = buf + ipBUFFER_PADDING;
 
-        // See https://www.freertos.org/FreeRTOS-Plus/FreeRTOS_Plus_TCP/Embedded_Ethernet_Porting.html#vNetworkInterfaceAllocateRAMToBuffers
+        // See
+        // https://www.freertos.org/FreeRTOS-Plus/FreeRTOS_Plus_TCP/Embedded_Ethernet_Porting.html#vNetworkInterfaceAllocateRAMToBuffers
         *((NetworkBufferDescriptor_t **)buf) = &(pxNetworkBuffers[x]);
-
-        // current->xDataLength = ipconfigNETWORK_MTU;
     }
-
-    // auto a = sizeof(NetworkBufferDescriptor_t) * ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS * ipconfigNETWORK_MTU;
 }
 
 void ip_to_str(char dst[16], const uint32_t ip_value)

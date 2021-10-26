@@ -18,7 +18,7 @@ private:
     /** Member variables */
 
     /** @brief List of ParameterBase pointers. */
-    static ParameterBase* m_parameters[];
+    static ParameterBase *m_parameters[];
 
     static uint32_t m_parameter_count;
 
@@ -65,7 +65,7 @@ template <typename T> void ParameterList::add_parameter(const std::string &name,
         auto *parameter = m_parameters[i];
         if (parameter->get_name() == name) { throw std::runtime_error("Parameter '" + name + "' already registered."); }
     }
-    
+
     m_parameters[m_parameter_count++] = new Parameter<T>(name, value);
 }
 

@@ -73,7 +73,7 @@ public:
      *
      * @return Routine* Pointer to the newly generated Routine.
      */
-    virtual Routine* create_routine(void) = 0;
+    virtual Routine *create_routine(void) = 0;
 };
 
 /**
@@ -98,26 +98,11 @@ public:
      *
      * @return RoutineClass* Pointer to the newly generated Routine.
      */
-    RoutineClass* create_routine(void) override { return &m_routine_class_instance; }
+    RoutineClass *create_routine(void) override { return &m_routine_class_instance; }
 };
 
 } // namespace Impl
 } // namespace System
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // clang-format off
 
