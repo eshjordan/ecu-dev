@@ -13,8 +13,8 @@ cd ${root_dir}/build/amd64
 cmake ${root_dir}
 make -j$(nproc)
 
-eval `ssh-agent -s` > /dev/null
-ssh-add
+# eval `ssh-agent -s` > /dev/null
+# ssh-add
 
 ssh pi@raspi "/bin/bash -c '\
 rm -r /home/pi/ecu/; \

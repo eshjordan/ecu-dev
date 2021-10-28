@@ -54,7 +54,7 @@ extern "C" {
                             is part of the win32 thread. */
 #define configTOTAL_HEAP_SIZE ((size_t)(64 * 1024 * 1024 + 7324800*1.5))
 #define configMAX_TASK_NAME_LEN (12)
-#define configUSE_TRACE_FACILITY 0
+#define configUSE_TRACE_FACILITY 1
 #define configUSE_16_BIT_TICKS 0
 #define configIDLE_SHOULD_YIELD 1
 #define configUSE_MUTEXES 1
@@ -92,7 +92,7 @@ void vConfigureTimerForRunTimeStats(void);    /* Prototype of function that init
  * format the raw data provided by the uxTaskGetSystemState() function in to human
  * readable ASCII form.  See the notes in the implementation of vTaskList() within
  * FreeRTOS/Source/tasks.c for limitations. */
-#define configUSE_STATS_FORMATTING_FUNCTIONS 0
+#define configUSE_STATS_FORMATTING_FUNCTIONS 1
 
 /* Enables the test whereby a stack larger than the total heap size is
  * requested. */
@@ -124,6 +124,8 @@ void vConfigureTimerForRunTimeStats(void);    /* Prototype of function that init
 extern void vGenerateCoreBInterrupt(void *xUpdatedMessageBuffer);
 #define sbSEND_COMPLETED(pxStreamBuffer) vGenerateCoreBInterrupt(pxStreamBuffer)
 #endif /* configINCLUDE_MESSAGE_BUFFER_AMP_DEMO */
+
+#define configGENERATE_RUN_TIME_STATS 1
 
 extern void vAssertCalled(const char *const pcFileName, unsigned long ulLine);
 

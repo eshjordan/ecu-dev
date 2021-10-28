@@ -1,4 +1,5 @@
 #include "Server.hpp"
+#include "RTOS_IP.hpp"
 #include "portmacro.h"
 
 #define SERVER_PORT_NUM 8000

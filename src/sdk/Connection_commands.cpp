@@ -1,5 +1,7 @@
 #include "Connection.hpp"
+#include "Message.h"
 #include "System.hpp"
+#include <cstring>
 #include <fstream>
 #include <string>
 #include <sys/stat.h>
@@ -8,6 +10,72 @@
 
 namespace System {
 namespace Impl {
+
+void Connection::send_status(Message_t *message)
+{
+    const char task_list_header[] = "Task Status\n"
+                                    "Name         State   Priority  StackHighWaterMark  Num \n"
+                                    "*******************************************************\n";
+
+    const char runtime_stats_header[] = "\nTask Timings\n"
+                                        "Name          Ticks         Percentage \n"
+                                        "*************************************************\n";
+
+    constexpr uint16_t task_print_size = 40 * 100;
+    constexpr uint16_t msg_size =
+        sizeof(task_list_header) + task_print_size + sizeof(runtime_stats_header) + task_print_size;
+
+    Header_t header = {};
+    make_header(&header, m_seq++, get_time_now(), msg_size);
+
+    ssize_t tx = FreeRTOS_send(m_socket, &header, sizeof(header), 0);
+
+    if (tx < 0)
+    {
+        printf("Header send failed\n");
+        return;
+    }
+
+    char status_buffer[msg_size] = {0};
+    uint offset                  = 0;
+
+    // Copy task info header into buffer
+    strncpy(status_buffer, task_list_header, sizeof(task_list_header));
+    offset += sizeof(task_list_header);
+
+    // Copy detailed task info into buffer
+    vTaskList(status_buffer + offset);
+
+    printf("%s\n\n\n", status_buffer);
+
+    offset = msg_size / 2;
+
+    // Copy task timing header into buffer
+    strncpy(status_buffer + offset, runtime_stats_header, sizeof(runtime_stats_header));
+    offset += sizeof(runtime_stats_header);
+
+    // Copy task timing info into buffer
+    vTaskGetRunTimeStats(status_buffer + offset);
+
+    printf("%s\n\n\n", status_buffer + offset);
+
+    auto bytes_to_send = msg_size;
+    int tx_bytes       = 0;
+    while (tx_bytes < msg_size)
+    {
+        ssize_t tx = FreeRTOS_send(m_socket, status_buffer + tx_bytes,
+                                   bytes_to_send < ipconfigTCP_MSS ? bytes_to_send : ipconfigTCP_MSS, 0);
+
+        if (tx < 0)
+        {
+            printf("send %d failed\n", tx_bytes);
+            return;
+        }
+
+        tx_bytes += tx;
+        bytes_to_send -= tx;
+    }
+}
 
 void Connection::synchronize_connection(Message_t *message)
 {

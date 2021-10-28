@@ -1,6 +1,10 @@
 #include "Connection.hpp"
+#include "CRC.h"
+#include "Message.h"
 #include "RTOS_IP.hpp"
 #include "System.hpp"
+#include <cstddef>
+#include <cstdint>
 
 namespace System {
 namespace Impl {
@@ -118,11 +122,33 @@ void Connection::process_message(Message_t *message)
 
     switch (message->command)
     {
+    case Message_t::UNKNOWN: {
+        break;
+    }
     case Message_t::ECHO: {
+        send_message(message);
         break;
     }
     case Message_t::PING: {
         send_message(message);
+        break;
+    }
+    case Message_t::ACK: {
+        break;
+    }
+    case Message_t::RESTART: {
+        // Shut down all connections nicely
+        xTaskCreate(System::restart, "ECU_RESTART", 10000, /* Stack size in words, not bytes. */
+                    memset(malloc(1), EXIT_SUCCESS, 1),    /* Parameter passed into the task. */
+                    tskIDLE_PRIORITY,                      /* Priority of the task. */
+                    nullptr);                              /* Don't need to keep the task handle. */
+
+        // Terminate the connection from our end. Task will still be running, but we can't send or recv messages.
+        close();
+        break;
+    }
+    case Message_t::STATUS: {
+        send_status(message);
         break;
     }
     case Message_t::SYNC: {
@@ -140,11 +166,29 @@ void Connection::process_message(Message_t *message)
 
         // Terminate the connection from our end. Task will still be running, but we can't send or recv messages.
         close();
+        break;
+    }
+    case Message_t::PROGRAM_UPDATE: {
+        download_firmware(message);
+
+        // Shut down all connections nicely
+        xTaskCreate(System::restart, "ECU_RESTART", 10000, /* Stack size in words, not bytes. */
+                    memset(malloc(1), EXIT_SUCCESS, 1),    /* Parameter passed into the task. */
+                    tskIDLE_PRIORITY,                      /* Priority of the task. */
+                    nullptr);                              /* Don't need to keep the task handle. */
+
+        // Terminate the connection from our end. Task will still be running, but we can't send or recv messages.
+        close();
 
         break;
     }
-    default: {
-        vLoggingPrintf("Command not implemented yet!\n");
+    case Message_t::VALUE: {
+        break;
+    }
+    case Message_t::PARAM_GET: {
+        break;
+    }
+    case Message_t::PARAM_SET: {
         break;
     }
     }

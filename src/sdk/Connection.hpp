@@ -32,6 +32,8 @@ private:
 
     /* Functions to handle specific requests. */
 
+    void send_status(Message_t *message);
+
     void synchronize_connection(Message_t *num_messages);
 
     void download_firmware(Message_t *message);

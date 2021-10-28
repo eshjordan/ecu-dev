@@ -50,7 +50,28 @@ int reconnect()
     return init();
 }
 
-void remote_restart() {}
+void remote_restart() {
+    Message_t msg;
+    make_message(&msg, 0, "restart", nullptr, Message_t::RESTART);
+    send(sock, &msg, sizeof(Message_t), 0);
+}
+
+void request_status()
+{
+    Message_t msg;
+    make_message(&msg, 0, "status", nullptr, Message_t::STATUS);
+    send(sock, &msg, sizeof(Message_t), 0);
+
+    Header_t header;
+    recv(sock, &header, sizeof(Header_t), 0);
+
+    for (int i = 0; i < header.length; i++)
+    {
+        char c;
+        recv(sock, &c, 1, 0);
+        std::cout << c;
+    }
+}
 
 void sync_test();
 
@@ -85,9 +106,10 @@ int main(int argc, char **argv)
              "\t1) make and restart\n"
              "\t2) reconnect\n"
              "\t3) remote_restart\n"
-             "\t4) sync_test\n"
-             "\t5) firmware_update_test\n"
-             "\t6) software_update_test\n"
+             "\t4) request_status\n"
+             "\t5) sync_test\n"
+             "\t6) firmware_update_test\n"
+             "\t7) software_update_test\n"
              "\tq) quit\n");
     };
 
@@ -117,16 +139,21 @@ int main(int argc, char **argv)
             break;
         }
         case '4': {
-            sync_test();
+            request_status();
             print_options();
             break;
         }
         case '5': {
-            firmware_update_test();
+            sync_test();
             print_options();
             break;
         }
         case '6': {
+            firmware_update_test();
+            print_options();
+            break;
+        }
+        case '7': {
             software_update_test();
             print_options();
             break;
