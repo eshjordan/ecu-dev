@@ -97,7 +97,7 @@ void Connection::manage_connection(void *arg)
         if (connection->is_open() && connection->is_connected())
         {
             Message_t msg;
-            if (connection->receive_message(&msg) < 0) { continue; }
+            if (connection->receive_message(&msg) <= 0) { continue; }
 
             int message_ok = check_message(&msg);
             if (message_ok < 0)
@@ -158,14 +158,14 @@ void Connection::process_message(Message_t *message)
     case Message_t::FIRMWARE_UPDATE: {
         download_firmware(message);
 
-        // Shut down all connections nicely
-        xTaskCreate(System::restart, "ECU_RESTART", 10000, /* Stack size in words, not bytes. */
-                    memset(malloc(1), EXIT_SUCCESS, 1),    /* Parameter passed into the task. */
-                    tskIDLE_PRIORITY,                      /* Priority of the task. */
-                    nullptr);                              /* Don't need to keep the task handle. */
+        // // Shut down all connections nicely
+        // xTaskCreate(System::restart, "ECU_RESTART", 10000, /* Stack size in words, not bytes. */
+        //             memset(malloc(1), EXIT_SUCCESS, 1),    /* Parameter passed into the task. */
+        //             tskIDLE_PRIORITY,                      /* Priority of the task. */
+        //             nullptr);                              /* Don't need to keep the task handle. */
 
-        // Terminate the connection from our end. Task will still be running, but we can't send or recv messages.
-        close();
+        // // Terminate the connection from our end. Task will still be running, but we can't send or recv messages.
+        // close();
         break;
     }
     case Message_t::PROGRAM_UPDATE: {

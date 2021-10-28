@@ -72,15 +72,15 @@ inline void print_msg_err(const int err_code)
 {
     switch (err_code)
     {
-    case ERR_CRC_FAILED: {
+    case -ERR_CRC_FAILED: {
         puts("CRC Failed!");
         break;
     }
-    case ERR_INVALID_LENGTH: {
+    case -ERR_INVALID_LENGTH: {
         puts("Invalid Length!");
         break;
     }
-    case ERR_INVALID_START_BYTE: {
+    case -ERR_INVALID_START_BYTE: {
         puts("Invalid Start Byte!");
         break;
     }

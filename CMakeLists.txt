@@ -27,9 +27,9 @@ set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -k")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 
-set(CMAKE_BUILD_TYPE "RelWithDebInfo")
+set(CMAKE_BUILD_TYPE "Debug")
 set(STATIC_PROGRAM ON)
-set(LOG_STATIC_ALLOCATION_REQUESTS ON)
+set(LOG_STATIC_ALLOCATION_REQUESTS OFF)
 set(BUILD_SHARED_LIBS ON)
 
 if(STATIC_PROGRAM)
@@ -68,4 +68,6 @@ include_directories(${ECU_SDK_INCLUDE})
 
 add_subdirectory(src/program)
 
-add_subdirectory(src/client)
+if(NOT ${BUILD_TYP} STREQUAL "raspi")
+    add_subdirectory(src/client)
+endif()

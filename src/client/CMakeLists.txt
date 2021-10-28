@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 project(ECU_CLIENT)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS} ${C_FLGS} -std=c++17")
+
 file(GLOB ECU_CLIENT_SRC
     ${CMAKE_SOURCE_DIR}/src/client/*.c
     ${CMAKE_SOURCE_DIR}/src/client/*.cpp

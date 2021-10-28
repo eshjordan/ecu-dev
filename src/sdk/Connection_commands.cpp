@@ -1,6 +1,7 @@
 #include "Connection.hpp"
 #include "Message.h"
 #include "System.hpp"
+#include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <string>
@@ -231,102 +232,157 @@ void Connection::synchronize_connection(Message_t *message)
 
 void Connection::download_firmware(Message_t *message)
 {
-    auto firmware_size = ((uint32_t *)&message->data)[0];
-    auto firmware_crc  = ((uint32_t *)&message->data)[1];
+    auto num_files = *(uint64_t *)&message->data;
 
-    printf("Firmware size: %u\n", firmware_size);
-    printf("Firmware CRC: %u\n", firmware_crc);
+    vLoggingPrintf("Downloading %lld files...\n", num_files);
 
     Message_t ack_msg;
-    make_message(&ack_msg,      /* Destination message. */
-                 m_seq++,       /* Message ID number. */
-                 "sync_ack",    /* Message name. */
-                 nullptr,       /* Message data, set to zero. */
-                 Message_t::ACK /* Command. */
+    make_message(&ack_msg,       /* Destination message. */
+                 m_seq++,        /* Message ID number. */
+                 "firmware_ack", /* Message name. */
+                 nullptr,        /* Message data, set to zero. */
+                 Message_t::ACK  /* Command. */
     );
 
     // Send acknowledgement
     if (send_message(&ack_msg) < 0)
     {
+        vLoggingPrintf("Error sending ACK!");
         close();
         return;
     }
 
-    auto *received_firmware = new uint8_t[firmware_size];
-    memset(received_firmware, 0, firmware_size);
-
-    BaseType_t success_count = 0;
-    int failed_count         = 0;
-    int i                    = 0;
-    while (success_count < firmware_size)
+    for (int file_num = 0; file_num < num_files; file_num++)
     {
-        memset(m_rx_buffer, 0, sizeof(m_rx_buffer));
-        BaseType_t rx_bytes = FreeRTOS_recv(m_socket, received_firmware + success_count, ipconfigTCP_MSS, 0);
+        Message_t file_header;
+        receive_message(&file_header);
 
-        if (rx_bytes < 0)
+        std::string type_and_name = file_header.name;
+        std::string file_type     = type_and_name.substr(0, type_and_name.find_first_of('/'));
+        std::string filename      = type_and_name.substr(type_and_name.find_first_of('/') + 1);
+
+        auto firmware_size = ((uint32_t *)&file_header.data)[0];
+        auto firmware_crc  = ((uint32_t *)&file_header.data)[1];
+
+        vLoggingPrintf("Downloading %s file %s...\n", file_type.c_str(), filename.c_str());
+        vLoggingPrintf("Firmware size: %u\n", firmware_size);
+        vLoggingPrintf("Firmware CRC: %u\n", firmware_crc);
+
+        make_message(&ack_msg,      /* Destination message. */
+                     m_seq++,       /* Message ID number. */
+                     "sync_ack",    /* Message name. */
+                     nullptr,       /* Message data, set to zero. */
+                     Message_t::ACK /* Command. */
+        );
+
+        // Send acknowledgement
+        if (send_message(&ack_msg) < 0)
         {
-            print_recv_err(rx_bytes);
-            delete[] received_firmware;
+            vLoggingPrintf("Error sending ACK!");
             close();
             return;
         }
 
-        success_count += rx_bytes;
+        uint8_t received_firmware[20 * 1024 * 1024]; // 20MB max firmware size
 
-        i++;
+        if (firmware_size > sizeof(received_firmware))
+        {
+            vLoggingPrintf("File is too large!");
+            close();
+            return;
+        }
+
+        BaseType_t success_count = 0;
+        int failed_count         = 0;
+        int i                    = 0;
+        while (success_count < firmware_size)
+        {
+            BaseType_t rx_bytes = FreeRTOS_recv(m_socket, received_firmware + success_count, ipconfigTCP_MSS, 0);
+
+            if (rx_bytes < 0)
+            {
+                print_recv_err(rx_bytes);
+                close();
+                return;
+            }
+
+            success_count += rx_bytes;
+
+            i++;
+        }
+
+        vLoggingPrintf("Received %ld bytes\n", success_count);
+
+        // Check CRC
+        CRC transmitted_crc = *(CRC *)&received_firmware[firmware_size - sizeof(CRC)];
+        CRC received_crc    = calc_crc(received_firmware, firmware_size - sizeof(CRC));
+        if (received_crc != transmitted_crc)
+        {
+            vLoggingPrintf("Firmware CRC mismatch: %u != %u\n", received_crc, transmitted_crc);
+            return;
+        }
+
+        puts("Received OK!");
+
+        std::string filepath;
+        std::string base_dir = "/home/pi/ecu/";
+
+        if (file_type == "bin")
+        {
+            filepath = base_dir + "bin/" + filename;
+        } else if (file_type == "lib")
+        {
+            filepath = base_dir + "lib/" + filename;
+        } else
+        {
+            vLoggingPrintf("Unknown file type: %s\n", file_type.c_str());
+            return;
+        }
+
+        printf("Writing to %s\n", filepath.c_str());
+
+        struct stat file_status = {};
+        stat(filepath.c_str(), &file_status);
+        unlink(filepath.c_str());
+
+        FILE *output_f = fopen(filepath.c_str(), "wb");
+        if (output_f == nullptr)
+        {
+            vLoggingPrintf("Error opening file %s for writing!\n", filepath.c_str());
+            fclose(output_f);
+            return;
+        }
+
+        if (fwrite(received_firmware, 1, success_count, output_f) != success_count)
+        {
+            puts("Error writing file!");
+            fclose(output_f);
+            return;
+        }
+
+        fclose(output_f);
+
+        // Retain the file permissions
+        chown(filepath.c_str(), file_status.st_uid, file_status.st_gid);
+        chmod(filepath.c_str(), file_status.st_mode);
+
+        make_message(&ack_msg,      /* Destination message. */
+                     m_seq++,       /* Message ID number. */
+                     "sync_ack",    /* Message name. */
+                     nullptr,       /* Message data, set to zero. */
+                     Message_t::ACK /* Command. */
+        );
+
+        // Send acknowledgement
+        if (send_message(&ack_msg) < 0)
+        {
+            puts("Error sending ACK!");
+            close();
+            return;
+        }
     }
 
-    printf("Received %ld bytes\n", success_count);
-
-    // Check CRC
-    CRC transmitted_crc = *(CRC *)&received_firmware[firmware_size - sizeof(CRC)];
-    CRC received_crc    = calc_crc(received_firmware, firmware_size - sizeof(CRC));
-    if (received_crc != transmitted_crc)
-    {
-        vLoggingPrintf("Firmware CRC mismatch: %u != %u\n", received_crc, transmitted_crc);
-        delete[] received_firmware;
-        return;
-    }
-
-    make_message(&ack_msg,      /* Destination message. */
-                 m_seq++,       /* Message ID number. */
-                 "sync_ack",    /* Message name. */
-                 nullptr,       /* Message data, set to zero. */
-                 Message_t::ACK /* Command. */
-    );
-
-    // Send acknowledgement
-    if (send_message(&ack_msg) < 0)
-    {
-        delete[] received_firmware;
-        close();
-        return;
-    }
-
-    puts("Received OK!");
-
-    std::string filename = System::Impl::get_executable_path();
-
-    struct stat file_status = {};
-    stat(filename.c_str(), &file_status);
-    unlink(filename.c_str());
-
-    std::fstream output_f(filename, std::ios::out | std::ios::trunc | std::ios::binary);
-    output_f.write((char *)&received_firmware[0], success_count);
-
-    delete[] received_firmware;
-
-    if (!output_f.good())
-    {
-        vLoggingPrintf("Error writing to file!");
-        return;
-    }
-
-    output_f.close();
-
-    // Retain the file permissions
-    chown(filename.c_str(), file_status.st_uid, file_status.st_gid);
-    chmod(filename.c_str(), file_status.st_mode);
+    puts("Download complete!");
 }
 
 } // namespace Impl
