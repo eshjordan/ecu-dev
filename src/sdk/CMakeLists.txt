@@ -4,10 +4,13 @@ project(ECU_SDK)
 file(GLOB ECU_SDK_SRC
     ${CMAKE_SOURCE_DIR}/src/sdk/*.c
     ${CMAKE_SOURCE_DIR}/src/sdk/*.cpp
+    ${CMAKE_SOURCE_DIR}/src/sdk/portable/raspi/*.c
+    ${CMAKE_SOURCE_DIR}/src/sdk/portable/raspi/*.cpp
 )
 
 set(ECU_SDK_INCLUDE
-    ${CMAKE_SOURCE_DIR}/src/sdk
+    ${CMAKE_SOURCE_DIR}/src/sdk/include
+    ${CMAKE_SOURCE_DIR}/src/sdk/portable/raspi/include
 )
 
 include_directories(
