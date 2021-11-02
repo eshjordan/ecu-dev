@@ -1,14 +1,12 @@
 cmake_minimum_required(VERSION 3.0)
 project(ECU)
 
-set(BUILD_TYP amd64)
+if(NOT BUILD_TYP)
+    set(BUILD_TYP "amd64")
+endif()
 
-if(DEFINED CMAKE_TOOLCHAIN_FILE)
-    add_definitions(-DRASPI)
-    set(BUILD_TYP raspi)
-    include(${CMAKE_TOOLCHAIN_FILE})
-    # set_property(GLOBAL PROPERTY LINK_DEPENDS ${CMAKE_SOURCE_DIR}/${LINKER_SCRIPT})
-else()
+if(${BUILD_TYP} MATCHES "amd64")
+
     set(COMMON_FLAGS " \
         -march=znver1 \
         -mtune=znver1"
@@ -17,6 +15,13 @@ else()
     set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} ${COMMON_FLAGS}")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS} ${C_FLGS} -std=gnu99 -Wno-implicit")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS} ${C_FLGS} -std=c++11")
+
+
+elseif(${BUILD_TYP} MATCHES "raspi")
+
+    add_definitions(-DRASPI)
+    include(${CMAKE_TOOLCHAIN_FILE})
+
 endif()
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/${BUILD_TYP})
@@ -68,6 +73,6 @@ include_directories(${ECU_SDK_INCLUDE})
 
 add_subdirectory(src/program)
 
-if(NOT ${BUILD_TYP} STREQUAL "raspi")
+if(${BUILD_TYP} MATCHES "amd64")
     add_subdirectory(src/client)
 endif()
