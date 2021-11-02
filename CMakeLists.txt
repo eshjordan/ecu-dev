@@ -5,6 +5,18 @@ if(NOT BUILD_TYP)
     set(BUILD_TYP "amd64")
 endif()
 
+if(DEFINED CMAKE_TOOLCHAIN_FILE)
+
+    include(${CMAKE_TOOLCHAIN_FILE})
+
+else()
+
+    set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wno-implicit")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
+endif()
+
 if(${BUILD_TYP} MATCHES "amd64")
 
     set(COMMON_FLAGS " \
@@ -12,17 +24,30 @@ if(${BUILD_TYP} MATCHES "amd64")
         -mtune=znver1"
     )
 
-    set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} ${COMMON_FLAGS}")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS} ${C_FLGS} -std=gnu99 -Wno-implicit")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS} ${C_FLGS} -std=c++11")
-
+    set(C_FLGS "")
 
 elseif(${BUILD_TYP} MATCHES "raspi")
 
     add_definitions(-DRASPI)
-    include(${CMAKE_TOOLCHAIN_FILE})
+    set(COMMON_FLAGS " \
+        -march=armv8-a \
+        -mtune=cortex-a53 \
+        -mfloat-abi=hard \
+        -DRASPPI=3 \
+        -marm"
+    )
+
+    set(C_FLGS " \
+        -Wno-psabi \
+        -fsigned-char \
+        -mno-unaligned-access"
+    )
 
 endif()
+
+set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} ${COMMON_FLAGS}")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS} ${C_FLGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS} ${C_FLGS}")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/${BUILD_TYP})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/${BUILD_TYP})

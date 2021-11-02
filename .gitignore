@@ -11,3 +11,4 @@ src/cppcheck-addon-ctu-file-list
 bin/
 lib/
 *.code-workspace
+combine_compile_commands.py

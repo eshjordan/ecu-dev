@@ -5,12 +5,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS} ${C_FLGS} -std=c++17")
 
 file(GLOB ECU_CLIENT_SRC
-    ${CMAKE_SOURCE_DIR}/src/client/*.c
-    ${CMAKE_SOURCE_DIR}/src/client/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
 )
 
 set(ECU_CLIENT_INCLUDE
-    ${CMAKE_SOURCE_DIR}/src/client
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 include_directories(

@@ -2,12 +2,12 @@ cmake_minimum_required(VERSION 3.0)
 project(ECU_SHARED)
 
 file(GLOB ECU_SHARED_SRC
-    ${CMAKE_SOURCE_DIR}/src/shared/*.c
-    ${CMAKE_SOURCE_DIR}/src/shared/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
 )
 
 set(ECU_SHARED_INCLUDE
-    ${CMAKE_SOURCE_DIR}/src/shared
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 include_directories(
@@ -22,7 +22,7 @@ target_link_libraries(ecu_shared
     pthread
 )
 
-if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
+if(${CMAKE_BUILD_TYPE} MATCHES "Release")
     add_custom_command(TARGET ecu_shared POST_BUILD
         COMMAND ${CMAKE_STRIP} -g -S -d --strip-debug
         "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libecu_shared.so"

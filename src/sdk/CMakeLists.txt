@@ -2,15 +2,15 @@ cmake_minimum_required(VERSION 3.0)
 project(ECU_SDK)
 
 file(GLOB ECU_SDK_SRC
-    ${CMAKE_SOURCE_DIR}/src/sdk/*.c
-    ${CMAKE_SOURCE_DIR}/src/sdk/*.cpp
-    ${CMAKE_SOURCE_DIR}/src/sdk/portable/raspi/*.c
-    ${CMAKE_SOURCE_DIR}/src/sdk/portable/raspi/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/portable/raspi/*.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/portable/raspi/*.cpp
 )
 
 set(ECU_SDK_INCLUDE
-    ${CMAKE_SOURCE_DIR}/src/sdk/include
-    ${CMAKE_SOURCE_DIR}/src/sdk/portable/raspi/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/portable/raspi/include
 )
 
 include_directories(
@@ -27,7 +27,7 @@ target_link_libraries(ecu_sdk
     ecu_shared
 )
 
-if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
+if(${CMAKE_BUILD_TYPE} MATCHES "Release")
     add_custom_command(TARGET ecu_sdk POST_BUILD
         COMMAND ${CMAKE_STRIP} -g -S -d --strip-debug
         "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libecu_sdk.so"
