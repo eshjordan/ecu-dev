@@ -6,18 +6,8 @@
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
    CONDITIONS OF ANY KIND, either express or implied.
 */
-#include "ESP32Msg.h"
-#include "Message.h"
-#include "driver/spi_common.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/projdefs.h"
-#include "freertos/timers.h"
 
-#include "ecu-pins.h"
-#include "ecu-shared.h"
-
-#include <stdio.h>
-#include <string.h>
+#include "app.h"
 
 static ESP32Msg_t esp_status = {};
 
@@ -28,40 +18,34 @@ void run_spi(void *pvParameters)
     // Initialise CRC calculation
     init_crc();
 
-    DMA_ATTR WORD_ALIGNED_ATTR static uint8_t tx_buf[3 * sizeof(Message_t)] = {};
-    DMA_ATTR WORD_ALIGNED_ATTR static uint8_t rx_buf[3 * sizeof(Message_t)] = {};
+    static DMA_ATTR WORD_ALIGNED_ATTR Message_t tx_msg = {.name = "spi_ack", .data = {0}, .command = ACK_CMD};
+    static DMA_ATTR WORD_ALIGNED_ATTR Message_t rx_msg = {0};
 
+    // clang-format off
     static spi_slave_transaction_t trans_desc = {
-        .tx_buffer = tx_buf,
-        .rx_buffer = rx_buf,
-        .length    = 1024UL * 8,
+        .tx_buffer = &tx_msg,
+        .rx_buffer = &rx_msg,
+        .length = sizeof(Message_t) * 8
     };
-
-    static const Message_t *const rx_msg = (Message_t *)rx_buf;
-
-    static Message_t ack_msg = {.name = "spi_ack", .data = {0}, .command = ACK_CMD};
-
-    static ESP32Msg_t esp_msg = {0};
+    // clang-format on
 
     static char msg[1024] = {0};
 
     while (1)
     {
-        ack_msg.header = make_header(0, sizeof(Message_t));
-        calc_msg_checksum(&ack_msg);
+        tx_msg.header = make_header(0, sizeof(Message_t));
+        calc_msg_checksum(&tx_msg);
 
         // Clear the rx buffer
-        memset(rx_buf, 0, sizeof(rx_buf));
-        memset(tx_buf, 0, sizeof(tx_buf));
-        memcpy(tx_buf, &ack_msg, sizeof(ack_msg));
+        memset(&rx_msg, 0, sizeof(Message_t));
 
-        // Wait for the master to send a query
+        // Wait for the master to send a query, acknowledge we're here
         ESP_ERROR_CHECK(spi_slave_transmit(ECU_SPI_RCV_HOST, &trans_desc, portMAX_DELAY));
 
-        msg_to_str(msg, rx_msg);
+        msg_to_str(msg, &rx_msg);
         ecu_warn("Rx msg:\n%s\n", msg);
 
-        int msg_status = check_msg(rx_msg);
+        int msg_status = check_msg(&rx_msg);
         if (msg_status < 0)
         {
             msg_err_to_str(msg, msg_status);
@@ -69,41 +53,16 @@ void run_spi(void *pvParameters)
             goto nd;
         }
 
-        if (rx_msg->command != STATUS_CMD)
+        switch (rx_msg.command)
         {
-            ecu_warn("SPI - Received invalid command: %d", rx_msg->command);
+        case STATUS_CMD: {
+            ecu_send_status(&esp_status);
+            break;
+        }
+        default: {
+            ecu_warn("SPI - Received invalid command: %d", rx_msg.command);
             goto nd;
         }
-
-        // Copy the IO state to the message buffer, clear rx buffer
-        memset(rx_buf, 0, sizeof(rx_buf));
-        memset(tx_buf, 0, sizeof(tx_buf));
-
-        memcpy(tx_buf, &esp_status, sizeof(ESP32Msg_t));
-        ((ESP32Msg_t *)tx_buf)->header = make_header(0, sizeof(ESP32Msg_t));
-        calc_esp_checksum((ESP32Msg_t *)tx_buf);
-
-        // Set up a transaction to send/receive
-        ESP_ERROR_CHECK(spi_slave_transmit(ECU_SPI_RCV_HOST, &trans_desc, portMAX_DELAY));
-
-        ESP32Msg_to_str(msg, &esp_msg);
-        ecu_log("SPI - Sent message:\n%s", msg);
-
-        msg_to_str(msg, rx_msg);
-        ecu_log("SPI - Received message:\n%s", msg);
-
-        msg_status = check_msg(rx_msg);
-        if (msg_status < 0)
-        {
-            msg_err_to_str(msg, msg_status);
-            ecu_warn("SPI - Received invalid acknowledgement msg - %s", msg);
-            goto nd;
-        }
-
-        if (rx_msg->command != ACK_CMD)
-        {
-            ecu_warn("SPI - Received invalid ack command - %d", rx_msg->command);
-            goto nd;
         }
 
     nd:

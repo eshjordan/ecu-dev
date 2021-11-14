@@ -7,8 +7,10 @@ extern "C" {
 
 #include "CANMsg.h"
 #include "ESP32Msg.h"
-#include "Message.h"
 #include "Header.h"
+#include "Message.h"
+
+#define max(s1, s2) ((s1) > (s2) ? (s1) : (s2))
 
 #ifdef __cplusplus
 }

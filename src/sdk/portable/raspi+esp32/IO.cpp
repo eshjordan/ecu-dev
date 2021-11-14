@@ -61,15 +61,6 @@ static int init_esp32_spi(void)
 
 REGISTER_ROUTINE(esp_get_status, 1)
 {
-    if (!esp32_spi_inited)
-    {
-        puts("io not inited");
-        spi_fd = init_esp32_spi();
-        if (spi_fd < 0) { return; }
-    }
-
-    puts("esp_get_status");
-
     __attribute__((aligned(4))) static uint8_t tx_buf[1024] = {0};
     __attribute__((aligned(4))) static uint8_t rx_buf[1024] = {0};
 
@@ -84,12 +75,6 @@ REGISTER_ROUTINE(esp_get_status, 1)
     memset(rx_buf, 0, sizeof(rx_buf));
     memset(tx_buf, 0, sizeof(tx_buf));
     memcpy(tx_buf, &request_msg, sizeof(request_msg));
-
-    if (spi_fd < 0)
-    {
-        puts("spi not open");
-        return;
-    }
 
     System::IO::spi_transfer(0, sizeof(Message_t), tx_buf, rx_buf);
 
@@ -182,9 +167,9 @@ CANMsg_t read_can_input(int bus, int id) { return esp_status.CANMsg; }
 
 void write_can_output(int bus, int id, CANMsg_t msg) {}
 
-int spi_read(int channel, int size, uint8_t *buffer) { return 1; }
+int spi_read(int channel, int size, uint8_t *buffer) { return spi_transfer(channel, size, nullptr, buffer); }
 
-int spi_write(int channel, int size, uint8_t *buffer) { return 1; }
+int spi_write(int channel, int size, uint8_t *buffer) { return spi_transfer(channel, size, buffer, nullptr); }
 
 int spi_transfer(int channel, int size, uint8_t *tx_buffer, uint8_t *rx_buffer)
 {
@@ -206,6 +191,8 @@ int spi_transfer(int channel, int size, uint8_t *tx_buffer, uint8_t *rx_buffer)
         puts("can't send spi message");
         return -1;
     }
+
+    return 1;
 }
 
 } // namespace IO
