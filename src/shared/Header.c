@@ -1,5 +1,5 @@
 #include "Header.h"
-
+#include <stdio.h>
 #include <sys/time.h>
 
 struct timeval time_to_timeval(const Time_t *time)
@@ -25,9 +25,8 @@ Time_t get_time_now(void)
     return timeval_to_time(&tv_now);
 }
 
-void make_header(Header_t *dst, uint32_t id, Time_t stamp, uint32_t length)
+struct Header_t make_header(uint32_t id, uint32_t length)
 {
-    dst->id     = id;
-    dst->stamp  = stamp;
-    dst->length = length;
+    Header_t hdr = {.start_byte = ECU_MSG_START_BYTE, .length = (length), .id = (id), .stamp = get_time_now()};
+    return hdr;
 }

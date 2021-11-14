@@ -6,10 +6,7 @@ extern "C" {
 #endif
 
 #include "CANMsg.h"
-#include "CRC.h"
 #include "Header.h"
-#include <stdint.h>
-#include <stdio.h>
 
 // clang-format off
 
@@ -27,11 +24,12 @@ struct ESP32Msg_t {
     Header_t header STRUCT_INIT;
     uint32_t adc[9] STRUCT_INIT;
     uint32_t hall_effect STRUCT_INIT;
-    uint8_t din1 STRUCT_INIT;
-    uint8_t din2 STRUCT_INIT;
-    uint8_t din3 STRUCT_INIT;
+    uint8_t din1 : 1 STRUCT_INIT;
+    uint8_t din2 : 1 STRUCT_INIT;
+    uint8_t din3 : 1 STRUCT_INIT;
     CANMsg_t CANMsg STRUCT_INIT;
     CRC checksum STRUCT_INIT;
+    uint32_t pad STRUCT_INIT;
 } ALIGN;
 
 typedef struct ESP32Msg_t ESP32Msg_t;

@@ -289,8 +289,7 @@ void send_file(const std::filesystem::directory_entry &file, const std::string &
 
     std::string type_and_name = type + "/" + filename.c_str();
 
-    Message_t file_header = {};
-    make_message(&file_header, 0, type_and_name.c_str(), data, Message_t::VALUE_CMD);
+    Message_t file_header = make_message(0, type_and_name.c_str(), data, Message_t::VALUE_CMD);
 
     if (send(sock, &file_header, sizeof(Message_t), 0) < 0)
     {
@@ -340,18 +339,16 @@ void send_file(const std::filesystem::directory_entry &file, const std::string &
 
 void echo_test()
 {
-    Message_t msg;
-    make_message(&msg, 0, "ping", nullptr, Message_t::ECHO_CMD);
+    Message_t msg = make_message(0, "ping", nullptr, Message_t::ECHO_CMD);
     send(sock, &msg, sizeof(Message_t), 0);
 }
 
 void sync_test()
 {
-    Message_t init_msg;
     uint32_t id         = 0;
     uint64_t sync_count = 10;
 
-    make_message(&init_msg, id++, "Test Message", &sync_count, Message_t::SYNC_CMD);
+    Message_t init_msg = make_message(id++, "Test Message", &sync_count, Message_t::SYNC_CMD);
 
     if (send(sock, &init_msg, sizeof(Message_t), 0) < 0)
     {
@@ -371,8 +368,7 @@ void sync_test()
     // Start pinging
     for (int i = 0; i < sync_count; i++)
     {
-        Message_t msg;
-        make_message(&msg, id++, "Test Message", nullptr, Message_t::PING_CMD);
+        Message_t msg = make_message(id++, "Test Message", nullptr, Message_t::PING_CMD);
 
         if (send(sock, &msg, sizeof(Message_t), 0) < 0)
         {
@@ -430,15 +426,13 @@ void sync_test()
 
 void remote_restart()
 {
-    Message_t msg;
-    make_message(&msg, 0, "restart", nullptr, Message_t::RESTART_CMD);
+    Message_t msg = make_message(0, "restart", nullptr, Message_t::RESTART_CMD);
     send(sock, &msg, sizeof(Message_t), 0);
 }
 
 void request_status()
 {
-    Message_t msg;
-    make_message(&msg, 0, "status", nullptr, Message_t::STATUS_CMD);
+    Message_t msg = make_message(0, "status", nullptr, Message_t::STATUS_CMD);
     send(sock, &msg, sizeof(Message_t), 0);
 
     Header_t header;
@@ -474,10 +468,9 @@ void firmware_update_test()
         lib_files.push_back(file);
     }
 
-    Message_t init_msg;
-    uint32_t id   = 0;
-    uint64_t data = bin_files.size() + lib_files.size();
-    make_message(&init_msg, id++, "Number of files", &data, Message_t::FIRMWARE_UPDATE_CMD);
+    uint32_t id        = 0;
+    uint64_t data      = bin_files.size() + lib_files.size();
+    Message_t init_msg = make_message(id++, "Number of files", &data, Message_t::FIRMWARE_UPDATE_CMD);
 
     if (send(sock, &init_msg, sizeof(Message_t), 0) < 0)
     {

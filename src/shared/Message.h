@@ -5,7 +5,6 @@
 extern "C" {
 #endif
 
-#include "CRC.h"
 #include "Header.h"
 
 #define ECU_MSG_START_BYTE 0x9DU
@@ -68,7 +67,7 @@ int check_msg(const Message_t *msg);
  */
 void msg_err_to_str(char *str, int err_code);
 
-void make_message(Message_t *dst, uint32_t id, const char name[64], const void *data, Command_t command);
+struct Message_t make_message(uint32_t id, const char name[64], const void *data, Command_t command);
 
 /**
  * @brief Use at least 512 bytes for the message buffer.

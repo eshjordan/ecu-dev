@@ -17,9 +17,11 @@ CANMsg_t read_can_input(int bus, int id);
 
 void write_can_output(int bus, int id, CANMsg_t msg);
 
-void read_spi_input(int channel, int size, char *data);
+int spi_read(int channel, int size, uint8_t *buffer);
 
-void write_spi_input(int channel, int size, char *data);
+int spi_write(int channel, int size, uint8_t *buffer);
+
+int spi_transfer(int channel, int size, uint8_t *tx_buffer, uint8_t *rx_buffer);
 
 } // namespace IO
 } // namespace System

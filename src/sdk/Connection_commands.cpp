@@ -26,8 +26,7 @@ void Connection::send_status(Message_t *message)
     constexpr uint16_t msg_size =
         sizeof(task_list_header) + task_print_size + sizeof(runtime_stats_header) + task_print_size;
 
-    Header_t header = {};
-    make_header(&header, m_seq++, get_time_now(), msg_size);
+    Header_t header = make_header(m_seq++, msg_size);
 
     ssize_t tx = FreeRTOS_send(m_socket, &header, sizeof(header), 0);
 
@@ -89,12 +88,10 @@ void Connection::synchronize_connection(Message_t *message)
     std::vector<Time_t> received_times;
     received_times.reserve(num_messages);
 
-    Message_t ack_msg;
-    make_message(&ack_msg,          /* Destination message. */
-                 m_seq++,           /* Message ID number. */
-                 "sync_ack",        /* Message name. */
-                 nullptr,           /* Message data, set to zero. */
-                 Message_t::ACK_CMD /* Command. */
+    Message_t ack_msg = make_message(m_seq++,           /* Message ID number. */
+                                     "sync_ack",        /* Message name. */
+                                     nullptr,           /* Message data, set to zero. */
+                                     Message_t::ACK_CMD /* Command. */
     );
 
     // Send acknowledgement
@@ -153,12 +150,10 @@ void Connection::synchronize_connection(Message_t *message)
         received_times.push_back(recv_time);
 
         // Send acknowledgement
-        Message_t ack_msg;
-        make_message(&ack_msg,          /* Destination message. */
-                     m_seq++,           /* Message ID number. */
-                     "sync_ack",        /* Message name. */
-                     nullptr,           /* Message data, set to zero. */
-                     Message_t::ACK_CMD /* Command. */
+        Message_t ack_msg = make_message(m_seq++,           /* Message ID number. */
+                                         "sync_ack",        /* Message name. */
+                                         nullptr,           /* Message data, set to zero. */
+                                         Message_t::ACK_CMD /* Command. */
         );
 
         BaseType_t tx_bytes = send_message(&ack_msg);
@@ -199,12 +194,10 @@ void Connection::synchronize_connection(Message_t *message)
 
     vLoggingPrintf("Time offset - %s: %lld.%lld sec\n", m_ip_str, seconds, nanoseconds);
 
-    Message_t seconds_msg;
-    make_message(&seconds_msg,        /* Destination message. */
-                 m_seq++,             /* Message ID number. */
-                 "seconds",           /* Message name. */
-                 &seconds,            /* Message data, set to zero. */
-                 Message_t::VALUE_CMD /* Command. */
+    Message_t seconds_msg = make_message(m_seq++,             /* Message ID number. */
+                                         "seconds",           /* Message name. */
+                                         &seconds,            /* Message data, set to zero. */
+                                         Message_t::VALUE_CMD /* Command. */
     );
 
     // Send seconds offset
@@ -215,12 +208,10 @@ void Connection::synchronize_connection(Message_t *message)
         return;
     }
 
-    Message_t nanoseconds_msg;
-    make_message(&nanoseconds_msg,    /* Destination message. */
-                 m_seq++,             /* Message ID number. */
-                 "nanoseconds",       /* Message name. */
-                 &nanoseconds,        /* Message data, set to zero. */
-                 Message_t::VALUE_CMD /* Command. */
+    Message_t nanoseconds_msg = make_message(m_seq++,             /* Message ID number. */
+                                             "nanoseconds",       /* Message name. */
+                                             &nanoseconds,        /* Message data, set to zero. */
+                                             Message_t::VALUE_CMD /* Command. */
     );
 
     // Send nanoseconds offset
@@ -238,12 +229,10 @@ void Connection::download_firmware(Message_t *message)
 
     vLoggingPrintf("Downloading %lld files...\n", num_files);
 
-    Message_t ack_msg;
-    make_message(&ack_msg,          /* Destination message. */
-                 m_seq++,           /* Message ID number. */
-                 "firmware_ack",    /* Message name. */
-                 nullptr,           /* Message data, set to zero. */
-                 Message_t::ACK_CMD /* Command. */
+    Message_t ack_msg = make_message(m_seq++,           /* Message ID number. */
+                                     "firmware_ack",    /* Message name. */
+                                     nullptr,           /* Message data, set to zero. */
+                                     Message_t::ACK_CMD /* Command. */
     );
 
     // Send acknowledgement
@@ -270,11 +259,10 @@ void Connection::download_firmware(Message_t *message)
         vLoggingPrintf("Firmware size: %u\n", firmware_size);
         vLoggingPrintf("Firmware CRC: %u\n", firmware_crc);
 
-        make_message(&ack_msg,          /* Destination message. */
-                     m_seq++,           /* Message ID number. */
-                     "sync_ack",        /* Message name. */
-                     nullptr,           /* Message data, set to zero. */
-                     Message_t::ACK_CMD /* Command. */
+        ack_msg = make_message(m_seq++,           /* Message ID number. */
+                               "sync_ack",        /* Message name. */
+                               nullptr,           /* Message data, set to zero. */
+                               Message_t::ACK_CMD /* Command. */
         );
 
         // Send acknowledgement
@@ -368,11 +356,10 @@ void Connection::download_firmware(Message_t *message)
         chown(filepath.c_str(), file_status.st_uid, file_status.st_gid);
         chmod(filepath.c_str(), file_status.st_mode);
 
-        make_message(&ack_msg,          /* Destination message. */
-                     m_seq++,           /* Message ID number. */
-                     "sync_ack",        /* Message name. */
-                     nullptr,           /* Message data, set to zero. */
-                     Message_t::ACK_CMD /* Command. */
+        ack_msg = make_message(m_seq++,           /* Message ID number. */
+                               "sync_ack",        /* Message name. */
+                               nullptr,           /* Message data, set to zero. */
+                               Message_t::ACK_CMD /* Command. */
         );
 
         // Send acknowledgement

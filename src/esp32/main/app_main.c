@@ -31,16 +31,15 @@ void run_spi(void *pvParameters)
     DMA_ATTR WORD_ALIGNED_ATTR static uint8_t tx_buf[3 * sizeof(Message_t)] = {};
     DMA_ATTR WORD_ALIGNED_ATTR static uint8_t rx_buf[3 * sizeof(Message_t)] = {};
 
-    static spi_slave_transaction_t t = {
+    static spi_slave_transaction_t trans_desc = {
         .tx_buffer = tx_buf,
         .rx_buffer = rx_buf,
-        .length    = 3 * sizeof(Message_t) * 8,
+        .length    = 1024UL * 8,
     };
 
     static const Message_t *const rx_msg = (Message_t *)rx_buf;
 
-    static Message_t ack_msg = {.header = {.start_byte = ECU_MSG_START_BYTE}, .name = "spi_ack", .data = {0}};
-    make_message(&ack_msg, 0, NULL, NULL, ACK_CMD);
+    static Message_t ack_msg = {.name = "spi_ack", .data = {0}, .command = ACK_CMD};
 
     static ESP32Msg_t esp_msg = {0};
 
@@ -48,30 +47,16 @@ void run_spi(void *pvParameters)
 
     while (1)
     {
+        ack_msg.header = make_header(0, sizeof(Message_t));
+        calc_msg_checksum(&ack_msg);
+
         // Clear the rx buffer
         memset(rx_buf, 0, sizeof(rx_buf));
         memset(tx_buf, 0, sizeof(tx_buf));
         memcpy(tx_buf, &ack_msg, sizeof(ack_msg));
 
-        // for (uint8_t i = 0; i < sizeof(Message_t); i++)
-        // {
-        //     tx_buf[i] = i;
-        // }
-
-        // ecu_warn("SENDING:");
-        // for (int i = 0; i < sizeof(Message_t); i++)
-        // {
-        //     printf("%hu\n", tx_buf[i]);
-        // }
-
         // Wait for the master to send a query
-        ESP_ERROR_CHECK(spi_slave_transmit(ECU_SPI_RCV_HOST, &t, portMAX_DELAY));
-
-        // ecu_warn("RECEIVING:");
-        // for (int i = 0; i < sizeof(Message_t); i++)
-        // {
-        //     printf("%hu\n", rx_buf[i]);
-        // }
+        ESP_ERROR_CHECK(spi_slave_transmit(ECU_SPI_RCV_HOST, &trans_desc, portMAX_DELAY));
 
         msg_to_str(msg, rx_msg);
         ecu_warn("Rx msg:\n%s\n", msg);
@@ -94,18 +79,12 @@ void run_spi(void *pvParameters)
         memset(rx_buf, 0, sizeof(rx_buf));
         memset(tx_buf, 0, sizeof(tx_buf));
 
-        memcpy(&esp_msg, &esp_status, sizeof(ESP32Msg_t));
-        calc_can_checksum(&esp_msg.CANMsg);
-        calc_esp_checksum(&esp_msg);
-        memcpy(tx_buf, &esp_msg, sizeof(ESP32Msg_t));
-
-        memset(&t, 0, sizeof(t));
-        t.tx_buffer = tx_buf;
-        t.rx_buffer = rx_buf;
-        t.length    = 3 * sizeof(Message_t) * 8;
+        memcpy(tx_buf, &esp_status, sizeof(ESP32Msg_t));
+        ((ESP32Msg_t *)tx_buf)->header = make_header(0, sizeof(ESP32Msg_t));
+        calc_esp_checksum((ESP32Msg_t *)tx_buf);
 
         // Set up a transaction to send/receive
-        ESP_ERROR_CHECK(spi_slave_transmit(ECU_SPI_RCV_HOST, &t, portMAX_DELAY));
+        ESP_ERROR_CHECK(spi_slave_transmit(ECU_SPI_RCV_HOST, &trans_desc, portMAX_DELAY));
 
         ESP32Msg_to_str(msg, &esp_msg);
         ecu_log("SPI - Sent message:\n%s", msg);

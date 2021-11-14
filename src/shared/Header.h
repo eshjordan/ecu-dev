@@ -6,8 +6,6 @@ extern "C" {
 #endif
 
 #include "CRC.h"
-#include <stdint.h>
-#include <stdio.h>
 
 #define ECU_MSG_START_BYTE 0x9DU
 
@@ -38,7 +36,7 @@ struct Time_t {
 typedef struct Time_t Time_t;
 
 struct Header_t {
-    const uint8_t start_byte START_BYTE_INIT;
+    uint8_t start_byte START_BYTE_INIT;
     uint32_t length STRUCT_INIT;
     uint32_t id STRUCT_INIT;
     Time_t stamp STRUCT_INIT;
@@ -52,7 +50,7 @@ Time_t timeval_to_time(const struct timeval *time);
 
 Time_t get_time_now(void);
 
-void make_header(Header_t *dst, uint32_t id, Time_t stamp, uint32_t length);
+struct Header_t make_header(uint32_t id, uint32_t length);
 
 #ifdef __cplusplus
 } // extern "C"

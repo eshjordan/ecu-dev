@@ -5,10 +5,7 @@
 extern "C" {
 #endif
 
-#include "CRC.h"
 #include "Header.h"
-#include <stdint.h>
-#include <stdio.h>
 
 // clang-format off
 
