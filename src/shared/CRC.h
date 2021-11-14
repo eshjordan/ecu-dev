@@ -23,11 +23,6 @@ void init_crc(void);
 
 CRC calc_crc(const void *data, uint16_t length);
 
-static CRC reflect(CRC data, uint8_t num_bits);
-
-#define REFLECT_DATA(X) ((uint8_t)reflect((X), 8))
-#define REFLECT_REMAINDER(X) ((CRC)reflect((X), WIDTH))
-
 #ifdef __cplusplus
 } // extern "C"
 #endif

@@ -6,142 +6,251 @@
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
    CONDITIONS OF ANY KIND, either express or implied.
 */
-#include <stddef.h>
-#include <stdint.h>
+#include "ESP32Msg.h"
+#include "Message.h"
+#include "driver/spi_common.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/projdefs.h"
+#include "freertos/timers.h"
+
+#include "ecu-pins.h"
+#include "ecu-shared.h"
+
 #include <stdio.h>
 #include <string.h>
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include "freertos/semphr.h"
-#include "freertos/task.h"
+static ESP32Msg_t esp_status = {};
 
-#include "lwip/dns.h"
-#include "lwip/igmp.h"
-#include "lwip/netdb.h"
-#include "lwip/sockets.h"
+void run_spi(void *pvParameters)
+{
+    int n = 0;
 
-#include "driver/gpio.h"
-#include "driver/spi_slave.h"
-#include "esp_event.h"
-#include "esp_log.h"
-#include "esp_spi_flash.h"
-#include "esp_system.h"
-#include "esp_wifi.h"
-#include "nvs_flash.h"
-#include "soc/rtc_periph.h"
+    // Initialise CRC calculation
+    init_crc();
 
-/*
-SPI receiver (slave) example.
+    DMA_ATTR WORD_ALIGNED_ATTR static uint8_t tx_buf[3 * sizeof(Message_t)] = {};
+    DMA_ATTR WORD_ALIGNED_ATTR static uint8_t rx_buf[3 * sizeof(Message_t)] = {};
 
-This example is supposed to work together with the SPI sender. It uses the standard SPI pins (MISO, MOSI, SCLK, CS) to
-transmit data over in a full-duplex fashion, that is, while the master puts data on the MOSI pin, the slave puts its own
-data on the MISO pin.
+    static spi_slave_transaction_t t = {
+        .tx_buffer = tx_buf,
+        .rx_buffer = rx_buf,
+        .length    = 3 * sizeof(Message_t) * 8,
+    };
 
-This example uses one extra pin: GPIO_HANDSHAKE is used as a handshake pin. After a transmission has been set up and
-we're ready to send/receive data, this code uses a callback to set the handshake pin high. The sender will detect this
-and start sending a transaction. As soon as the transaction is done, the line gets set low again.
-*/
+    static const Message_t *const rx_msg = (Message_t *)rx_buf;
 
-/*
-Pins in use. The SPI Master can use the GPIO mux, so feel free to change these if needed.
-*/
-#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2
-#define GPIO_HANDSHAKE 2
-#define GPIO_MOSI 13
-#define GPIO_MISO 12
-#define GPIO_SCLK 14
-#define GPIO_CS 15
+    static Message_t ack_msg = {.header = {.start_byte = ECU_MSG_START_BYTE}, .name = "spi_ack", .data = {0}};
+    make_message(&ack_msg, 0, NULL, NULL, ACK_CMD);
 
-#elif CONFIG_IDF_TARGET_ESP32C3
-#define GPIO_HANDSHAKE 3
-#define GPIO_MOSI 7
-#define GPIO_MISO 2
-#define GPIO_SCLK 6
-#define GPIO_CS 10
+    static ESP32Msg_t esp_msg = {0};
 
-#elif CONFIG_IDF_TARGET_ESP32S3
-#define GPIO_HANDSHAKE 2
-#define GPIO_MOSI 11
-#define GPIO_MISO 13
-#define GPIO_SCLK 12
-#define GPIO_CS 10
+    static char msg[1024] = {0};
 
-#endif // CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2
+    while (1)
+    {
+        // Clear the rx buffer
+        memset(rx_buf, 0, sizeof(rx_buf));
+        memset(tx_buf, 0, sizeof(tx_buf));
+        memcpy(tx_buf, &ack_msg, sizeof(ack_msg));
 
-#ifdef CONFIG_IDF_TARGET_ESP32
-#define RCV_HOST HSPI_HOST
+        // for (uint8_t i = 0; i < sizeof(Message_t); i++)
+        // {
+        //     tx_buf[i] = i;
+        // }
 
-#else
-#define RCV_HOST SPI2_HOST
+        // ecu_warn("SENDING:");
+        // for (int i = 0; i < sizeof(Message_t); i++)
+        // {
+        //     printf("%hu\n", tx_buf[i]);
+        // }
 
-#endif
+        // Wait for the master to send a query
+        ESP_ERROR_CHECK(spi_slave_transmit(ECU_SPI_RCV_HOST, &t, portMAX_DELAY));
 
-// Called after a transaction is queued and ready for pickup by master.
-void my_post_setup_cb(spi_slave_transaction_t *trans) {}
+        // ecu_warn("RECEIVING:");
+        // for (int i = 0; i < sizeof(Message_t); i++)
+        // {
+        //     printf("%hu\n", rx_buf[i]);
+        // }
 
-// Called after transaction is sent/received.
-void my_post_trans_cb(spi_slave_transaction_t *trans) {}
+        msg_to_str(msg, rx_msg);
+        ecu_warn("Rx msg:\n%s\n", msg);
+
+        int msg_status = check_msg(rx_msg);
+        if (msg_status < 0)
+        {
+            msg_err_to_str(msg, msg_status);
+            ecu_warn("SPI - Received invalid message - %s", msg);
+            goto nd;
+        }
+
+        if (rx_msg->command != STATUS_CMD)
+        {
+            ecu_warn("SPI - Received invalid command: %d", rx_msg->command);
+            goto nd;
+        }
+
+        // Copy the IO state to the message buffer, clear rx buffer
+        memset(rx_buf, 0, sizeof(rx_buf));
+        memset(tx_buf, 0, sizeof(tx_buf));
+
+        memcpy(&esp_msg, &esp_status, sizeof(ESP32Msg_t));
+        calc_can_checksum(&esp_msg.CANMsg);
+        calc_esp_checksum(&esp_msg);
+        memcpy(tx_buf, &esp_msg, sizeof(ESP32Msg_t));
+
+        memset(&t, 0, sizeof(t));
+        t.tx_buffer = tx_buf;
+        t.rx_buffer = rx_buf;
+        t.length    = 3 * sizeof(Message_t) * 8;
+
+        // Set up a transaction to send/receive
+        ESP_ERROR_CHECK(spi_slave_transmit(ECU_SPI_RCV_HOST, &t, portMAX_DELAY));
+
+        ESP32Msg_to_str(msg, &esp_msg);
+        ecu_log("SPI - Sent message:\n%s", msg);
+
+        msg_to_str(msg, rx_msg);
+        ecu_log("SPI - Received message:\n%s", msg);
+
+        msg_status = check_msg(rx_msg);
+        if (msg_status < 0)
+        {
+            msg_err_to_str(msg, msg_status);
+            ecu_warn("SPI - Received invalid acknowledgement msg - %s", msg);
+            goto nd;
+        }
+
+        if (rx_msg->command != ACK_CMD)
+        {
+            ecu_warn("SPI - Received invalid ack command - %d", rx_msg->command);
+            goto nd;
+        }
+
+    nd:
+        n++;
+    }
+}
+
+void run_uart(void *pvParameters) { vTaskSuspend(NULL); }
+
+void run_can(void *pvParameters) { vTaskSuspend(NULL); }
+
+void run_pwm(void *pvParameters) { vTaskSuspend(NULL); }
+
+void run_dac(void *pvParameters) { vTaskSuspend(NULL); }
+
+void run_adc(void *pvParameters)
+{
+    static const uint8_t num_samples = 64;
+
+    static const uint8_t num_adc_1 = 4;
+    static const uint8_t num_adc_2 = 3;
+
+    static const adc_channel_t adc_gpios[] = {ECU_GET_ADC_CHANNEL(ECU_ADC_1), ECU_GET_ADC_CHANNEL(ECU_ADC_2),
+                                              ECU_GET_ADC_CHANNEL(ECU_ADC_3), ECU_GET_ADC_CHANNEL(ECU_ADC_4),
+                                              ECU_GET_ADC_CHANNEL(ECU_ADC_5), ECU_GET_ADC_CHANNEL(ECU_ADC_6),
+                                              ECU_GET_ADC_CHANNEL(ECU_ADC_7)};
+
+    uint32_t adc_readings[7] = {};
+
+    // Multisampling
+    for (uint8_t i = 0; i < num_samples; i++)
+    {
+        for (uint8_t j = 0; j < num_adc_1 + num_adc_2; j++)
+        {
+            if (j < num_adc_1)
+            {
+                adc_readings[j] += adc1_get_raw((adc1_channel_t)adc_gpios[j]);
+            } else
+            {
+                int raw = 0;
+                ESP_ERROR_CHECK(adc2_get_raw((adc2_channel_t)adc_gpios[j], ADC_WIDTH_12Bit, &raw));
+                adc_readings[j] += raw;
+            }
+        }
+    }
+
+    for (uint8_t j = 0; j < num_adc_1 + num_adc_2; j++)
+    {
+        adc_readings[j] /= num_samples;
+        esp_adc_cal_characteristics_t calib = ecu_get_adc_calib(j < num_adc_1 ? ECU_ADC_1 : ECU_ADC_2);
+
+        // Convert adc_reading to voltage in mV
+        uint32_t voltage  = esp_adc_cal_raw_to_voltage(adc_readings[j], &calib);
+        esp_status.adc[j] = voltage;
+    }
+}
+
+void run_hall_effect(void *pvParameters) { vTaskSuspend(NULL); }
+
+void run_din(void *pvParameters) { vTaskSuspend(NULL); }
+
+void run_dout(void *pvParameters) { vTaskSuspend(NULL); }
+
+void log_esp_state(void *pvParameters)
+{
+    static char buf[1024] = {};
+
+    ESP32Msg_to_str(buf, &esp_status);
+    ecu_log("%s", buf);
+}
 
 // Main application
 void app_main(void)
 {
-    int n = 0;
-    esp_err_t ret;
+    ecu_pins_init();
 
-    // Configuration for the SPI bus
-    spi_bus_config_t buscfg = {
-        .mosi_io_num   = GPIO_MOSI,
-        .miso_io_num   = GPIO_MISO,
-        .sclk_io_num   = GPIO_SCLK,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-    };
+    vTaskDelay(pdMS_TO_TICKS(3000));
 
-    // Configuration for the SPI slave interface
-    spi_slave_interface_config_t slvcfg = {.mode          = 0,
-                                           .spics_io_num  = GPIO_CS,
-                                           .queue_size    = 3,
-                                           .flags         = 0,
-                                           .post_setup_cb = my_post_setup_cb,
-                                           .post_trans_cb = my_post_trans_cb};
+    TaskHandle_t spi_task   = NULL;
+    TaskHandle_t uart_task  = NULL;
+    TaskHandle_t can_task   = NULL;
+    TaskHandle_t pwm_task   = NULL;
+    TaskHandle_t dac_task   = NULL;
+    TimerHandle_t adc_timer = NULL;
+    TaskHandle_t hall_task  = NULL;
+    TaskHandle_t din_task   = NULL;
+    TaskHandle_t dout_task  = NULL;
+    TimerHandle_t log_timer = NULL;
 
-    // Enable pull-ups on SPI lines so we don't detect rogue pulses when no master is connected.
-    gpio_set_pull_mode(GPIO_MOSI, GPIO_PULLUP_ONLY);
-    gpio_set_pull_mode(GPIO_SCLK, GPIO_PULLUP_ONLY);
-    gpio_set_pull_mode(GPIO_CS, GPIO_PULLUP_ONLY);
+    xTaskCreate(run_spi, "run_spi", 4096, NULL, 5, &spi_task);
 
-    // Initialize SPI slave interface
-    ret = spi_slave_initialize(RCV_HOST, &buscfg, &slvcfg, SPI_DMA_CH_AUTO);
-    assert(ret == ESP_OK);
+    xTaskCreate(run_uart, "run_uart", 4096, NULL, 2, &uart_task);
 
-    WORD_ALIGNED_ATTR char sendbuf[129] = "";
-    WORD_ALIGNED_ATTR char recvbuf[129] = "";
-    memset(recvbuf, 0, 33);
-    spi_slave_transaction_t t;
-    memset(&t, 0, sizeof(t));
+    xTaskCreate(run_can, "run_can", 4096, NULL, 5, &can_task);
 
-    while (1)
+    xTaskCreate(run_pwm, "run_pwm", 4096, NULL, 4, &pwm_task);
+
+    xTaskCreate(run_dac, "run_dac", 4096, NULL, 4, &dac_task);
+
+    adc_timer = xTimerCreate("run_adc", pdMS_TO_TICKS(1000), pdTRUE, 0, run_adc);
+
+    if (adc_timer == NULL)
     {
-        // Clear receive buffer, set send buffer to something sane
-        memset(recvbuf, 0xA5, 129);
-        sprintf(sendbuf, "This is the receiver, sending data for transmission number %04d.", n);
-
-        // Set up a transaction of 128 bytes to send/receive
-        t.length    = 128 * 8;
-        t.tx_buffer = sendbuf;
-        t.rx_buffer = recvbuf;
-        /* This call enables the SPI slave interface to send/receive to the sendbuf and recvbuf. The transaction is
-        initialized by the SPI master, however, so it will not actually happen until the master starts a hardware
-        transaction by pulling CS low and pulsing the clock etc. In this specific example, we use the handshake line,
-        pulled up by the .post_setup_cb callback that is called as soon as a transaction is ready, to let the master
-        know it is free to transfer data.
-        */
-        ret = spi_slave_transmit(RCV_HOST, &t, portMAX_DELAY);
-
-        // spi_slave_transmit does not return until the master has done a transmission, so by here we have sent our data
-        // and received data from the master. Print it.
-        printf("Received: %s\n", recvbuf);
-        n++;
+        ecu_log("ADC TIMER FAILED - ADC READING DISABLED");
+    } else
+    {
+        xTimerStart(adc_timer, 0);
     }
+
+    xTaskCreate(run_hall_effect, "run_hall_effect", 4096, NULL, 2, &hall_task);
+
+    xTaskCreate(run_din, "run_din", 4096, NULL, 2, &din_task);
+
+    xTaskCreate(run_dout, "run_dout", 4096, NULL, 2, &dout_task);
+
+    // log_timer = xTimerCreate("log_esp_state", pdMS_TO_TICKS(1000), pdTRUE, 0, log_esp_state);
+
+    // if (log_timer == NULL)
+    // {
+    //     ecu_log("LOG TIMER FAILED - STATUS LOGGING DISABLED\n");
+    // } else
+    // {
+    //     xTimerStart(log_timer, 0);
+    // }
+
+    ecu_log("RUNNING");
+
+    vTaskSuspend(NULL);
 }

@@ -96,13 +96,15 @@ void Connection::manage_connection(void *arg)
     {
         if (connection->is_open() && connection->is_connected())
         {
-            Message_t msg;
+            Message_t msg = {};
             if (connection->receive_message(&msg) <= 0) { continue; }
 
-            int message_ok = check_message(&msg);
+            int message_ok = check_msg(&msg);
             if (message_ok < 0)
             {
-                print_msg_err(message_ok);
+                char err_msg[32];
+                msg_err_to_str(err_msg, message_ok);
+                printf("%s\n", err_msg);
                 continue;
             }
 
@@ -122,21 +124,21 @@ void Connection::process_message(Message_t *message)
 
     switch (message->command)
     {
-    case Message_t::UNKNOWN: {
+    case Message_t::UNKNOWN_CMD: {
         break;
     }
-    case Message_t::ECHO: {
+    case Message_t::ECHO_CMD: {
         send_message(message);
         break;
     }
-    case Message_t::PING: {
+    case Message_t::PING_CMD: {
         send_message(message);
         break;
     }
-    case Message_t::ACK: {
+    case Message_t::ACK_CMD: {
         break;
     }
-    case Message_t::RESTART: {
+    case Message_t::RESTART_CMD: {
         // Shut down all connections nicely
         xTaskCreate(System::restart, "ECU_RESTART", 10000, /* Stack size in words, not bytes. */
                     memset(malloc(1), EXIT_SUCCESS, 1),    /* Parameter passed into the task. */
@@ -147,15 +149,15 @@ void Connection::process_message(Message_t *message)
         close();
         break;
     }
-    case Message_t::STATUS: {
+    case Message_t::STATUS_CMD: {
         send_status(message);
         break;
     }
-    case Message_t::SYNC: {
+    case Message_t::SYNC_CMD: {
         synchronize_connection(message);
         break;
     }
-    case Message_t::FIRMWARE_UPDATE: {
+    case Message_t::FIRMWARE_UPDATE_CMD: {
         download_firmware(message);
 
         // // Shut down all connections nicely
@@ -168,7 +170,7 @@ void Connection::process_message(Message_t *message)
         // close();
         break;
     }
-    case Message_t::PROGRAM_UPDATE: {
+    case Message_t::PROGRAM_UPDATE_CMD: {
         download_firmware(message);
 
         // Shut down all connections nicely
@@ -182,13 +184,13 @@ void Connection::process_message(Message_t *message)
 
         break;
     }
-    case Message_t::VALUE: {
+    case Message_t::VALUE_CMD: {
         break;
     }
-    case Message_t::PARAM_GET: {
+    case Message_t::PARAM_GET_CMD: {
         break;
     }
-    case Message_t::PARAM_SET: {
+    case Message_t::PARAM_SET_CMD: {
         break;
     }
     }

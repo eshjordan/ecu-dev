@@ -1,10 +1,8 @@
 
 idf_component_register(
     SRCS
-        "app_main.c"
+        "ecu-pins.c"
     INCLUDE_DIRS
         "include"
-    REQUIRES
-        ecu-pins
-        ecu-shared
+    REQUIRES esp_adc_cal
 )

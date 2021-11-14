@@ -17,6 +17,11 @@
 
 #endif
 
+static CRC reflect(CRC data, uint8_t num_bits);
+
+#define REFLECT_DATA(X) ((uint8_t)reflect((X), 8))
+#define REFLECT_REMAINDER(X) ((CRC)reflect((X), WIDTH))
+
 #define WIDTH (8U * sizeof(CRC))
 #define TOPBIT 1U << (WIDTH - 1U)
 

@@ -1,4 +1,5 @@
 #include "IO.hpp"
+#include "Message.h"
 #include "System.hpp"
 #include <fcntl.h>
 #include <linux/spi/spidev.h>
@@ -12,11 +13,11 @@ static bool io_inited     = false;
 
 static void transfer()
 {
-    uint8_t tx[128] = {1};
+    Message_t tx_msg = {};
 
-    uint8_t rx[128] = {};
+    Message_t rx_msg = {};
 
-    struct spi_ioc_transfer tr = {.tx_buf = (unsigned long)tx, .rx_buf = (unsigned long)rx, .len = 128};
+    struct spi_ioc_transfer tr = {.tx_buf = (unsigned long)&tx_msg, .rx_buf = (unsigned long)&rx_msg, .len = sizeof(Message_t)};
 
     if (fd < 0)
     {
@@ -33,10 +34,11 @@ static void transfer()
 
     puts("spi message:");
 
-    for (ret = 0; ret < sizeof(rx); ret++)
-    {
-        printf("%c", rx[ret]);
-    }
+    char msg_str[128] = {};
+
+    msg_to_str(msg_str, &rx_msg);
+    printf("%s\n", msg_str);
+
     puts("");
 }
 

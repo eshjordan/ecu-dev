@@ -1,0 +1,6 @@
+#!/bin/bash
+root_dir=$(dirname $(readlink -f $0))
+
+cd ${root_dir}/build/esp32
+source ${HOME}/esp/esp-idf/export.sh > /dev/null
+idf.py -G "Unix Makefiles" -C "${root_dir}/src/esp32" -B "${root_dir}/build/esp32" --ccache -p /dev/ttyUSB0 monitor
