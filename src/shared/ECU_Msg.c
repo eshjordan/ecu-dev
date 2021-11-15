@@ -1,60 +1,34 @@
-#include "Message.h"
+#include "ECU_Msg.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
-CRC calc_msg_checksum(Message_t *msg)
+struct ECU_Msg_t ecu_msg_make(uint32_t id, const char name[64], const void *data, ECU_Command_t command)
 {
-    return msg->checksum = calc_crc(msg, offsetof(Message_t, checksum));
-}
-
-int check_msg(const Message_t *const msg)
-{
-    if (msg->header.start_byte != ECU_MSG_START_BYTE) { return -ERR_INVALID_START_BYTE; }
-
-    if (msg->checksum != calc_crc(msg, offsetof(Message_t, checksum))) { return -ERR_CRC_FAILED; }
-    return 1;
-}
-
-void msg_err_to_str(char *str, const int err_code)
-{
-    switch (err_code)
-    {
-    case -ERR_CRC_FAILED: {
-        sprintf(str, "CRC Failed!");
-        return;
-    }
-    case -ERR_INVALID_LENGTH: {
-        sprintf(str, "Invalid Length!");
-        return;
-    }
-    case -ERR_INVALID_START_BYTE: {
-        sprintf(str, "Invalid Start Byte!");
-        return;
-    }
-    default: {
-        sprintf(str, "Unknown Error!");
-        return;
-    }
-    }
-}
-
-struct Message_t make_message(uint32_t id, const char name[64], const void *data, Command_t command)
-{
-    Message_t dst = {.header = make_header(id, sizeof(Message_t)), .command = command};
+    ECU_Msg_t dst = {.header = header_make(id, sizeof(ECU_Msg_t)), .command = command};
 
     if (name) { strncpy(dst.name, name, 64); }
 
     if (data) { memcpy(dst.data, data, 8); }
 
-    calc_msg_checksum(&dst);
+    ecu_msg_calc_checksum(&dst);
 
     return dst;
 }
 
-void msg_to_str(char *str, const Message_t *const msg)
+CRC ecu_msg_calc_checksum(ECU_Msg_t *msg) { return msg->checksum = calc_crc(msg, offsetof(ECU_Msg_t, checksum)); }
+
+ecu_err_t ecu_msg_check(const ECU_Msg_t *const msg)
 {
-    static const char fmt_str[] = "Message:\n"
+    if (msg->header.start_byte != ECU_MSG_START_BYTE) { return -ERR_INVALID_START_BYTE; }
+
+    if (msg->checksum != calc_crc(msg, offsetof(ECU_Msg_t, checksum))) { return -ERR_CRC_FAILED; }
+    return 1;
+}
+
+void ecu_msg_to_str(char *str, const ECU_Msg_t *const msg)
+{
+    static const char fmt_str[] = "ECU_Msg:\n"
                                   "    Header:\n"
                                   "        start_byte: %hhu\n"
                                   "        length: %u\n"

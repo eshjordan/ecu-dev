@@ -1,5 +1,5 @@
 #include "main.hpp"
-#include "Message.h"
+#include "ECU_Msg.h"
 #include <algorithm>
 #include <filesystem>
 
@@ -289,18 +289,18 @@ void send_file(const std::filesystem::directory_entry &file, const std::string &
 
     std::string type_and_name = type + "/" + filename.c_str();
 
-    Message_t file_header = make_message(0, type_and_name.c_str(), data, Message_t::VALUE_CMD);
+    ECU_Msg_t file_header = ecu_msg_make(0, type_and_name.c_str(), data, ECU_Msg_t::VALUE_CMD);
 
-    if (send(sock, &file_header, sizeof(Message_t), 0) < 0)
+    if (send(sock, &file_header, sizeof(ECU_Msg_t), 0) < 0)
     {
         puts("File header send failed");
         return;
     }
 
-    Message_t ack_msg;
+    ECU_Msg_t ack_msg;
 
     // Wait for server to acknowledge
-    if (recv(sock, &ack_msg, sizeof(Message_t), 0) < 0)
+    if (recv(sock, &ack_msg, sizeof(ECU_Msg_t), 0) < 0)
     {
         puts("ACK recv failed");
         return;
@@ -328,7 +328,7 @@ void send_file(const std::filesystem::directory_entry &file, const std::string &
     assert(tx_bytes == file_size);
 
     // Wait for server to acknowledge
-    if (recv(sock, &ack_msg, sizeof(Message_t), 0) < 0)
+    if (recv(sock, &ack_msg, sizeof(ECU_Msg_t), 0) < 0)
     {
         puts("ACK recv failed");
         return;
@@ -339,8 +339,8 @@ void send_file(const std::filesystem::directory_entry &file, const std::string &
 
 void echo_test()
 {
-    Message_t msg = make_message(0, "ping", nullptr, Message_t::ECHO_CMD);
-    send(sock, &msg, sizeof(Message_t), 0);
+    ECU_Msg_t msg = ecu_msg_make(0, "ping", nullptr, ECU_Msg_t::ECHO_CMD);
+    send(sock, &msg, sizeof(ECU_Msg_t), 0);
 }
 
 void sync_test()
@@ -348,9 +348,9 @@ void sync_test()
     uint32_t id         = 0;
     uint64_t sync_count = 10;
 
-    Message_t init_msg = make_message(id++, "Test Message", &sync_count, Message_t::SYNC_CMD);
+    ECU_Msg_t init_msg = ecu_msg_make(id++, "Test Message", &sync_count, ECU_Msg_t::SYNC_CMD);
 
-    if (send(sock, &init_msg, sizeof(Message_t), 0) < 0)
+    if (send(sock, &init_msg, sizeof(ECU_Msg_t), 0) < 0)
     {
         puts("Init send failed");
         return;
@@ -359,7 +359,7 @@ void sync_test()
     uint8_t buf[1024];
 
     // Wait for server to acknowledge
-    if (recv(sock, buf, sizeof(Message_t), 0) < 0)
+    if (recv(sock, buf, sizeof(ECU_Msg_t), 0) < 0)
     {
         puts("ACK recv failed");
         return;
@@ -368,32 +368,32 @@ void sync_test()
     // Start pinging
     for (int i = 0; i < sync_count; i++)
     {
-        Message_t msg = make_message(id++, "Test Message", nullptr, Message_t::PING_CMD);
+        ECU_Msg_t msg = ecu_msg_make(id++, "Test Message", nullptr, ECU_Msg_t::PING_CMD);
 
-        if (send(sock, &msg, sizeof(Message_t), 0) < 0)
+        if (send(sock, &msg, sizeof(ECU_Msg_t), 0) < 0)
         {
             printf("send %d failed\n", i);
             return;
         }
 
         // Wait for server to acknowledge
-        if (recv(sock, buf, sizeof(Message_t), 0) < 0)
+        if (recv(sock, buf, sizeof(ECU_Msg_t), 0) < 0)
         {
             puts("ACK recv failed");
             return;
         }
     }
 
-    Message_t sync_status;
+    ECU_Msg_t sync_status;
     ssize_t bytes_received = 0;
 
-    if ((bytes_received = recv(sock, &sync_status, sizeof(Message_t), 0)) < 0)
+    if ((bytes_received = recv(sock, &sync_status, sizeof(ECU_Msg_t), 0)) < 0)
     {
         puts("Sec recv failed");
         return;
     }
 
-    if (check_msg(&sync_status) < 0)
+    if (ecu_msg_check(&sync_status) < 0)
     {
         puts("Received message is not a message");
         return;
@@ -401,13 +401,13 @@ void sync_test()
 
     auto seconds = *reinterpret_cast<int64_t *>(sync_status.data);
 
-    if ((bytes_received = recv(sock, &sync_status, sizeof(Message_t), 0)) < 0)
+    if ((bytes_received = recv(sock, &sync_status, sizeof(ECU_Msg_t), 0)) < 0)
     {
         puts("Nsec recv failed");
         return;
     }
 
-    if (check_msg(&sync_status) < 0)
+    if (ecu_msg_check(&sync_status) < 0)
     {
         puts("Received message is not a message");
         return;
@@ -426,14 +426,14 @@ void sync_test()
 
 void remote_restart()
 {
-    Message_t msg = make_message(0, "restart", nullptr, Message_t::RESTART_CMD);
-    send(sock, &msg, sizeof(Message_t), 0);
+    ECU_Msg_t msg = ecu_msg_make(0, "restart", nullptr, ECU_Msg_t::RESTART_CMD);
+    send(sock, &msg, sizeof(ECU_Msg_t), 0);
 }
 
 void request_status()
 {
-    Message_t msg = make_message(0, "status", nullptr, Message_t::STATUS_CMD);
-    send(sock, &msg, sizeof(Message_t), 0);
+    ECU_Msg_t msg = ecu_msg_make(0, "status", nullptr, ECU_Msg_t::STATUS_CMD);
+    send(sock, &msg, sizeof(ECU_Msg_t), 0);
 
     Header_t header;
     recv(sock, &header, sizeof(Header_t), 0);
@@ -470,16 +470,16 @@ void firmware_update_test()
 
     uint32_t id        = 0;
     uint64_t data      = bin_files.size() + lib_files.size();
-    Message_t init_msg = make_message(id++, "Number of files", &data, Message_t::FIRMWARE_UPDATE_CMD);
+    ECU_Msg_t init_msg = ecu_msg_make(id++, "Number of files", &data, ECU_Msg_t::FIRMWARE_UPDATE_CMD);
 
-    if (send(sock, &init_msg, sizeof(Message_t), 0) < 0)
+    if (send(sock, &init_msg, sizeof(ECU_Msg_t), 0) < 0)
     {
         puts("Command send failed");
         return;
     }
 
-    Message_t ack_msg;
-    if (recv(sock, &ack_msg, sizeof(Message_t), 0) < 0)
+    ECU_Msg_t ack_msg;
+    if (recv(sock, &ack_msg, sizeof(ECU_Msg_t), 0) < 0)
     {
         puts("ACK recv failed");
         return;

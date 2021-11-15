@@ -1,5 +1,5 @@
 #include "IO.hpp"
-#include "Message.h"
+#include "ECU_Msg.h"
 #include "System.hpp"
 #include <fcntl.h>
 #include <linux/spi/spidev.h>
@@ -13,11 +13,11 @@ static bool io_inited     = false;
 
 static void transfer()
 {
-    Message_t tx_msg = {};
+    ECU_Msg_t tx_msg = {};
 
-    Message_t rx_msg = {};
+    ECU_Msg_t rx_msg = {};
 
-    struct spi_ioc_transfer tr = {.tx_buf = (unsigned long)&tx_msg, .rx_buf = (unsigned long)&rx_msg, .len = sizeof(Message_t)};
+    struct spi_ioc_transfer tr = {.tx_buf = (unsigned long)&tx_msg, .rx_buf = (unsigned long)&rx_msg, .len = sizeof(ECU_Msg_t)};
 
     if (fd < 0)
     {

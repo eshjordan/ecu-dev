@@ -1,6 +1,6 @@
 #include "Connection.hpp"
 #include "CRC.h"
-#include "Message.h"
+#include "ECU_Msg.h"
 #include "RTOS_IP.hpp"
 #include "System.hpp"
 #include <cstddef>
@@ -26,9 +26,9 @@ void Connection::init(void)
     vLoggingPrintf("Connection opened! - %s\n", m_ip_str);
 }
 
-BaseType_t Connection::receive_message(Message_t *message)
+BaseType_t Connection::receive_message(ECU_Msg_t *message)
 {
-    BaseType_t rx_bytes = FreeRTOS_recv(m_socket, message, sizeof(Message_t), 0);
+    BaseType_t rx_bytes = FreeRTOS_recv(m_socket, message, sizeof(ECU_Msg_t), 0);
     if (rx_bytes < 0)
     {
         print_recv_err(rx_bytes);
@@ -37,9 +37,9 @@ BaseType_t Connection::receive_message(Message_t *message)
     return rx_bytes;
 }
 
-BaseType_t Connection::send_message(Message_t *message)
+BaseType_t Connection::send_message(ECU_Msg_t *message)
 {
-    BaseType_t tx_bytes = FreeRTOS_send(m_socket, message, sizeof(Message_t), 0);
+    BaseType_t tx_bytes = FreeRTOS_send(m_socket, message, sizeof(ECU_Msg_t), 0);
     if (tx_bytes < 0)
     {
         print_send_err(tx_bytes);
@@ -96,14 +96,14 @@ void Connection::manage_connection(void *arg)
     {
         if (connection->is_open() && connection->is_connected())
         {
-            Message_t msg = {};
+            ECU_Msg_t msg = {};
             if (connection->receive_message(&msg) <= 0) { continue; }
 
-            int message_ok = check_msg(&msg);
+            int message_ok = ecu_msg_check(&msg);
             if (message_ok < 0)
             {
                 char err_msg[32];
-                msg_err_to_str(err_msg, message_ok);
+                ecu_err_to_str(err_msg, message_ok);
                 printf("%s\n", err_msg);
                 continue;
             }
@@ -117,28 +117,28 @@ void Connection::manage_connection(void *arg)
     vTaskDelete(nullptr);
 }
 
-void Connection::process_message(Message_t *message)
+void Connection::process_message(ECU_Msg_t *message)
 {
     printf("Received Message:\nName: %s\nID: %u\nCommand: %u\nData: %lld\n", message->name, message->header.id,
            message->command, (const uint64_t &)message->data);
 
     switch (message->command)
     {
-    case Message_t::UNKNOWN_CMD: {
+    case ECU_Msg_t::UNKNOWN_CMD: {
         break;
     }
-    case Message_t::ECHO_CMD: {
+    case ECU_Msg_t::ECHO_CMD: {
         send_message(message);
         break;
     }
-    case Message_t::PING_CMD: {
+    case ECU_Msg_t::PING_CMD: {
         send_message(message);
         break;
     }
-    case Message_t::ACK_CMD: {
+    case ECU_Msg_t::ACK_CMD: {
         break;
     }
-    case Message_t::RESTART_CMD: {
+    case ECU_Msg_t::RESTART_CMD: {
         // Shut down all connections nicely
         xTaskCreate(System::restart, "ECU_RESTART", 10000, /* Stack size in words, not bytes. */
                     memset(malloc(1), EXIT_SUCCESS, 1),    /* Parameter passed into the task. */
@@ -149,15 +149,15 @@ void Connection::process_message(Message_t *message)
         close();
         break;
     }
-    case Message_t::STATUS_CMD: {
+    case ECU_Msg_t::STATUS_CMD: {
         send_status(message);
         break;
     }
-    case Message_t::SYNC_CMD: {
+    case ECU_Msg_t::SYNC_CMD: {
         synchronize_connection(message);
         break;
     }
-    case Message_t::FIRMWARE_UPDATE_CMD: {
+    case ECU_Msg_t::FIRMWARE_UPDATE_CMD: {
         download_firmware(message);
 
         // // Shut down all connections nicely
@@ -170,7 +170,7 @@ void Connection::process_message(Message_t *message)
         // close();
         break;
     }
-    case Message_t::PROGRAM_UPDATE_CMD: {
+    case ECU_Msg_t::PROGRAM_UPDATE_CMD: {
         download_firmware(message);
 
         // Shut down all connections nicely
@@ -184,13 +184,13 @@ void Connection::process_message(Message_t *message)
 
         break;
     }
-    case Message_t::VALUE_CMD: {
+    case ECU_Msg_t::VALUE_CMD: {
         break;
     }
-    case Message_t::PARAM_GET_CMD: {
+    case ECU_Msg_t::PARAM_GET_CMD: {
         break;
     }
-    case Message_t::PARAM_SET_CMD: {
+    case ECU_Msg_t::PARAM_SET_CMD: {
         break;
     }
     }

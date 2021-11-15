@@ -5,10 +5,10 @@
 extern "C" {
 #endif
 
-#include "CANMsg.h"
-#include "ESP32Msg.h"
+#include "CAN_Msg.h"
+#include "ECU_Msg.h"
+#include "ESP32_In_Msg.h"
 #include "Header.h"
-#include "Message.h"
 
 #define max(s1, s2) ((s1) > (s2) ? (s1) : (s2))
 

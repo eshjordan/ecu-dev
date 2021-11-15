@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Message.h"
+#include "ECU_Msg.h"
 #include "RTOS_IP.hpp"
 
 namespace System {
@@ -24,19 +24,19 @@ private:
 
     static void manage_connection(void *arg);
 
-    void process_message(Message_t *message);
+    void process_message(ECU_Msg_t *message);
 
-    BaseType_t receive_message(Message_t *message);
+    BaseType_t receive_message(ECU_Msg_t *message);
 
-    BaseType_t send_message(Message_t *message);
+    BaseType_t send_message(ECU_Msg_t *message);
 
     /* Functions to handle specific requests. */
 
-    void send_status(Message_t *message);
+    void send_status(ECU_Msg_t *message);
 
-    void synchronize_connection(Message_t *num_messages);
+    void synchronize_connection(ECU_Msg_t *num_messages);
 
-    void download_firmware(Message_t *message);
+    void download_firmware(ECU_Msg_t *message);
 
 public:
     Connection(const Socket_t &socket, const freertos_sockaddr &address);

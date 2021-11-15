@@ -1,42 +1,16 @@
-#include "CANMsg.h"
+#include "CAN_Msg.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
-CRC calc_can_checksum(CANMsg_t *msg)
-{
-    return msg->checksum = calc_crc(msg, offsetof(CANMsg_t, checksum));
-}
+CRC can_msg_calc_checksum(CAN_Msg_t *msg) { return msg->checksum = calc_crc(msg, offsetof(CAN_Msg_t, checksum)); }
 
-int check_can(const CANMsg_t *const msg)
+ecu_err_t can_msg_check(const CAN_Msg_t *const msg)
 {
-    if (msg->header.start_byte != ECU_MSG_START_BYTE) { return -ERR_INVALID_START_BYTE; }
+    if (msg->header.start_byte != ECU_HEADER_START_BYTE) { return -ERR_INVALID_START_BYTE; }
 
-    if (msg->checksum != calc_crc(msg, offsetof(CANMsg_t, checksum))) { return -ERR_CRC_FAILED; }
+    if (msg->checksum != calc_crc(msg, offsetof(CAN_Msg_t, checksum))) { return -ERR_CRC_FAILED; }
     return 1;
-}
-
-void can_err_to_str(char *str, const int err_code)
-{
-    switch (err_code)
-    {
-    case -ERR_CRC_FAILED: {
-        sprintf(str, "CRC Failed!");
-        return;
-    }
-    case -ERR_INVALID_LENGTH: {
-        sprintf(str, "Invalid Length!");
-        return;
-    }
-    case -ERR_INVALID_START_BYTE: {
-        sprintf(str, "Invalid Start Byte!");
-        return;
-    }
-    default: {
-        sprintf(str, "Unknown Error!");
-        return;
-    }
-    }
 }
 
 /**
@@ -45,9 +19,9 @@ void can_err_to_str(char *str, const int err_code)
  * @param str
  * @param msg
  */
-void CANMsg_to_str(char *str, const CANMsg_t *msg)
+void can_msg_to_str(char *str, const CAN_Msg_t *msg)
 {
-    static const char fmt_str[] = "CANMsg:\n"
+    static const char fmt_str[] = "CAN_Msg:\n"
                                   "    Header:\n"
                                   "        start_byte: %hhu\n"
                                   "        length: %u\n"

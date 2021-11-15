@@ -1,5 +1,5 @@
-#ifndef CANMSG_H
-#define CANMSG_H
+#ifndef CAN_MSG_H
+#define CAN_MSG_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,7 +25,7 @@ extern "C" {
 #define CAN_MSG_FLAG_SELF (1 << 28)         /* Transmit as a Self Reception Request. Unused for received. */
 #define CAN_MSG_FLAG_DLC_NON_COMP (1 << 27) /* Message's Data length code is larger than 8. */
 
-struct CANMsg_t {
+struct CAN_Msg_t {
     Header_t header STRUCT_INIT;
     uint32_t flags STRUCT_INIT;           /* Message flags */
     uint32_t identifier STRUCT_INIT;      /* 11 or 29 bit identifier */
@@ -34,13 +34,11 @@ struct CANMsg_t {
     CRC checksum STRUCT_INIT;             /* Message checksum. */
 } ALIGN;
 
-typedef struct CANMsg_t CANMsg_t;
+typedef struct CAN_Msg_t CAN_Msg_t;
 
-CRC calc_can_checksum(CANMsg_t *msg);
+CRC can_msg_calc_checksum(CAN_Msg_t *msg);
 
-int check_can(const CANMsg_t *msg);
-
-void can_err_to_str(char *str, int err_code);
+ecu_err_t can_msg_check(const CAN_Msg_t *msg);
 
 /**
  * @brief Use at least 512 bytes for the message buffer.
@@ -48,10 +46,10 @@ void can_err_to_str(char *str, int err_code);
  * @param str
  * @param msg
  */
-void CANMsg_to_str(char *str, const CANMsg_t *msg);
+void can_msg_to_str(char *str, const CAN_Msg_t *msg);
 
 #ifdef __cplusplus
 } // extern "C"
 #endif
 
-#endif // CANMSG_H
+#endif // CAN_MSG_H

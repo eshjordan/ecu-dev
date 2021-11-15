@@ -25,8 +25,8 @@ Time_t get_time_now(void)
     return timeval_to_time(&tv_now);
 }
 
-struct Header_t make_header(uint32_t id, uint32_t length)
+struct Header_t header_make(uint32_t id, uint32_t length)
 {
-    Header_t hdr = {.start_byte = ECU_MSG_START_BYTE, .length = (length), .id = (id), .stamp = get_time_now()};
+    Header_t hdr = {.start_byte = ECU_HEADER_START_BYTE, .length = (length), .id = (id), .stamp = get_time_now()};
     return hdr;
 }

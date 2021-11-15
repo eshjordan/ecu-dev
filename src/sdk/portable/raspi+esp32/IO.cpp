@@ -1,6 +1,6 @@
 #include "IO.hpp"
-#include "ESP32Msg.h"
-#include "Message.h"
+#include "ESP32_In_Msg.h"
+#include "ECU_Msg.h"
 #include "System.hpp"
 #include <fcntl.h>
 #include <linux/spi/spidev.h>
@@ -13,7 +13,7 @@ static const char *const device = "/dev/spidev0.0";
 static bool esp32_spi_inited    = false;
 static int spi_fd               = -1;
 
-static ESP32Msg_t esp_status = {};
+static ESP32_In_Msg_t esp_status = {};
 
 static int init_esp32_spi(void)
 {
@@ -59,79 +59,84 @@ static int init_esp32_spi(void)
     return spi_fd;
 }
 
-REGISTER_ROUTINE(esp_get_status, 1)
+REGISTER_ROUTINE(esp_get_status, 10)
 {
-    __attribute__((aligned(4))) static uint8_t tx_buf[1024] = {0};
-    __attribute__((aligned(4))) static uint8_t rx_buf[1024] = {0};
+#define print_status 0
 
-    static const auto *const rx_msg = (const Message_t *const)rx_buf;
+    static __attribute__((aligned(4))) ECU_Msg_t tx_msg = {};
+    static __attribute__((aligned(4))) ECU_Msg_t rx_msg = {};
 
     static char msg[1024] = {0};
     int esp_ret           = -1;
 
-    static Message_t request_msg = {};
-    request_msg                  = make_message(0, "spi_request", nullptr, Message_t::STATUS_CMD);
+    memset(&rx_msg, 0, sizeof(ECU_Msg_t));
 
-    memset(rx_buf, 0, sizeof(rx_buf));
-    memset(tx_buf, 0, sizeof(tx_buf));
-    memcpy(tx_buf, &request_msg, sizeof(request_msg));
+    tx_msg = ecu_msg_make(0, "spi_request", nullptr, ECU_Msg_t::STATUS_CMD);
 
-    System::IO::spi_transfer(0, sizeof(Message_t), tx_buf, rx_buf);
+    System::IO::spi_transfer(0, sizeof(ECU_Msg_t), &tx_msg, &rx_msg);
 
+#if print_status
     memset(msg, 0, sizeof(msg));
-    msg_to_str(msg, rx_msg);
+    msg_to_str(msg, &rx_msg);
     printf("SPI - Message before flipping:\n%s\n", msg);
+#endif
 
-    int msg_status = check_msg(rx_msg);
+    int msg_status = ecu_msg_check(&rx_msg);
     if (msg_status < 0)
     {
         memset(msg, 0, sizeof(msg));
-        msg_err_to_str(msg, msg_status);
+        ecu_err_to_str(msg, msg_status);
         printf("SPI - Received invalid acknowledgement msg - %s\n", msg);
-
-        memset(msg, 0, sizeof(msg));
-        msg_to_str(msg, rx_msg);
-        printf("SPI - Message:\n%s\n", msg);
         goto nd;
     }
 
-    if (rx_msg->command != Message_t::ACK_CMD)
+    if (rx_msg.command != ECU_Msg_t::ACK_CMD)
     {
         memset(msg, 0, sizeof(msg));
-        msg_to_str(msg, rx_msg);
+        ecu_msg_to_str(msg, &rx_msg);
         printf("SPI - Received invalid ack command - %s\n", msg);
         goto nd;
     }
 
-    static Message_t ack_msg = {};
-    ack_msg                  = make_message(0, "spi_ack", nullptr, Message_t::ACK_CMD);
+    vTaskDelay(pdMS_TO_TICKS(10));
 
     // Copy the IO state to the message buffer, clear rx buffer
-    memset(rx_buf, 0, sizeof(rx_buf));
-    memset(tx_buf, 0, sizeof(tx_buf));
-    memcpy(tx_buf, &ack_msg, sizeof(ack_msg));
+    memset(&rx_msg, 0, sizeof(ECU_Msg_t));
 
-    vTaskDelay(pdMS_TO_TICKS(100));
+    tx_msg = ecu_msg_make(0, "spi_ack", nullptr, ECU_Msg_t::ACK_CMD);
 
-    System::IO::spi_transfer(0, std::max(sizeof(ESP32Msg_t), sizeof(Message_t)), tx_buf, rx_buf);
+    System::IO::spi_transfer(0, std::max(sizeof(ESP32_In_Msg_t), sizeof(ECU_Msg_t)), &tx_msg, &esp_status);
 
+#if print_status
     memset(msg, 0, sizeof(msg));
-    ESP32Msg_to_str(msg, (ESP32Msg_t *)rx_buf);
+    esp32_in_msg_to_str(msg, &esp_status);
     printf("Rx Msg:\n%s\n", msg);
+#endif
 
-    esp_ret = check_esp((ESP32Msg_t *)rx_buf);
+    esp_ret = esp32_in_msg_check(&esp_status);
     if (esp_ret < 0)
     {
-        esp_err_to_str(msg, esp_ret);
+        ecu_err_to_str(msg, esp_ret);
         printf("ESP Msg error: %s\n", msg);
         goto nd;
     }
 
-    memcpy(&esp_status, rx_buf, sizeof(ESP32Msg_t));
-
 nd:
-    puts("");
+    __asm("nop");
 }
+
+// REGISTER_ROUTINE(esp_print_status, 1)
+// {
+//     for (int i = 0; i < 9; i++)
+//     {
+//         printf("adc %d: %lf\n", i, System::IO::read_analogue_input(i));
+//     }
+
+//     for (int i = 0; i < 3; i++)
+//     {
+//         printf("din %d: %d\n", i, System::IO::read_digital_input(i));
+//     }
+// }
 
 namespace System {
 namespace IO {
@@ -163,15 +168,15 @@ void write_digital_output(int channel, int value) {}
 
 void write_pwm_output(int channel, double freq, double duty) {}
 
-CANMsg_t read_can_input(int bus, int id) { return esp_status.CANMsg; }
+CAN_Msg_t read_can_input(int bus, int id) { return esp_status.can_msg; }
 
-void write_can_output(int bus, int id, CANMsg_t msg) {}
+void write_can_output(int bus, int id, CAN_Msg_t msg) {}
 
-int spi_read(int channel, int size, uint8_t *buffer) { return spi_transfer(channel, size, nullptr, buffer); }
+int spi_read(int channel, int size, void *buffer) { return spi_transfer(channel, size, nullptr, buffer); }
 
-int spi_write(int channel, int size, uint8_t *buffer) { return spi_transfer(channel, size, buffer, nullptr); }
+int spi_write(int channel, int size, void *buffer) { return spi_transfer(channel, size, buffer, nullptr); }
 
-int spi_transfer(int channel, int size, uint8_t *tx_buffer, uint8_t *rx_buffer)
+int spi_transfer(int channel, int size, void *tx_buffer, void *rx_buffer)
 {
     if (!esp32_spi_inited)
     {

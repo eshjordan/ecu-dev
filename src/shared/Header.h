@@ -6,18 +6,15 @@ extern "C" {
 #endif
 
 #include "CRC.h"
+#include "ECU_Error.h"
 
-#define ECU_MSG_START_BYTE 0x9DU
-
-#define ERR_CRC_FAILED 1
-#define ERR_INVALID_LENGTH 2
-#define ERR_INVALID_START_BYTE 3
+#define ECU_HEADER_START_BYTE 0x9DU
 
 // clang-format off
 
 #ifdef __cplusplus
 #define STRUCT_INIT {}
-#define START_BYTE_INIT =ECU_MSG_START_BYTE
+#define START_BYTE_INIT =ECU_HEADER_START_BYTE
 #else
 #define STRUCT_INIT
 #define START_BYTE_INIT
@@ -50,7 +47,7 @@ Time_t timeval_to_time(const struct timeval *time);
 
 Time_t get_time_now(void);
 
-struct Header_t make_header(uint32_t id, uint32_t length);
+struct Header_t header_make(uint32_t id, uint32_t length);
 
 #ifdef __cplusplus
 } // extern "C"

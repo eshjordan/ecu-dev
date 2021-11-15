@@ -1,5 +1,5 @@
 #include "Connection.hpp"
-#include "Message.h"
+#include "ECU_Msg.h"
 #include "System.hpp"
 #include <cstdio>
 #include <cstring>
@@ -12,7 +12,7 @@
 namespace System {
 namespace Impl {
 
-void Connection::send_status(Message_t *message)
+void Connection::send_status(ECU_Msg_t *message)
 {
     const char task_list_header[] = "Task Status\n"
                                     "Name         State   Priority  StackHighWaterMark  Num \n"
@@ -26,7 +26,7 @@ void Connection::send_status(Message_t *message)
     constexpr uint16_t msg_size =
         sizeof(task_list_header) + task_print_size + sizeof(runtime_stats_header) + task_print_size;
 
-    Header_t header = make_header(m_seq++, msg_size);
+    Header_t header = header_make(m_seq++, msg_size);
 
     ssize_t tx = FreeRTOS_send(m_socket, &header, sizeof(header), 0);
 
@@ -77,7 +77,7 @@ void Connection::send_status(Message_t *message)
     }
 }
 
-void Connection::synchronize_connection(Message_t *message)
+void Connection::synchronize_connection(ECU_Msg_t *message)
 {
     auto num_messages = *(uint64_t *)&message->data;
 
@@ -88,10 +88,10 @@ void Connection::synchronize_connection(Message_t *message)
     std::vector<Time_t> received_times;
     received_times.reserve(num_messages);
 
-    Message_t ack_msg = make_message(m_seq++,           /* Message ID number. */
+    ECU_Msg_t ack_msg = ecu_msg_make(m_seq++,           /* Message ID number. */
                                      "sync_ack",        /* Message name. */
                                      nullptr,           /* Message data, set to zero. */
-                                     Message_t::ACK_CMD /* Command. */
+                                     ECU_Msg_t::ACK_CMD /* Command. */
     );
 
     // Send acknowledgement
@@ -112,7 +112,7 @@ void Connection::synchronize_connection(Message_t *message)
             return;
         }
 
-        Message_t recv_msg;
+        ECU_Msg_t recv_msg;
         BaseType_t rx_bytes = receive_message(&recv_msg);
         if (rx_bytes < 0)
         {
@@ -122,11 +122,11 @@ void Connection::synchronize_connection(Message_t *message)
 
         Time_t recv_time = get_time_now();
 
-        int msg_status = check_msg(&recv_msg);
+        int msg_status = ecu_msg_check(&recv_msg);
         if (msg_status < 0)
         {
             char err_msg[32];
-            msg_err_to_str(err_msg, msg_status);
+            ecu_err_to_str(err_msg, msg_status);
             printf("%s\n", err_msg);
             failed_count++;
             continue;
@@ -134,9 +134,9 @@ void Connection::synchronize_connection(Message_t *message)
 
         switch (recv_msg.command)
         {
-        case Message_t::PING_CMD:
-        case Message_t::ACK_CMD:
-        case Message_t::SYNC_CMD: {
+        case ECU_Msg_t::PING_CMD:
+        case ECU_Msg_t::ACK_CMD:
+        case ECU_Msg_t::SYNC_CMD: {
             break;
         }
         default: {
@@ -150,10 +150,10 @@ void Connection::synchronize_connection(Message_t *message)
         received_times.push_back(recv_time);
 
         // Send acknowledgement
-        Message_t ack_msg = make_message(m_seq++,           /* Message ID number. */
+        ECU_Msg_t ack_msg = ecu_msg_make(m_seq++,           /* Message ID number. */
                                          "sync_ack",        /* Message name. */
                                          nullptr,           /* Message data, set to zero. */
-                                         Message_t::ACK_CMD /* Command. */
+                                         ECU_Msg_t::ACK_CMD /* Command. */
         );
 
         BaseType_t tx_bytes = send_message(&ack_msg);
@@ -194,10 +194,10 @@ void Connection::synchronize_connection(Message_t *message)
 
     vLoggingPrintf("Time offset - %s: %lld.%lld sec\n", m_ip_str, seconds, nanoseconds);
 
-    Message_t seconds_msg = make_message(m_seq++,             /* Message ID number. */
+    ECU_Msg_t seconds_msg = ecu_msg_make(m_seq++,             /* Message ID number. */
                                          "seconds",           /* Message name. */
                                          &seconds,            /* Message data, set to zero. */
-                                         Message_t::VALUE_CMD /* Command. */
+                                         ECU_Msg_t::VALUE_CMD /* Command. */
     );
 
     // Send seconds offset
@@ -208,10 +208,10 @@ void Connection::synchronize_connection(Message_t *message)
         return;
     }
 
-    Message_t nanoseconds_msg = make_message(m_seq++,             /* Message ID number. */
+    ECU_Msg_t nanoseconds_msg = ecu_msg_make(m_seq++,             /* Message ID number. */
                                              "nanoseconds",       /* Message name. */
                                              &nanoseconds,        /* Message data, set to zero. */
-                                             Message_t::VALUE_CMD /* Command. */
+                                             ECU_Msg_t::VALUE_CMD /* Command. */
     );
 
     // Send nanoseconds offset
@@ -223,16 +223,16 @@ void Connection::synchronize_connection(Message_t *message)
     }
 }
 
-void Connection::download_firmware(Message_t *message)
+void Connection::download_firmware(ECU_Msg_t *message)
 {
     auto num_files = *(uint64_t *)&message->data;
 
     vLoggingPrintf("Downloading %lld files...\n", num_files);
 
-    Message_t ack_msg = make_message(m_seq++,           /* Message ID number. */
+    ECU_Msg_t ack_msg = ecu_msg_make(m_seq++,           /* Message ID number. */
                                      "firmware_ack",    /* Message name. */
                                      nullptr,           /* Message data, set to zero. */
-                                     Message_t::ACK_CMD /* Command. */
+                                     ECU_Msg_t::ACK_CMD /* Command. */
     );
 
     // Send acknowledgement
@@ -245,7 +245,7 @@ void Connection::download_firmware(Message_t *message)
 
     for (int file_num = 0; file_num < num_files; file_num++)
     {
-        Message_t file_header;
+        ECU_Msg_t file_header;
         receive_message(&file_header);
 
         std::string type_and_name = file_header.name;
@@ -259,10 +259,10 @@ void Connection::download_firmware(Message_t *message)
         vLoggingPrintf("Firmware size: %u\n", firmware_size);
         vLoggingPrintf("Firmware CRC: %u\n", firmware_crc);
 
-        ack_msg = make_message(m_seq++,           /* Message ID number. */
+        ack_msg = ecu_msg_make(m_seq++,           /* Message ID number. */
                                "sync_ack",        /* Message name. */
                                nullptr,           /* Message data, set to zero. */
-                               Message_t::ACK_CMD /* Command. */
+                               ECU_Msg_t::ACK_CMD /* Command. */
         );
 
         // Send acknowledgement
@@ -356,10 +356,10 @@ void Connection::download_firmware(Message_t *message)
         chown(filepath.c_str(), file_status.st_uid, file_status.st_gid);
         chmod(filepath.c_str(), file_status.st_mode);
 
-        ack_msg = make_message(m_seq++,           /* Message ID number. */
+        ack_msg = ecu_msg_make(m_seq++,           /* Message ID number. */
                                "sync_ack",        /* Message name. */
                                nullptr,           /* Message data, set to zero. */
-                               Message_t::ACK_CMD /* Command. */
+                               ECU_Msg_t::ACK_CMD /* Command. */
         );
 
         // Send acknowledgement

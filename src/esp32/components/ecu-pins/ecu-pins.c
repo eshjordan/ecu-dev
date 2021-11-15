@@ -10,11 +10,11 @@ static int init_spi(void)
 {
     // Configuration for the SPI bus
     spi_bus_config_t buscfg = {
-        .mosi_io_num     = ECU_SPI_MOSI,
-        .miso_io_num     = ECU_SPI_MISO,
-        .sclk_io_num     = ECU_SPI_SCLK,
-        .quadwp_io_num   = -1,
-        .quadhd_io_num   = -1,
+        .mosi_io_num   = ECU_SPI_MOSI,
+        .miso_io_num   = ECU_SPI_MISO,
+        .sclk_io_num   = ECU_SPI_SCLK,
+        .quadwp_io_num = -1,
+        .quadhd_io_num = -1,
     };
 
     // Configuration for the SPI slave interface
@@ -175,6 +175,9 @@ static int init_din(void)
     };
 
     ESP_ERROR_CHECK(gpio_config(&io_conf));
+
+    ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_EDGE | ESP_INTR_FLAG_SHARED));
+
     return ESP_OK;
 }
 

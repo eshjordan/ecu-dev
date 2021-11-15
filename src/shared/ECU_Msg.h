@@ -24,8 +24,8 @@ extern "C" {
 // #define ALIGN __attribute__((__packed__, aligned(1U))) // Potentially unsafe/slower on some architectures, TODO: Test
 #define ALIGN __attribute__((aligned(4)))
 
-struct Message_t {
-    enum Command_t {
+struct ECU_Msg_t {
+    enum ECU_Command_t {
         UNKNOWN_CMD         = (uint8_t)(0U),  /* Used for error checking. */
         ECHO_CMD            = (uint8_t)(1U),  /* Echo a copy of this message exactly. */
         PING_CMD            = (uint8_t)(2U),  /* Get server to send a connection acknowledgement. */
@@ -43,31 +43,23 @@ struct Message_t {
     Header_t header STRUCT_INIT;
     char name[64] STRUCT_INIT;
     uint8_t data[8] STRUCT_INIT; // Able to have 8 bytes / 64 bits (long long int) value at max
-    enum Command_t command STRUCT_INIT;
+    enum ECU_Command_t command STRUCT_INIT;
     CRC checksum STRUCT_INIT;
 } ALIGN;
 
 #ifdef __cplusplus
-using Command_t = Message_t::Command_t;
+using ECU_Command_t = ECU_Msg_t::ECU_Command_t;
 #else
-typedef enum Command_t Command_t;
+typedef enum ECU_Command_t ECU_Command_t;
 #endif
 
-typedef struct Message_t Message_t;
+typedef struct ECU_Msg_t ECU_Msg_t;
 
-CRC calc_msg_checksum(Message_t *msg);
+struct ECU_Msg_t ecu_msg_make(uint32_t id, const char name[64], const void *data, ECU_Command_t command);
 
-int check_msg(const Message_t *msg);
+CRC ecu_msg_calc_checksum(ECU_Msg_t *msg);
 
-/**
- * @brief Use at least 32 bytes for the message buffer.
- *
- * @param str
- * @param msg
- */
-void msg_err_to_str(char *str, int err_code);
-
-struct Message_t make_message(uint32_t id, const char name[64], const void *data, Command_t command);
+ecu_err_t ecu_msg_check(const ECU_Msg_t *msg);
 
 /**
  * @brief Use at least 512 bytes for the message buffer.
@@ -75,7 +67,7 @@ struct Message_t make_message(uint32_t id, const char name[64], const void *data
  * @param str
  * @param msg
  */
-void msg_to_str(char *str, const Message_t *msg);
+void ecu_msg_to_str(char *str, const ECU_Msg_t *msg);
 
 #ifdef __cplusplus
 } // extern "C"

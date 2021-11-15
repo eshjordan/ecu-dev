@@ -9,23 +9,24 @@
 
 #include "app.h"
 
-static ESP32Msg_t esp_status = {};
+static ESP32_In_Msg_t esp_status = {};
 
-void run_spi(void *pvParameters)
+void run_spi(void *parameters)
 {
-    int n = 0;
+#define print_status 0
+    (void)parameters;
 
     // Initialise CRC calculation
     init_crc();
 
-    static DMA_ATTR WORD_ALIGNED_ATTR Message_t tx_msg = {.name = "spi_ack", .data = {0}, .command = ACK_CMD};
-    static DMA_ATTR WORD_ALIGNED_ATTR Message_t rx_msg = {0};
+    static DMA_ATTR WORD_ALIGNED_ATTR ECU_Msg_t tx_msg = {.name = "spi_ack", .data = {0}, .command = ACK_CMD};
+    static DMA_ATTR WORD_ALIGNED_ATTR ECU_Msg_t rx_msg = {0};
 
     // clang-format off
     static spi_slave_transaction_t trans_desc = {
         .tx_buffer = &tx_msg,
         .rx_buffer = &rx_msg,
-        .length = sizeof(Message_t) * 8
+        .length = sizeof(ECU_Msg_t) * 8
     };
     // clang-format on
 
@@ -33,22 +34,24 @@ void run_spi(void *pvParameters)
 
     while (1)
     {
-        tx_msg.header = make_header(0, sizeof(Message_t));
-        calc_msg_checksum(&tx_msg);
+        tx_msg.header = header_make(0, sizeof(ECU_Msg_t));
+        ecu_msg_calc_checksum(&tx_msg);
 
         // Clear the rx buffer
-        memset(&rx_msg, 0, sizeof(Message_t));
+        memset(&rx_msg, 0, sizeof(ECU_Msg_t));
 
         // Wait for the master to send a query, acknowledge we're here
         ESP_ERROR_CHECK(spi_slave_transmit(ECU_SPI_RCV_HOST, &trans_desc, portMAX_DELAY));
 
+#if print_status
         msg_to_str(msg, &rx_msg);
         ecu_warn("Rx msg:\n%s\n", msg);
+#endif
 
-        int msg_status = check_msg(&rx_msg);
+        ecu_err_t msg_status = ecu_msg_check(&rx_msg);
         if (msg_status < 0)
         {
-            msg_err_to_str(msg, msg_status);
+            ecu_err_to_str(msg, msg_status);
             ecu_warn("SPI - Received invalid message - %s", msg);
             goto nd;
         }
@@ -66,20 +69,37 @@ void run_spi(void *pvParameters)
         }
 
     nd:
-        n++;
+        NULL;
     }
 }
 
-void run_uart(void *pvParameters) { vTaskSuspend(NULL); }
-
-void run_can(void *pvParameters) { vTaskSuspend(NULL); }
-
-void run_pwm(void *pvParameters) { vTaskSuspend(NULL); }
-
-void run_dac(void *pvParameters) { vTaskSuspend(NULL); }
-
-void run_adc(void *pvParameters)
+void run_uart(void *parameters)
 {
+    (void)parameters;
+    vTaskSuspend(NULL);
+}
+
+void run_can(void *parameters)
+{
+    (void)parameters;
+    vTaskSuspend(NULL);
+}
+
+void run_pwm(void *parameters)
+{
+    (void)parameters;
+    vTaskSuspend(NULL);
+}
+
+void run_dac(void *parameters)
+{
+    (void)parameters;
+    vTaskSuspend(NULL);
+}
+
+void run_adc(void *parameters)
+{
+    (void)parameters;
     static const uint8_t num_samples = 64;
 
     static const uint8_t num_adc_1 = 4;
@@ -120,18 +140,47 @@ void run_adc(void *pvParameters)
     }
 }
 
-void run_hall_effect(void *pvParameters) { vTaskSuspend(NULL); }
-
-void run_din(void *pvParameters) { vTaskSuspend(NULL); }
-
-void run_dout(void *pvParameters) { vTaskSuspend(NULL); }
-
-void log_esp_state(void *pvParameters)
+void run_hall_effect(void *parameters)
 {
+    (void)parameters;
+    vTaskSuspend(NULL);
+}
+
+void run_din(void *parameters)
+{
+    (void)parameters;
+    while (1)
+    {
+        esp_status.din1 = gpio_get_level(ECU_DIN_1);
+        esp_status.din2 = gpio_get_level(ECU_DIN_2);
+        esp_status.din3 = gpio_get_level(ECU_DIN_3);
+        vTaskSuspend(NULL);
+    }
+}
+
+void run_dout(void *parameters)
+{
+    (void)parameters;
+    while (1)
+    {
+        // gpio_set_level(ECU_DOUT_1, esp_status.dout1);
+        vTaskSuspend(NULL);
+    }
+}
+
+void log_esp_state(void *parameters)
+{
+    (void)parameters;
     static char buf[1024] = {};
 
-    ESP32Msg_to_str(buf, &esp_status);
+    esp32_in_msg_to_str(buf, &esp_status);
     ecu_log("%s", buf);
+}
+
+void din_cb(void *params)
+{
+    (void)params;
+    xTaskResumeFromISR(run_din);
 }
 
 // Main application
@@ -139,7 +188,11 @@ void app_main(void)
 {
     ecu_pins_init();
 
-    vTaskDelay(pdMS_TO_TICKS(3000));
+    vTaskDelay(pdMS_TO_TICKS(500));
+
+    ESP_ERROR_CHECK(gpio_isr_handler_add(ECU_DIN_1, &din_cb, NULL));
+    ESP_ERROR_CHECK(gpio_isr_handler_add(ECU_DIN_2, &din_cb, NULL));
+    ESP_ERROR_CHECK(gpio_isr_handler_add(ECU_DIN_3, &din_cb, NULL));
 
     TaskHandle_t spi_task   = NULL;
     TaskHandle_t uart_task  = NULL;
