@@ -24,9 +24,7 @@ struct ESP32_In_Msg_t {
     Header_t header STRUCT_INIT;
     uint32_t adc[9] STRUCT_INIT;
     uint32_t hall_effect STRUCT_INIT;
-    uint8_t din1 STRUCT_INIT;
-    uint8_t din2 STRUCT_INIT;
-    uint8_t din3 STRUCT_INIT;
+    uint8_t din[3] STRUCT_INIT;
     CAN_Msg_t can_msg STRUCT_INIT;
     CRC checksum STRUCT_INIT;
 } ALIGN;
