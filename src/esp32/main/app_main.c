@@ -151,9 +151,9 @@ void run_din(void *parameters)
     (void)parameters;
     while (1)
     {
-        esp_status.din1 = gpio_get_level(ECU_DIN_1);
-        esp_status.din2 = gpio_get_level(ECU_DIN_2);
-        esp_status.din3 = gpio_get_level(ECU_DIN_3);
+        esp_status.din[0] = gpio_get_level(ECU_DIN_1);
+        esp_status.din[1] = gpio_get_level(ECU_DIN_2);
+        esp_status.din[2] = gpio_get_level(ECU_DIN_3);
         vTaskSuspend(NULL);
     }
 }

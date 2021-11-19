@@ -150,13 +150,13 @@ int read_digital_input(int channel)
     switch (channel)
     {
     case 0: {
-        return esp_status.din1;
+        return esp_status.din[0];
     }
     case 1: {
-        return esp_status.din2;
+        return esp_status.din[1];
     }
     case 2: {
-        return esp_status.din3;
+        return esp_status.din[2];
     }
     default: {
         return 0;

@@ -34,15 +34,15 @@ void esp32_out_msg_to_str(char *str, const ESP32_Out_Msg_t *const msg)
                                   "            tv_nsec: %ld\n"
 #endif
                                   "    dac:\n"
-                                  "        dac[0]: %u\n"
-                                  "        dac[1]: %u\n"
+                                  "        dac[0]: %lf\n"
+                                  "        dac[1]: %lf\n"
                                   "    pwm:\n"
                                   "        pwm[0]:\n"
-                                  "            frequency: %lld\n"
-                                  "            duty: %lld\n"
+                                  "            frequency: %lf\n"
+                                  "            duty: %lf\n"
                                   "        pwm[1]:\n"
-                                  "            frequency: %lld\n"
-                                  "            duty: %lld\n"
+                                  "            frequency: %lf\n"
+                                  "            duty: %lf\n"
                                   "    dout:\n"
                                   "        dout[0]: %u\n"
                                   "    can_msg:\n"
@@ -63,9 +63,9 @@ void esp32_out_msg_to_str(char *str, const ESP32_Out_Msg_t *const msg)
                                   "\n";
 
     sprintf(str, fmt_str, msg->header.start_byte, msg->header.length, msg->header.id, msg->header.stamp.tv_sec,
-            msg->header.stamp.tv_nsec, msg->adc[0], msg->adc[1], msg->adc[2], msg->adc[3], msg->adc[4], msg->adc[5],
-            msg->adc[6], msg->adc[7], msg->adc[8], msg->hall_effect, msg->din1, msg->din2, msg->din3,
-            msg->can_msg.flags, msg->can_msg.identifier, msg->can_msg.data_length_code, msg->can_msg.data[0],
-            msg->can_msg.data[1], msg->can_msg.data[2], msg->can_msg.data[3], msg->can_msg.data[4],
-            msg->can_msg.data[5], msg->can_msg.data[6], msg->can_msg.data[7], msg->can_msg.checksum, msg->checksum);
+            msg->header.stamp.tv_nsec, msg->dac[0], msg->dac[1], msg->pwm[0].frequency, msg->pwm[0].duty,
+            msg->pwm[1].frequency, msg->pwm[1].duty, msg->dout[0], msg->can_msg.flags, msg->can_msg.identifier,
+            msg->can_msg.data_length_code, msg->can_msg.data[0], msg->can_msg.data[1], msg->can_msg.data[2],
+            msg->can_msg.data[3], msg->can_msg.data[4], msg->can_msg.data[5], msg->can_msg.data[6],
+            msg->can_msg.data[7], msg->can_msg.checksum, msg->checksum);
 }
