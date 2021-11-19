@@ -1,7 +1,10 @@
 #include "IO.hpp"
-#include "ESP32_In_Msg.h"
 #include "ECU_Msg.h"
+#include "ESP32_In_Msg.h"
+#include "ESP32_Out_Msg.h"
+#include "Header.h"
 #include "System.hpp"
+#include <cstring>
 #include <fcntl.h>
 #include <linux/spi/spidev.h>
 #include <sys/ioctl.h>
@@ -13,7 +16,8 @@ static const char *const device = "/dev/spidev0.0";
 static bool esp32_spi_inited    = false;
 static int spi_fd               = -1;
 
-static ESP32_In_Msg_t esp_status = {};
+static ESP32_In_Msg_t esp_status  = {};
+static ESP32_Out_Msg_t esp_output = {};
 
 static int init_esp32_spi(void)
 {
@@ -69,6 +73,8 @@ REGISTER_ROUTINE(esp_get_status, 10)
     static char msg[1024] = {0};
     int esp_ret           = -1;
 
+    static ESP32_Out_Msg_t output = {};
+
     memset(&rx_msg, 0, sizeof(ECU_Msg_t));
 
     tx_msg = ecu_msg_make(0, "spi_request", nullptr, ECU_Msg_t::STATUS_CMD);
@@ -100,12 +106,12 @@ REGISTER_ROUTINE(esp_get_status, 10)
 
     vTaskDelay(pdMS_TO_TICKS(10));
 
-    // Copy the IO state to the message buffer, clear rx buffer
-    memset(&rx_msg, 0, sizeof(ECU_Msg_t));
+    output         = esp_output;
+    output.header  = header_make(0, sizeof(output));
+    output.dout[0] = 1;
+    esp32_out_msg_calc_checksum(&esp_output);
 
-    tx_msg = ecu_msg_make(0, "spi_ack", nullptr, ECU_Msg_t::ACK_CMD);
-
-    System::IO::spi_transfer(0, std::max(sizeof(ESP32_In_Msg_t), sizeof(ECU_Msg_t)), &tx_msg, &esp_status);
+    System::IO::spi_transfer(0, std::max(sizeof(ESP32_Out_Msg_t), sizeof(ESP32_In_Msg_t)), &esp_output, &esp_status);
 
 #if print_status
     memset(msg, 0, sizeof(msg));
@@ -172,11 +178,11 @@ CAN_Msg_t read_can_input(int bus, int id) { return esp_status.can_msg; }
 
 void write_can_output(int bus, int id, CAN_Msg_t msg) {}
 
-int spi_read(int channel, int size, void *buffer) { return spi_transfer(channel, size, nullptr, buffer); }
+int spi_read(int channel, uint32_t size, void *buffer) { return spi_transfer(channel, size, nullptr, buffer); }
 
-int spi_write(int channel, int size, void *buffer) { return spi_transfer(channel, size, buffer, nullptr); }
+int spi_write(int channel, uint32_t size, void *buffer) { return spi_transfer(channel, size, buffer, nullptr); }
 
-int spi_transfer(int channel, int size, void *tx_buffer, void *rx_buffer)
+int spi_transfer(int channel, uint32_t size, void *tx_buffer, void *rx_buffer)
 {
     if (!esp32_spi_inited)
     {

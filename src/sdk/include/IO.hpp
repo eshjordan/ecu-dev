@@ -17,11 +17,11 @@ CAN_Msg_t read_can_input(int bus, int id);
 
 void write_can_output(int bus, int id, CAN_Msg_t msg);
 
-int spi_read(int channel, int size, void *buffer);
+int spi_read(int channel, uint32_t size, void *buffer);
 
-int spi_write(int channel, int size, void *buffer);
+int spi_write(int channel, uint32_t size, void *buffer);
 
-int spi_transfer(int channel, int size, void *tx_buffer, void *rx_buffer);
+int spi_transfer(int channel, uint32_t size, void *tx_buffer, void *rx_buffer);
 
 } // namespace IO
 } // namespace System

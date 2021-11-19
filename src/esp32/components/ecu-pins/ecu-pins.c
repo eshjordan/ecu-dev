@@ -78,42 +78,38 @@ static int init_can(void)
 static int init_pwm(void)
 {
     // Prepare and then apply the LEDC PWM timer configuration
-    ledc_timer_config_t pwm_1_timer = {.speed_mode      = LEDC_LOW_SPEED_MODE,
+    ledc_timer_config_t pwm_1_timer = {.speed_mode      = LEDC_HIGH_SPEED_MODE,
                                        .timer_num       = LEDC_TIMER_0,
-                                       .duty_resolution = LEDC_TIMER_13_BIT,
-                                       .freq_hz         = 5000, // Set output frequency at 5 kHz
+                                       .freq_hz         = 5000,
+                                       .duty_resolution = LEDC_TIMER_1_BIT,
                                        .clk_cfg         = LEDC_AUTO_CLK};
 
     ESP_ERROR_CHECK(ledc_timer_config(&pwm_1_timer));
 
     // Prepare and then apply the LEDC PWM channel configuration
-    ledc_channel_config_t pwm_1_channel = {.speed_mode = LEDC_LOW_SPEED_MODE,
+    ledc_channel_config_t pwm_1_channel = {.speed_mode = LEDC_HIGH_SPEED_MODE,
                                            .channel    = LEDC_CHANNEL_0,
                                            .timer_sel  = LEDC_TIMER_0,
                                            .intr_type  = LEDC_INTR_DISABLE,
-                                           .gpio_num   = ECU_PWM_1,
-                                           .duty       = 0, // Set duty to 0%
-                                           .hpoint     = 0};
+                                           .gpio_num   = ECU_PWM_1};
 
     ESP_ERROR_CHECK(ledc_channel_config(&pwm_1_channel));
 
     // Prepare and then apply the LEDC PWM timer configuration
-    ledc_timer_config_t pwm_2_timer = {.speed_mode      = LEDC_LOW_SPEED_MODE,
-                                       .timer_num       = LEDC_TIMER_0,
-                                       .duty_resolution = LEDC_TIMER_13_BIT,
-                                       .freq_hz         = 5000, // Set output frequency at 5 kHz
+    ledc_timer_config_t pwm_2_timer = {.speed_mode      = LEDC_HIGH_SPEED_MODE,
+                                       .timer_num       = LEDC_TIMER_1,
+                                       .freq_hz         = 5000,
+                                       .duty_resolution = LEDC_TIMER_1_BIT,
                                        .clk_cfg         = LEDC_AUTO_CLK};
 
     ESP_ERROR_CHECK(ledc_timer_config(&pwm_2_timer));
 
     // Prepare and then apply the LEDC PWM channel configuration
-    ledc_channel_config_t pwm_2_channel = {.speed_mode = LEDC_LOW_SPEED_MODE,
-                                           .channel    = LEDC_CHANNEL_0,
-                                           .timer_sel  = LEDC_TIMER_0,
+    ledc_channel_config_t pwm_2_channel = {.speed_mode = LEDC_HIGH_SPEED_MODE,
+                                           .channel    = LEDC_CHANNEL_1,
+                                           .timer_sel  = LEDC_TIMER_1,
                                            .intr_type  = LEDC_INTR_DISABLE,
-                                           .gpio_num   = ECU_PWM_2,
-                                           .duty       = 0, // Set duty to 0%
-                                           .hpoint     = 0};
+                                           .gpio_num   = ECU_PWM_2};
 
     ESP_ERROR_CHECK(ledc_channel_config(&pwm_2_channel));
 
@@ -176,7 +172,7 @@ static int init_din(void)
 
     ESP_ERROR_CHECK(gpio_config(&io_conf));
 
-    ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_EDGE | ESP_INTR_FLAG_SHARED));
+    ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_EDGE));
 
     return ESP_OK;
 }

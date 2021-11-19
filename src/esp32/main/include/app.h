@@ -3,6 +3,7 @@
 
 #include "ECU_Msg.h"
 #include "ESP32_In_Msg.h"
+#include "ESP32_Out_Msg.h"
 #include "driver/spi_common.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/projdefs.h"
@@ -26,6 +27,6 @@ void run_dout(void *parameters);
 
 void log_esp_state(void *parameters);
 
-void ecu_send_status(ESP32_In_Msg_t *esp_status);
+void ecu_send_rcv_status(ESP32_In_Msg_t *esp_status, ESP32_Out_Msg_t *esp_output);
 
 #endif

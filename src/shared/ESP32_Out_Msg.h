@@ -21,8 +21,9 @@ extern "C" {
 #define ALIGN __attribute__((aligned(4)))
 
 struct PWM_t {
-    double frequency STRUCT_INIT;
-    double duty STRUCT_INIT;
+    uint32_t frequency STRUCT_INIT;
+    uint16_t duty STRUCT_INIT;
+    uint8_t duty_resolution STRUCT_INIT;
 } ALIGN;
 
 typedef struct PWM_t PWM_t;

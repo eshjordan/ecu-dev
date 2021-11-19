@@ -8,8 +8,41 @@
 */
 
 #include "app.h"
+#include "driver/adc.h"
+#include "driver/ledc.h"
+#include "hal/ledc_types.h"
 
-static ESP32_In_Msg_t esp_status = {};
+static ESP32_In_Msg_t esp_in_status   = {};
+static ESP32_Out_Msg_t esp_out_status = {.pwm[0].frequency       = 5000,
+                                         .pwm[0].duty            = 0,
+                                         .pwm[0].duty_resolution = LEDC_TIMER_1_BIT,
+                                         .pwm[1].frequency       = 5000,
+                                         .pwm[1].duty            = 0,
+                                         .pwm[1].duty_resolution = LEDC_TIMER_1_BIT};
+
+static ledc_timer_config_t pwm_1_timer = {.speed_mode      = LEDC_HIGH_SPEED_MODE,
+                                          .timer_num       = LEDC_TIMER_0,
+                                          .freq_hz         = 5000,
+                                          .duty_resolution = LEDC_TIMER_1_BIT,
+                                          .clk_cfg         = LEDC_AUTO_CLK};
+
+static ledc_channel_config_t pwm_1_channel = {.speed_mode = LEDC_HIGH_SPEED_MODE,
+                                              .channel    = LEDC_CHANNEL_0,
+                                              .timer_sel  = LEDC_TIMER_0,
+                                              .intr_type  = LEDC_INTR_DISABLE,
+                                              .gpio_num   = ECU_PWM_1};
+
+static ledc_timer_config_t pwm_2_timer = {.speed_mode      = LEDC_HIGH_SPEED_MODE,
+                                          .timer_num       = LEDC_TIMER_1,
+                                          .freq_hz         = 5000,
+                                          .duty_resolution = LEDC_TIMER_1_BIT,
+                                          .clk_cfg         = LEDC_AUTO_CLK};
+
+static ledc_channel_config_t pwm_2_channel = {.speed_mode = LEDC_HIGH_SPEED_MODE,
+                                              .channel    = LEDC_CHANNEL_1,
+                                              .timer_sel  = LEDC_TIMER_1,
+                                              .intr_type  = LEDC_INTR_DISABLE,
+                                              .gpio_num   = ECU_PWM_2};
 
 void run_spi(void *parameters)
 {
@@ -59,7 +92,10 @@ void run_spi(void *parameters)
         switch (rx_msg.command)
         {
         case STATUS_CMD: {
-            ecu_send_status(&esp_status);
+            ecu_send_rcv_status(&esp_in_status, &esp_out_status);
+            vTaskResume(run_dout);
+            vTaskResume(run_pwm);
+            vTaskResume(run_dac);
             break;
         }
         default: {
@@ -88,13 +124,88 @@ void run_can(void *parameters)
 void run_pwm(void *parameters)
 {
     (void)parameters;
-    vTaskSuspend(NULL);
+
+    while (1)
+    {
+        // PWM 1
+
+        if (esp_out_status.pwm[0].duty_resolution != pwm_1_timer.duty_resolution)
+        {
+            pwm_1_timer.freq_hz         = esp_out_status.pwm[0].frequency;
+            pwm_1_timer.duty_resolution = esp_out_status.pwm[0].duty_resolution;
+            pwm_1_channel.duty          = esp_out_status.pwm[0].duty;
+
+            ledc_stop(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 0);
+            ledc_timer_pause(LEDC_HIGH_SPEED_MODE, LEDC_TIMER_0);
+
+            ESP_ERROR_CHECK(ledc_timer_config(&pwm_1_timer));
+            ESP_ERROR_CHECK(ledc_channel_config(&pwm_1_channel));
+            ESP_ERROR_CHECK(ledc_timer_resume(LEDC_HIGH_SPEED_MODE, LEDC_TIMER_0));
+        }
+
+        if (esp_out_status.pwm[0].frequency != pwm_1_timer.freq_hz)
+        {
+            pwm_1_timer.freq_hz = esp_out_status.pwm[0].frequency;
+            pwm_1_channel.duty  = esp_out_status.pwm[0].duty;
+
+            // Set the duty to zero temporarily to prevent timer resolution issues
+            ESP_ERROR_CHECK(ledc_set_duty_and_update(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 0, 0));
+
+            ESP_ERROR_CHECK(ledc_set_freq(LEDC_HIGH_SPEED_MODE, LEDC_TIMER_0, pwm_1_timer.freq_hz));
+            ESP_ERROR_CHECK(ledc_set_duty_and_update(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, pwm_1_channel.duty, 0));
+        }
+
+        if (esp_out_status.pwm[0].duty != pwm_1_channel.duty)
+        {
+            pwm_1_channel.duty = esp_out_status.pwm[0].duty;
+            ESP_ERROR_CHECK(ledc_set_duty_and_update(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, pwm_1_channel.duty, 0));
+        }
+
+        // PWM 2
+
+        if (esp_out_status.pwm[1].duty_resolution != pwm_2_timer.duty_resolution)
+        {
+            pwm_2_timer.freq_hz         = esp_out_status.pwm[1].frequency;
+            pwm_2_timer.duty_resolution = esp_out_status.pwm[1].duty_resolution;
+            pwm_2_channel.duty          = esp_out_status.pwm[1].duty;
+
+            ledc_stop(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1, 0);
+            ledc_timer_pause(LEDC_HIGH_SPEED_MODE, LEDC_TIMER_1);
+
+            ESP_ERROR_CHECK(ledc_timer_config(&pwm_2_timer));
+            ESP_ERROR_CHECK(ledc_channel_config(&pwm_2_channel));
+            ESP_ERROR_CHECK(ledc_timer_resume(LEDC_HIGH_SPEED_MODE, LEDC_TIMER_1));
+        }
+
+        if (esp_out_status.pwm[1].frequency != pwm_2_timer.freq_hz)
+        {
+            pwm_2_timer.freq_hz = esp_out_status.pwm[1].frequency;
+            pwm_2_channel.duty  = esp_out_status.pwm[1].duty;
+
+            // Set the duty to zero temporarily to prevent timer resolution issues
+            ESP_ERROR_CHECK(ledc_set_duty_and_update(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1, 0, 0));
+
+            ESP_ERROR_CHECK(ledc_set_freq(LEDC_HIGH_SPEED_MODE, LEDC_TIMER_1, pwm_2_timer.freq_hz));
+            ESP_ERROR_CHECK(ledc_set_duty_and_update(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1, pwm_2_channel.duty, 0));
+        }
+
+        if (esp_out_status.pwm[1].duty != pwm_2_channel.duty)
+        {
+            pwm_2_channel.duty = esp_out_status.pwm[1].duty;
+            ESP_ERROR_CHECK(ledc_set_duty_and_update(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1, pwm_2_channel.duty, 0));
+        }
+
+        vTaskSuspend(NULL);
+    }
 }
 
 void run_dac(void *parameters)
 {
     (void)parameters;
-    vTaskSuspend(NULL);
+    while (1)
+    {
+        vTaskSuspend(NULL);
+    }
 }
 
 void run_adc(void *parameters)
@@ -135,15 +246,15 @@ void run_adc(void *parameters)
         esp_adc_cal_characteristics_t calib = ecu_get_adc_calib(j < num_adc_1 ? ECU_ADC_1 : ECU_ADC_2);
 
         // Convert adc_reading to voltage in mV
-        uint32_t voltage  = esp_adc_cal_raw_to_voltage(adc_readings[j], &calib);
-        esp_status.adc[j] = voltage;
+        uint32_t voltage     = esp_adc_cal_raw_to_voltage(adc_readings[j], &calib);
+        esp_in_status.adc[j] = voltage;
     }
 }
 
 void run_hall_effect(void *parameters)
 {
     (void)parameters;
-    vTaskSuspend(NULL);
+    esp_in_status.hall_effect = hall_sensor_read();
 }
 
 void run_din(void *parameters)
@@ -151,11 +262,17 @@ void run_din(void *parameters)
     (void)parameters;
     while (1)
     {
-        esp_status.din[0] = gpio_get_level(ECU_DIN_1);
-        esp_status.din[1] = gpio_get_level(ECU_DIN_2);
-        esp_status.din[2] = gpio_get_level(ECU_DIN_3);
+        esp_in_status.din[0] = gpio_get_level(ECU_DIN_1);
+        esp_in_status.din[1] = gpio_get_level(ECU_DIN_2);
+        esp_in_status.din[2] = gpio_get_level(ECU_DIN_3);
         vTaskSuspend(NULL);
     }
+}
+
+void din_cb(void *params)
+{
+    (void)params;
+    xTaskResumeFromISR(run_din);
 }
 
 void run_dout(void *parameters)
@@ -163,24 +280,9 @@ void run_dout(void *parameters)
     (void)parameters;
     while (1)
     {
-        // gpio_set_level(ECU_DOUT_1, esp_status.dout1);
+        gpio_set_level(ECU_DOUT_1, esp_out_status.dout[0]);
         vTaskSuspend(NULL);
     }
-}
-
-void log_esp_state(void *parameters)
-{
-    (void)parameters;
-    static char buf[1024] = {};
-
-    esp32_in_msg_to_str(buf, &esp_status);
-    ecu_log("%s", buf);
-}
-
-void din_cb(void *params)
-{
-    (void)params;
-    xTaskResumeFromISR(run_din);
 }
 
 // Main application
@@ -194,16 +296,15 @@ void app_main(void)
     ESP_ERROR_CHECK(gpio_isr_handler_add(ECU_DIN_2, &din_cb, NULL));
     ESP_ERROR_CHECK(gpio_isr_handler_add(ECU_DIN_3, &din_cb, NULL));
 
-    TaskHandle_t spi_task   = NULL;
-    TaskHandle_t uart_task  = NULL;
-    TaskHandle_t can_task   = NULL;
-    TaskHandle_t pwm_task   = NULL;
-    TaskHandle_t dac_task   = NULL;
-    TimerHandle_t adc_timer = NULL;
-    TaskHandle_t hall_task  = NULL;
-    TaskHandle_t din_task   = NULL;
-    TaskHandle_t dout_task  = NULL;
-    TimerHandle_t log_timer = NULL;
+    TaskHandle_t spi_task    = NULL;
+    TaskHandle_t uart_task   = NULL;
+    TaskHandle_t can_task    = NULL;
+    TaskHandle_t pwm_task    = NULL;
+    TaskHandle_t dac_task    = NULL;
+    TimerHandle_t adc_timer  = NULL;
+    TimerHandle_t hall_timer = NULL;
+    TaskHandle_t din_task    = NULL;
+    TaskHandle_t dout_task   = NULL;
 
     xTaskCreate(run_spi, "run_spi", 4096, NULL, 5, &spi_task);
 
@@ -219,27 +320,25 @@ void app_main(void)
 
     if (adc_timer == NULL)
     {
-        ecu_log("ADC TIMER FAILED - ADC READING DISABLED");
+        ecu_error("ADC TIMER FAILED - ADC READING DISABLED");
     } else
     {
         xTimerStart(adc_timer, 0);
     }
 
-    xTaskCreate(run_hall_effect, "run_hall_effect", 4096, NULL, 2, &hall_task);
+    hall_timer = xTimerCreate("run_hall_effect", pdMS_TO_TICKS(1000), pdTRUE, 0, run_hall_effect);
+
+    if (hall_timer == NULL)
+    {
+        ecu_error("HALL TIMER FAILED - HALL READING DISABLED");
+    } else
+    {
+        xTimerStart(hall_timer, 0);
+    }
 
     xTaskCreate(run_din, "run_din", 4096, NULL, 2, &din_task);
 
     xTaskCreate(run_dout, "run_dout", 4096, NULL, 2, &dout_task);
-
-    // log_timer = xTimerCreate("log_esp_state", pdMS_TO_TICKS(1000), pdTRUE, 0, log_esp_state);
-
-    // if (log_timer == NULL)
-    // {
-    //     ecu_log("LOG TIMER FAILED - STATUS LOGGING DISABLED\n");
-    // } else
-    // {
-    //     xTimerStart(log_timer, 0);
-    // }
 
     ecu_log("RUNNING");
 
