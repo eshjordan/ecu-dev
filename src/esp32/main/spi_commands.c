@@ -4,15 +4,15 @@
 
 void ecu_send_rcv_status(ESP32_In_Msg_t *esp_status, ESP32_Out_Msg_t *esp_output)
 {
-#define print_status 1
+#define print_status 0
     static char msg[1024] = {0};
 
-    static DMA_ATTR WORD_ALIGNED_ATTR ESP32_Out_Msg_t rx_msg = {0};
-    static DMA_ATTR WORD_ALIGNED_ATTR ESP32_In_Msg_t tx_msg  = {0};
-    static spi_slave_transaction_t trans_desc                = {
-                       .rx_buffer = &rx_msg,
-                       .tx_buffer = &tx_msg,
-                       .length    = max(sizeof(ESP32_In_Msg_t), sizeof(ESP32_Out_Msg_t)) * 8UL,
+    static DMA_ATTR ESP32_Out_Msg_t rx_msg    = {0};
+    static DMA_ATTR ESP32_In_Msg_t tx_msg     = {0};
+    static spi_slave_transaction_t trans_desc = {
+        .rx_buffer = &rx_msg,
+        .tx_buffer = &tx_msg,
+        .length    = max(sizeof(ESP32_In_Msg_t), sizeof(ESP32_Out_Msg_t)) * 8UL,
     };
 
     // Copy the IO state to the message buffer, clear rx buffer

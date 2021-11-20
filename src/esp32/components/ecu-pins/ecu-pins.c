@@ -1,5 +1,7 @@
 #include "ecu-pins.h"
+#include "driver/ledc.h"
 #include "esp_err.h"
+#include "esp_intr_alloc.h"
 #include "soc/adc_channel.h"
 
 static volatile int ecu_pins_initialized                        = 0;
@@ -112,6 +114,8 @@ static int init_pwm(void)
                                            .gpio_num   = ECU_PWM_2};
 
     ESP_ERROR_CHECK(ledc_channel_config(&pwm_2_channel));
+
+    ESP_ERROR_CHECK(ledc_fade_func_install(ESP_INTR_FLAG_INTRDISABLED));
 
     return ESP_OK;
 }

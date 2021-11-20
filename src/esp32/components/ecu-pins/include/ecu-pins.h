@@ -18,8 +18,8 @@ extern "C" {
 #include "esp_adc_cal.h"
 
 /* Useful macros. */
-#define ecu_log(fmt_str, ...) printf("\033[36;1m[ECU_LOG  ] - \033[36m" fmt_str "\033[0m\n", ##__VA_ARGS__)
-#define ecu_warn(fmt_str, ...) printf("\033[33;1m[ECU_WARN ] - \033[33m" fmt_str "\033[0m\n", ##__VA_ARGS__)
+#define ecu_log(fmt_str, ...) printf("\033[36;1m[  ECU_LOG] - \033[36m" fmt_str "\033[0m\n", ##__VA_ARGS__)
+#define ecu_warn(fmt_str, ...) printf("\033[33;1m[ ECU_WARN] - \033[33m" fmt_str "\033[0m\n", ##__VA_ARGS__)
 #define ecu_error(fmt_str, ...) printf("\033[31;1m[ECU_ERROR] - \033[31m" fmt_str "\033[0m\n", ##__VA_ARGS__)
 #define ecu_debug(fmt_str, ...) printf("\033[1m[ECU_DEBUG] - \033[0m" fmt_str "\n", ##__VA_ARGS__)
 

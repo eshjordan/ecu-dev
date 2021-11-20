@@ -63,12 +63,12 @@ static int init_esp32_spi(void)
     return spi_fd;
 }
 
-REGISTER_ROUTINE(esp_get_status, 1)
+REGISTER_ROUTINE(esp_get_status, 10)
 {
-#define print_status 1
+#define print_status 0
 
-    static __attribute__((aligned(4))) ECU_Msg_t tx_msg = {};
-    static __attribute__((aligned(4))) ECU_Msg_t rx_msg = {};
+    static ECU_Msg_t tx_msg = {};
+    static ECU_Msg_t rx_msg = {};
 
     static char msg[1024] = {0};
     int esp_ret           = -1;
@@ -104,11 +104,19 @@ REGISTER_ROUTINE(esp_get_status, 1)
         goto nd;
     }
 
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(10));
 
-    output         = esp_output;
-    output.header  = header_make(0, sizeof(output));
-    output.dout[0] = 1;
+    output        = esp_output;
+    output.header = header_make(0, sizeof(output));
+
+    static int count = 0;
+
+    output.pwm[0].frequency       = 5000;
+    output.pwm[0].duty_resolution = 4;
+    output.pwm[0].duty            = count++;
+
+    if (count >= 0b1111) { count = 0; }
+
     esp32_out_msg_calc_checksum(&output);
 
     System::IO::spi_transfer(0, std::max(sizeof(ESP32_Out_Msg_t), sizeof(ESP32_In_Msg_t)), &output, &esp_status);
