@@ -11,7 +11,11 @@
 #include "driver/adc.h"
 #include "driver/ledc.h"
 #include "ecu-pins.h"
+#include "freertos/projdefs.h"
 #include "hal/ledc_types.h"
+
+SemaphoreHandle_t xSemaphore = NULL;
+StaticSemaphore_t xMutexBuffer;
 
 TaskHandle_t spi_task    = NULL;
 TaskHandle_t uart_task   = NULL;
@@ -103,10 +107,13 @@ void run_spi(void *parameters)
         switch (rx_msg.command)
         {
         case STATUS_CMD: {
+            xSemaphoreTake(xSemaphore, portMAX_DELAY);
             ecu_send_rcv_status(&esp_in_status, &esp_out_status);
-            vTaskResume(dout_task);
-            vTaskResume(pwm_task);
-            vTaskResume(dac_task);
+            xSemaphoreGive(xSemaphore);
+
+            xTaskNotifyGive(dout_task);
+            xTaskNotifyGive(pwm_task);
+            xTaskNotifyGive(dac_task);
             break;
         }
         default: {
@@ -143,18 +150,23 @@ void run_pwm(void *parameters)
         ledc_timer_config_t *pwm_timers[2]     = {&pwm_0_timer, &pwm_1_timer};
         ledc_channel_config_t *pwm_channels[2] = {&pwm_0_channel, &pwm_1_channel};
 
+        xSemaphoreTake(xSemaphore, portMAX_DELAY);
+        uint8_t resolutions[2] = {esp_out_status.pwm[0].duty_resolution, esp_out_status.pwm[1].duty_resolution};
+        uint32_t freqs[2]      = {esp_out_status.pwm[0].frequency, esp_out_status.pwm[1].frequency};
+        uint16_t duties[2]     = {esp_out_status.pwm[0].duty, esp_out_status.pwm[1].duty};
+        xSemaphoreGive(xSemaphore);
+
         for (int i = 0; i < 2; i++)
         {
-            int pwm_enable   = esp_out_status.pwm[i].duty > 0;
-            int pwm_reenable = pwm_enable && pwm_channels[i]->duty == 0;
-            int pwm_update_resolution =
-                pwm_enable && esp_out_status.pwm[i].duty_resolution != pwm_timers[i]->duty_resolution;
-            int pwm_update_frequency = pwm_enable && esp_out_status.pwm[i].frequency != pwm_timers[i]->freq_hz;
-            int pwm_update_duty      = pwm_enable && esp_out_status.pwm[i].duty != pwm_channels[i]->duty;
+            int pwm_enable            = duties[i] > 0;
+            int pwm_reenable          = pwm_enable && pwm_channels[i]->duty == 0;
+            int pwm_update_resolution = pwm_enable && resolutions[i] != pwm_timers[i]->duty_resolution;
+            int pwm_update_frequency  = pwm_enable && freqs[i] != pwm_timers[i]->freq_hz;
+            int pwm_update_duty       = pwm_enable && duties[i] != pwm_channels[i]->duty;
 
-            pwm_timers[i]->freq_hz         = esp_out_status.pwm[i].frequency;
-            pwm_timers[i]->duty_resolution = esp_out_status.pwm[i].duty_resolution;
-            pwm_channels[i]->duty          = esp_out_status.pwm[i].duty;
+            pwm_timers[i]->freq_hz         = freqs[i];
+            pwm_timers[i]->duty_resolution = resolutions[i];
+            pwm_channels[i]->duty          = duties[i];
 
             if (!pwm_enable && pwm_channels[i]->duty != 0)
             {
@@ -169,12 +181,12 @@ void run_pwm(void *parameters)
                 ESP_ERROR_CHECK(ledc_timer_resume(LEDC_HIGH_SPEED_MODE, led_timers[i]));
             } else if (pwm_update_duty)
             {
-                ESP_ERROR_CHECK(ledc_set_duty(LEDC_HIGH_SPEED_MODE, led_channels[i], pwm_0_channel.duty));
+                ESP_ERROR_CHECK(ledc_set_duty(LEDC_HIGH_SPEED_MODE, led_channels[i], pwm_channels[i]->duty));
                 ESP_ERROR_CHECK(ledc_update_duty(LEDC_HIGH_SPEED_MODE, led_channels[i]));
             }
         }
 
-        vTaskSuspend(NULL);
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     }
 }
 
@@ -185,12 +197,17 @@ void run_dac(void *parameters)
 
     while (1)
     {
+        xSemaphoreTake(xSemaphore, portMAX_DELAY);
+
         uint8_t dac_1_value = (255 * esp_out_status.dac[0]) / vdd_a;
         ESP_ERROR_CHECK(dac_output_voltage(DAC_CHANNEL_1, dac_1_value));
 
         uint8_t dac_2_value = (255 * esp_out_status.dac[1]) / vdd_a;
         ESP_ERROR_CHECK(dac_output_voltage(DAC_CHANNEL_2, dac_2_value));
-        vTaskSuspend(NULL);
+
+        xSemaphoreGive(xSemaphore);
+
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     }
 }
 
@@ -232,15 +249,20 @@ void run_adc(void *parameters)
         esp_adc_cal_characteristics_t calib = ecu_get_adc_calib(j < num_adc_1 ? ECU_ADC_1 : ECU_ADC_2);
 
         // Convert adc_reading to voltage in mV
-        uint32_t voltage     = esp_adc_cal_raw_to_voltage(adc_readings[j], &calib);
+        uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_readings[j], &calib);
+
+        xSemaphoreTake(xSemaphore, portMAX_DELAY);
         esp_in_status.adc[j] = voltage;
+        xSemaphoreGive(xSemaphore);
     }
 }
 
 void run_hall_effect(void *parameters)
 {
     (void)parameters;
+    xSemaphoreTake(xSemaphore, portMAX_DELAY);
     esp_in_status.hall_effect = hall_sensor_read();
+    xSemaphoreGive(xSemaphore);
 }
 
 void run_din(void *parameters)
@@ -248,17 +270,19 @@ void run_din(void *parameters)
     (void)parameters;
     while (1)
     {
+        xSemaphoreTake(xSemaphore, portMAX_DELAY);
         esp_in_status.din[0] = gpio_get_level(ECU_DIN_1);
         esp_in_status.din[1] = gpio_get_level(ECU_DIN_2);
         esp_in_status.din[2] = gpio_get_level(ECU_DIN_3);
-        vTaskSuspend(NULL);
+        xSemaphoreGive(xSemaphore);
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     }
 }
 
 void din_cb(void *params)
 {
     (void)params;
-    xTaskResumeFromISR(din_task);
+    vTaskNotifyGiveFromISR(din_task, NULL);
 }
 
 void run_dout(void *parameters)
@@ -266,14 +290,17 @@ void run_dout(void *parameters)
     (void)parameters;
     while (1)
     {
+        xSemaphoreTake(xSemaphore, portMAX_DELAY);
         gpio_set_level(ECU_DOUT_1, esp_out_status.dout[0]);
-        vTaskSuspend(NULL);
+        xSemaphoreGive(xSemaphore);
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     }
 }
 
 // Main application
 void app_main(void)
 {
+    xSemaphore = xSemaphoreCreateMutexStatic(&xMutexBuffer);
     ecu_pins_init();
 
     vTaskDelay(pdMS_TO_TICKS(500));

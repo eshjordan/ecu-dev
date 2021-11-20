@@ -25,3 +25,9 @@ REGISTER_ROUTINE(print_state, 1)
 
     std::cout << "pos: " << pos << " vel: " << vel << " acc: " << acc << std::endl;
 }
+
+REGISTER_ROUTINE(print_esp, 1)
+{
+    std::cout << "din[0]: " << System::IO::read_digital_input(0) << " din[1]: " << System::IO::read_digital_input(1)
+              << " din[2]: " << System::IO::read_digital_input(2) << std::endl;
+}
