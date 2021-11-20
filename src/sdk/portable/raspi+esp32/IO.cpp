@@ -109,13 +109,19 @@ REGISTER_ROUTINE(esp_get_status, 10)
     output        = esp_output;
     output.header = header_make(0, sizeof(output));
 
-    static int count = 0;
+    static int count    = 0;
+    static double value = 0;
 
     output.pwm[0].frequency       = 5000;
     output.pwm[0].duty_resolution = 4;
     output.pwm[0].duty            = count++;
 
+    output.dac[0] = value;
+    value += 0.2;
+
     if (count >= 0b1111) { count = 0; }
+
+    if (value >= 3.3) { value = 0; }
 
     esp32_out_msg_calc_checksum(&output);
 

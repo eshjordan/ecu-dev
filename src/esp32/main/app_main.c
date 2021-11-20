@@ -181,8 +181,15 @@ void run_pwm(void *parameters)
 void run_dac(void *parameters)
 {
     (void)parameters;
+    const double vdd_a = 3.3;
+
     while (1)
     {
+        uint8_t dac_1_value = (255 * esp_out_status.dac[0]) / vdd_a;
+        ESP_ERROR_CHECK(dac_output_voltage(DAC_CHANNEL_1, dac_1_value));
+
+        uint8_t dac_2_value = (255 * esp_out_status.dac[1]) / vdd_a;
+        ESP_ERROR_CHECK(dac_output_voltage(DAC_CHANNEL_2, dac_2_value));
         vTaskSuspend(NULL);
     }
 }
