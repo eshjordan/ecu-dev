@@ -1,1 +1,16 @@
-.gitignore
+Trace.dump
+build
+compile_commands.json
+.cache
+.clang-format
+.clang-tidy
+.vscode
+**.dump
+**.ctu-info
+src/cppcheck-addon-ctu-file-list
+bin/
+lib/
+*.code-workspace
+combine_compile_commands.py
+src/stm32
+src/myfirstproject2

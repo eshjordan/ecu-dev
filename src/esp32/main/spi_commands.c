@@ -4,7 +4,7 @@
 
 void ecu_send_rcv_status(ESP32_In_Msg_t *esp_status, ESP32_Out_Msg_t *esp_output)
 {
-#define print_status 0
+#define print_status 1
     static char msg[1024] = {0};
 
     static DMA_ATTR WORD_ALIGNED_ATTR ESP32_Out_Msg_t rx_msg = {0};

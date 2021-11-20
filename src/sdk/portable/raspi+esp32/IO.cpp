@@ -63,9 +63,9 @@ static int init_esp32_spi(void)
     return spi_fd;
 }
 
-REGISTER_ROUTINE(esp_get_status, 10)
+REGISTER_ROUTINE(esp_get_status, 1)
 {
-#define print_status 0
+#define print_status 1
 
     static __attribute__((aligned(4))) ECU_Msg_t tx_msg = {};
     static __attribute__((aligned(4))) ECU_Msg_t rx_msg = {};
@@ -83,7 +83,7 @@ REGISTER_ROUTINE(esp_get_status, 10)
 
 #if print_status
     memset(msg, 0, sizeof(msg));
-    msg_to_str(msg, &rx_msg);
+    ecu_msg_to_str(msg, &rx_msg);
     printf("SPI - Message before flipping:\n%s\n", msg);
 #endif
 
@@ -104,14 +104,14 @@ REGISTER_ROUTINE(esp_get_status, 10)
         goto nd;
     }
 
-    vTaskDelay(pdMS_TO_TICKS(10));
+    vTaskDelay(pdMS_TO_TICKS(100));
 
     output         = esp_output;
     output.header  = header_make(0, sizeof(output));
     output.dout[0] = 1;
-    esp32_out_msg_calc_checksum(&esp_output);
+    esp32_out_msg_calc_checksum(&output);
 
-    System::IO::spi_transfer(0, std::max(sizeof(ESP32_Out_Msg_t), sizeof(ESP32_In_Msg_t)), &esp_output, &esp_status);
+    System::IO::spi_transfer(0, std::max(sizeof(ESP32_Out_Msg_t), sizeof(ESP32_In_Msg_t)), &output, &esp_status);
 
 #if print_status
     memset(msg, 0, sizeof(msg));
