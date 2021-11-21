@@ -8,6 +8,7 @@ extern "C" {
 
 #include "FreeRTOS.h"
 #include "portmacro.h"
+#include "semphr.h"
 #include "task.h"
 
 // extern void *memcpy(void *__restrict __dest, const void *__restrict __src, size_t __n) __THROW __nonnull((1, 2));

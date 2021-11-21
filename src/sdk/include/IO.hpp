@@ -3,6 +3,8 @@
 namespace System {
 namespace IO {
 
+int port_init_io(void);
+
 double read_analogue_input(int channel);
 
 void write_analogue_output(int channel, double value);

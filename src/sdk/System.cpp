@@ -45,6 +45,7 @@ void init(int argc, char **argv)
 
         init_crc();
         System::Impl::Server::init();
+        System::IO::port_init_io();
 
         System::Impl::ParameterList::add_parameter("position", 0.0);
         System::Impl::ParameterList::add_parameter("velocity", 0.0);

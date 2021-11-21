@@ -19,25 +19,25 @@
 #include "freertos/projdefs.h"
 #include "hal/ledc_types.h"
 
-SemaphoreHandle_t xSemaphore = NULL;
-StaticSemaphore_t xMutexBuffer;
+static SemaphoreHandle_t xSemaphore = NULL;
+static StaticSemaphore_t xMutexBuffer;
 
-TaskHandle_t spi_task    = NULL;
-TaskHandle_t uart_task   = NULL;
-TaskHandle_t can_task    = NULL;
-TaskHandle_t pwm_task    = NULL;
-TaskHandle_t dac_task    = NULL;
-TimerHandle_t adc_timer  = NULL;
-TimerHandle_t hall_timer = NULL;
-TaskHandle_t din_task    = NULL;
-TaskHandle_t dout_task   = NULL;
+static TaskHandle_t spi_task    = NULL;
+static TaskHandle_t uart_task   = NULL;
+static TaskHandle_t can_task    = NULL;
+static TaskHandle_t pwm_task    = NULL;
+static TaskHandle_t dac_task    = NULL;
+static TimerHandle_t adc_timer  = NULL;
+static TimerHandle_t hall_timer = NULL;
+static TaskHandle_t din_task    = NULL;
+static TaskHandle_t dout_task   = NULL;
 
-static DMA_ATTR WORD_ALIGNED_ATTR ESP32_In_ADC_t adc_data[9]  = {0};
-static DMA_ATTR WORD_ALIGNED_ATTR ESP32_In_Hall_t hall_data   = {0};
-static DMA_ATTR WORD_ALIGNED_ATTR ESP32_In_DIN_t din_data[3]  = {0};
-static DMA_ATTR WORD_ALIGNED_ATTR ESP32_Out_DAC_t dac_data[2] = {0};
-static DMA_ATTR WORD_ALIGNED_ATTR ESP32_Out_PWM_t pwm_data[2] = {0};
-static DMA_ATTR WORD_ALIGNED_ATTR ESP32_Out_DOUT_t dout_data  = {0};
+static DMA_ATTR WORD_ALIGNED_ATTR ESP32_In_ADC_t adc_data[9]    = {0};
+static DMA_ATTR WORD_ALIGNED_ATTR ESP32_In_Hall_t hall_data[1]  = {0};
+static DMA_ATTR WORD_ALIGNED_ATTR ESP32_In_DIN_t din_data[3]    = {0};
+static DMA_ATTR WORD_ALIGNED_ATTR ESP32_Out_DAC_t dac_data[2]   = {0};
+static DMA_ATTR WORD_ALIGNED_ATTR ESP32_Out_PWM_t pwm_data[2]   = {0};
+static DMA_ATTR WORD_ALIGNED_ATTR ESP32_Out_DOUT_t dout_data[1] = {0};
 
 void spi_send_rcv_wait(void *tx_buf, void *rx_buf, size_t len)
 {
@@ -118,26 +118,50 @@ void run_spi(void *parameters)
         case ESP32_IN_ADC: {
             xSemaphoreTake(xSemaphore, portMAX_DELAY);
 
-            adc_data[rx_msg.channel].seed = esp_random();
-            adc_data[rx_msg.channel].checksum =
-                calc_crc(&(adc_data[rx_msg.channel]), offsetof(ESP32_In_ADC_t, checksum));
+            adc_data[rx_msg.channel].seed     = esp_random();
+            adc_data[rx_msg.channel].checksum = calc_crc(&adc_data[rx_msg.channel], offsetof(ESP32_In_ADC_t, checksum));
             spi_send_rcv_wait(&adc_data[rx_msg.channel], empty_buf, sizeof(ESP32_In_ADC_t));
 
             xSemaphoreGive(xSemaphore);
             break;
         }
+        case ESP32_IN_HALL: {
+            xSemaphoreTake(xSemaphore, portMAX_DELAY);
+
+            hall_data[rx_msg.channel].seed = esp_random();
+            hall_data[rx_msg.channel].checksum =
+                calc_crc(&hall_data[rx_msg.channel], offsetof(ESP32_In_Hall_t, checksum));
+            spi_send_rcv_wait(&hall_data, empty_buf, sizeof(ESP32_In_Hall_t));
+
+            xSemaphoreGive(xSemaphore);
+        }
+        case ESP32_IN_DIN: {
+            xSemaphoreTake(xSemaphore, portMAX_DELAY);
+
+            din_data[rx_msg.channel].seed = esp_random();
+            din_data[rx_msg.channel].checksum =
+                calc_crc(&(din_data[rx_msg.channel]), offsetof(ESP32_In_DIN_t, checksum));
+            spi_send_rcv_wait(&din_data[rx_msg.channel], empty_buf, sizeof(ESP32_In_DIN_t));
+
+            xSemaphoreGive(xSemaphore);
+        }
         case ESP32_OUT_DAC: {
+            spi_send_rcv_wait(empty_buf, &dac_data[rx_msg.channel], sizeof(ESP32_Out_DAC_t));
             xTaskNotifyGive(dac_task);
             break;
         }
         case ESP32_OUT_PWM: {
+            spi_send_rcv_wait(empty_buf, &pwm_data[rx_msg.channel], sizeof(ESP32_Out_PWM_t));
             xTaskNotifyGive(pwm_task);
             break;
         }
         case ESP32_OUT_DOUT: {
+            spi_send_rcv_wait(empty_buf, &dout_data[rx_msg.channel], sizeof(ESP32_Out_DOUT_t));
             xTaskNotifyGive(dout_task);
             break;
         }
+        case ESP32_IN_CAN:
+        case ESP32_OUT_CAN:
         case ESP32_UNKNOWN:
         default: {
             ecu_warn("SPI - Received invalid command: Unknown");
@@ -314,7 +338,7 @@ void run_hall_effect(void *parameters)
 {
     (void)parameters;
     xSemaphoreTake(xSemaphore, portMAX_DELAY);
-    hall_data.hall = hall_sensor_read();
+    hall_data[0].hall = hall_sensor_read();
     xSemaphoreGive(xSemaphore);
 }
 
@@ -344,7 +368,7 @@ void run_dout(void *parameters)
     while (1)
     {
         xSemaphoreTake(xSemaphore, portMAX_DELAY);
-        gpio_set_level(ECU_DOUT_1, dout_data.dout);
+        gpio_set_level(ECU_DOUT_1, dout_data[0].dout);
         xSemaphoreGive(xSemaphore);
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     }

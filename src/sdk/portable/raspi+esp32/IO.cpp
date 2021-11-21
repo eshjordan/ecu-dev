@@ -14,9 +14,14 @@
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
+#define SPI_WAIT_TIME pdMS_TO_TICKS(2)
+
 static const char *const device = "/dev/spidev0.0";
 static bool esp32_spi_inited    = false;
 static int spi_fd               = -1;
+
+static SemaphoreHandle_t xSemaphore = NULL;
+static StaticSemaphore_t xMutexBuffer;
 
 // static ESP32_In_Msg_t esp_status  = {};
 // static ESP32_Out_Msg_t esp_output = {};
@@ -79,10 +84,11 @@ void request_peripheral(uint8_t type, uint8_t channel)
 
 REGISTER_ROUTINE(esp_get_status, 60)
 {
+    xSemaphoreTakeRecursive(xSemaphore, portMAX_DELAY);
     // Send request
     request_peripheral(ESP32_IN_ADC, 0);
 
-    vTaskDelay(pdMS_TO_TICKS(5));
+    vTaskDelay(SPI_WAIT_TIME);
 
     // Receive acknowledgement
     ALIGN ESP32_Request_t ack_msg = {0};
@@ -100,7 +106,7 @@ REGISTER_ROUTINE(esp_get_status, 60)
         return;
     }
 
-    vTaskDelay(pdMS_TO_TICKS(5));
+    vTaskDelay(SPI_WAIT_TIME);
 
     ALIGN ESP32_In_ADC_t adc = {0};
     System::IO::spi_read(0, sizeof(ESP32_In_ADC_t), &adc);
@@ -112,10 +118,68 @@ REGISTER_ROUTINE(esp_get_status, 60)
     }
 
     std::cout << "ADC: " << adc.adc << "\n";
+
+    vTaskDelay(SPI_WAIT_TIME);
+
+    xSemaphoreGiveRecursive(xSemaphore);
+}
+
+REGISTER_ROUTINE(esp_pwm, 60)
+{
+    xSemaphoreTakeRecursive(xSemaphore, portMAX_DELAY);
+    // Send request
+    request_peripheral(ESP32_OUT_PWM, 0);
+
+    vTaskDelay(SPI_WAIT_TIME);
+
+    // Receive acknowledgement
+    ALIGN ESP32_Request_t ack_msg = {0};
+    System::IO::spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
+
+    if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
+    {
+        puts("SPI - Received invalid acknowledgement msg - bad CRC");
+        return;
+    }
+
+    if (ack_msg.type != ESP32_ACK)
+    {
+        puts("SPI - Received invalid ack command");
+        return;
+    }
+
+    vTaskDelay(SPI_WAIT_TIME);
+
+    static int count          = 0;
+    ALIGN ESP32_Out_PWM_t pwm = {0};
+    pwm.seed                  = rand();
+    pwm.duty_resolution       = 8;
+    pwm.frequency             = 5000;
+    pwm.duty                  = count++;
+    pwm.checksum              = calc_crc(&pwm, offsetof(ESP32_Out_PWM_t, checksum));
+    if (count >= 255) { count = 0; }
+    System::IO::spi_write(0, sizeof(ESP32_Out_PWM_t), &pwm);
+
+    vTaskDelay(SPI_WAIT_TIME);
+
+    xSemaphoreGiveRecursive(xSemaphore);
 }
 
 namespace System {
 namespace IO {
+
+int port_init_io(void)
+{
+    xSemaphore = xSemaphoreCreateRecursiveMutexStatic(&xMutexBuffer);
+
+    if (!esp32_spi_inited)
+    {
+        spi_fd = init_esp32_spi();
+        if (spi_fd < 0) { return -1; }
+    }
+
+    return 1;
+}
 
 double read_analogue_input(int channel) { return 0; }
 
@@ -154,13 +218,6 @@ int spi_write(int channel, uint32_t size, void *buffer) { return spi_transfer(ch
 
 int spi_transfer(int channel, uint32_t size, void *tx_buffer, void *rx_buffer)
 {
-    if (!esp32_spi_inited)
-    {
-        puts("io not inited");
-        spi_fd = init_esp32_spi();
-        if (spi_fd < 0) { return -1; }
-    }
-
     struct spi_ioc_transfer tr = {0};
     tr.tx_buf                  = (__u64)tx_buffer;
     tr.rx_buf                  = (__u64)rx_buffer;

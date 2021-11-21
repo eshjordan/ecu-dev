@@ -42,7 +42,7 @@ static void transfer()
     puts("");
 }
 
-void port_init_io()
+int port_init_io(void)
 {
     static constexpr uint8_t spi_bits_per_word = 8;
     static constexpr uint32_t spi_speed_hz     = 125000;
@@ -51,21 +51,21 @@ void port_init_io()
     if (fd < 0)
     {
         puts("can't open device");
-        return;
+        return 0;
     }
 
     int ret = ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &spi_bits_per_word);
     if (ret == -1)
     {
         puts("can't set bits per word");
-        return;
+        return 0;
     }
 
     ret = ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &spi_speed_hz);
     if (ret == -1)
     {
         puts("can't set max speed hz");
-        return;
+        return 0;
     }
 
     io_inited = true;
@@ -77,7 +77,7 @@ REGISTER_ROUTINE(esp_get_status, 1)
 {
     if (!io_inited) {
         puts("io not inited");
-        port_init_io();
+        port_init_io(nullptr);
     }
     puts("esp_get_status");
     transfer();
