@@ -23,11 +23,5 @@ REGISTER_ROUTINE(print_state, 1)
     auto vel = System::get_parameter<double>("velocity");
     auto acc = System::get_parameter<double>("acceleration");
 
-    std::cout << "pos: " << pos << " vel: " << vel << " acc: " << acc << std::endl;
-}
-
-REGISTER_ROUTINE(print_esp, 1)
-{
-    std::cout << "din[0]: " << System::IO::read_digital_input(0) << " din[1]: " << System::IO::read_digital_input(1)
-              << " din[2]: " << System::IO::read_digital_input(2) << std::endl;
+    // std::cout << "pos: " << pos << " vel: " << vel << " acc: " << acc << std::endl;
 }

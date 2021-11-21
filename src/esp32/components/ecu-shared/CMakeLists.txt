@@ -6,8 +6,6 @@ idf_component_register(
         "${CMAKE_SOURCE_DIR}/../shared/Header.c"
         "${CMAKE_SOURCE_DIR}/../shared/ECU_Msg.c"
         "${CMAKE_SOURCE_DIR}/../shared/CAN_Msg.c"
-        "${CMAKE_SOURCE_DIR}/../shared/ESP32_In_Msg.c"
-        "${CMAKE_SOURCE_DIR}/../shared/ESP32_Out_Msg.c"
     INCLUDE_DIRS
         "include"
         "${CMAKE_SOURCE_DIR}/../shared"

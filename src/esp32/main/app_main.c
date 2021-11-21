@@ -7,10 +7,15 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 
+#include "CRC.h"
+#include "ESP32_Msg.h"
 #include "app.h"
 #include "driver/adc.h"
 #include "driver/ledc.h"
+#include "driver/spi_slave.h"
 #include "ecu-pins.h"
+#include "esp_attr.h"
+#include "esp_random.h"
 #include "freertos/projdefs.h"
 #include "hal/ledc_types.h"
 
@@ -27,103 +32,118 @@ TimerHandle_t hall_timer = NULL;
 TaskHandle_t din_task    = NULL;
 TaskHandle_t dout_task   = NULL;
 
-static ESP32_In_Msg_t esp_in_status   = {};
-static ESP32_Out_Msg_t esp_out_status = {.pwm[0].frequency       = 5000,
-                                         .pwm[0].duty            = 0,
-                                         .pwm[0].duty_resolution = LEDC_TIMER_1_BIT,
-                                         .pwm[1].frequency       = 5000,
-                                         .pwm[1].duty            = 0,
-                                         .pwm[1].duty_resolution = LEDC_TIMER_1_BIT};
+static DMA_ATTR WORD_ALIGNED_ATTR ESP32_In_ADC_t adc_data[9]  = {0};
+static DMA_ATTR WORD_ALIGNED_ATTR ESP32_In_Hall_t hall_data   = {0};
+static DMA_ATTR WORD_ALIGNED_ATTR ESP32_In_DIN_t din_data[3]  = {0};
+static DMA_ATTR WORD_ALIGNED_ATTR ESP32_Out_DAC_t dac_data[2] = {0};
+static DMA_ATTR WORD_ALIGNED_ATTR ESP32_Out_PWM_t pwm_data[2] = {0};
+static DMA_ATTR WORD_ALIGNED_ATTR ESP32_Out_DOUT_t dout_data  = {0};
 
-static ledc_timer_config_t pwm_0_timer = {.speed_mode      = LEDC_HIGH_SPEED_MODE,
-                                          .timer_num       = LEDC_TIMER_0,
-                                          .freq_hz         = 5000,
-                                          .duty_resolution = LEDC_TIMER_1_BIT,
-                                          .clk_cfg         = LEDC_AUTO_CLK};
+void spi_send_rcv_wait(void *tx_buf, void *rx_buf, size_t len)
+{
+    // clang-format off
+    spi_slave_transaction_t trans_desc = {
+        .tx_buffer = tx_buf,
+        .rx_buffer = rx_buf,
+        .length = len * 8
+    };
+    // clang-format on
 
-static ledc_channel_config_t pwm_0_channel = {.speed_mode = LEDC_HIGH_SPEED_MODE,
-                                              .channel    = LEDC_CHANNEL_0,
-                                              .timer_sel  = LEDC_TIMER_0,
-                                              .intr_type  = LEDC_INTR_DISABLE,
-                                              .gpio_num   = ECU_PWM_1};
+    // Wait for the master to send a query, acknowledge we're here
+    ESP_ERROR_CHECK(spi_slave_transmit(ECU_SPI_RCV_HOST, &trans_desc, portMAX_DELAY));
+}
 
-static ledc_timer_config_t pwm_1_timer = {.speed_mode      = LEDC_HIGH_SPEED_MODE,
-                                          .timer_num       = LEDC_TIMER_1,
-                                          .freq_hz         = 5000,
-                                          .duty_resolution = LEDC_TIMER_1_BIT,
-                                          .clk_cfg         = LEDC_AUTO_CLK};
+void spi_send_ack_wait()
+{
+    WORD_ALIGNED_ATTR ESP32_Request_t rx_buf  = {0};
+    WORD_ALIGNED_ATTR ESP32_Request_t ack_msg = {0};
+    ack_msg.seed                              = esp_random();
+    ack_msg.type                              = ESP32_ACK;
+    ack_msg.checksum                          = calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum));
 
-static ledc_channel_config_t pwm_1_channel = {.speed_mode = LEDC_HIGH_SPEED_MODE,
-                                              .channel    = LEDC_CHANNEL_1,
-                                              .timer_sel  = LEDC_TIMER_1,
-                                              .intr_type  = LEDC_INTR_DISABLE,
-                                              .gpio_num   = ECU_PWM_2};
+    // clang-format off
+    spi_slave_transaction_t trans_desc = {
+        .tx_buffer = &ack_msg,
+        .rx_buffer = &rx_buf,
+        .length = sizeof(ESP32_Request_t) * 8
+    };
+    // clang-format on
+
+    ESP_ERROR_CHECK(spi_slave_transmit(ECU_SPI_RCV_HOST, &trans_desc, portMAX_DELAY));
+}
+
+void spi_send_nack_wait()
+{
+    WORD_ALIGNED_ATTR ESP32_Request_t rx_buf   = {0};
+    WORD_ALIGNED_ATTR ESP32_Request_t nack_msg = {0};
+    nack_msg.seed                              = esp_random();
+    nack_msg.type                              = ESP32_NACK;
+    nack_msg.checksum                          = calc_crc(&nack_msg, offsetof(ESP32_Request_t, checksum));
+
+    // clang-format off
+    spi_slave_transaction_t trans_desc = {
+        .tx_buffer = &nack_msg,
+        .rx_buffer = &rx_buf,
+        .length = sizeof(ESP32_Request_t) * 8
+    };
+    // clang-format on
+
+    ESP_ERROR_CHECK(spi_slave_transmit(ECU_SPI_RCV_HOST, &trans_desc, portMAX_DELAY));
+}
 
 void run_spi(void *parameters)
 {
-#define print_status 0
     (void)parameters;
 
     // Initialise CRC calculation
     init_crc();
 
-    static DMA_ATTR ECU_Msg_t tx_msg = {.name = "spi_ack", .data = {0}, .command = ACK_CMD};
-    static DMA_ATTR ECU_Msg_t rx_msg = {0};
-
-    // clang-format off
-    static spi_slave_transaction_t trans_desc = {
-        .tx_buffer = &tx_msg,
-        .rx_buffer = &rx_msg,
-        .length = sizeof(ECU_Msg_t) * 8
-    };
-    // clang-format on
-
-    static char msg[1024] = {0};
-
     while (1)
     {
-        tx_msg.header = header_make(0, sizeof(ECU_Msg_t));
-        ecu_msg_calc_checksum(&tx_msg);
+        WORD_ALIGNED_ATTR uint8_t empty_buf[512] = {0};
+        WORD_ALIGNED_ATTR ESP32_Request_t rx_msg = {0};
+        spi_send_rcv_wait(empty_buf, &rx_msg, sizeof(ESP32_Request_t));
 
-        // Clear the rx buffer
-        memset(&rx_msg, 0, sizeof(ECU_Msg_t));
-
-        // Wait for the master to send a query, acknowledge we're here
-        ESP_ERROR_CHECK(spi_slave_transmit(ECU_SPI_RCV_HOST, &trans_desc, portMAX_DELAY));
-
-#if print_status
-        msg_to_str(msg, &rx_msg);
-        ecu_warn("Rx msg:\n%s\n", msg);
-#endif
-
-        ecu_err_t msg_status = ecu_msg_check(&rx_msg);
-        if (msg_status < 0)
+        if (rx_msg.checksum != calc_crc(&rx_msg, offsetof(ESP32_Request_t, checksum)))
         {
-            ecu_err_to_str(msg, msg_status);
-            ecu_warn("SPI - Received invalid message - %s", msg);
-            goto nd;
+            ecu_warn("SPI - Received invalid message - bad CRC");
+            spi_send_nack_wait();
+            continue;
         }
 
-        switch (rx_msg.command)
-        {
-        case STATUS_CMD: {
-            xSemaphoreTake(xSemaphore, portMAX_DELAY);
-            ecu_send_rcv_status(&esp_in_status, &esp_out_status);
-            xSemaphoreGive(xSemaphore);
+        spi_send_ack_wait();
 
-            xTaskNotifyGive(dout_task);
-            xTaskNotifyGive(pwm_task);
+        switch (rx_msg.type)
+        {
+        case ESP32_IN_ADC: {
+            xSemaphoreTake(xSemaphore, portMAX_DELAY);
+
+            adc_data[rx_msg.channel].seed = esp_random();
+            adc_data[rx_msg.channel].checksum =
+                calc_crc(&(adc_data[rx_msg.channel]), offsetof(ESP32_In_ADC_t, checksum));
+            spi_send_rcv_wait(&adc_data[rx_msg.channel], empty_buf, sizeof(ESP32_In_ADC_t));
+
+            xSemaphoreGive(xSemaphore);
+            break;
+        }
+        case ESP32_OUT_DAC: {
             xTaskNotifyGive(dac_task);
             break;
         }
+        case ESP32_OUT_PWM: {
+            xTaskNotifyGive(pwm_task);
+            break;
+        }
+        case ESP32_OUT_DOUT: {
+            xTaskNotifyGive(dout_task);
+            break;
+        }
+        case ESP32_UNKNOWN:
         default: {
-            ecu_warn("SPI - Received invalid command: %d", rx_msg.command);
-            goto nd;
+            ecu_warn("SPI - Received invalid command: Unknown");
+            break;
         }
         }
-
-    nd:
-        NULL;
     }
 }
 
@@ -143,32 +163,65 @@ void run_pwm(void *parameters)
 {
     (void)parameters;
 
+    // clang-format off
+    static uint8_t led_channels[2]           = {LEDC_CHANNEL_0, LEDC_CHANNEL_1};
+    static uint8_t led_timers[2]             = {LEDC_TIMER_0, LEDC_TIMER_1};
+    static ledc_timer_config_t pwm_timers[2] = {
+        {
+            .speed_mode      = LEDC_HIGH_SPEED_MODE,
+            .timer_num       = LEDC_TIMER_0,
+            .freq_hz         = 5000,
+            .duty_resolution = LEDC_TIMER_1_BIT,
+            .clk_cfg         = LEDC_AUTO_CLK,
+        },
+        {
+            .speed_mode      = LEDC_HIGH_SPEED_MODE,
+            .timer_num       = LEDC_TIMER_1,
+            .freq_hz         = 5000,
+            .duty_resolution = LEDC_TIMER_1_BIT,
+            .clk_cfg         = LEDC_AUTO_CLK,
+        },
+    };
+
+    static ledc_channel_config_t pwm_channels[2] = {
+        {
+            .speed_mode = LEDC_HIGH_SPEED_MODE,
+            .channel    = LEDC_CHANNEL_0,
+            .timer_sel  = LEDC_TIMER_0,
+            .intr_type  = LEDC_INTR_DISABLE,
+            .gpio_num   = ECU_PWM_1
+        },
+        {
+            .speed_mode = LEDC_HIGH_SPEED_MODE,
+            .channel    = LEDC_CHANNEL_1,
+            .timer_sel  = LEDC_TIMER_1,
+            .intr_type  = LEDC_INTR_DISABLE,
+            .gpio_num   = ECU_PWM_2
+        }
+    };
+    // clang-format on
+
     while (1)
     {
-        uint8_t led_channels[2]                = {LEDC_CHANNEL_0, LEDC_CHANNEL_1};
-        uint8_t led_timers[2]                  = {LEDC_TIMER_0, LEDC_TIMER_1};
-        ledc_timer_config_t *pwm_timers[2]     = {&pwm_0_timer, &pwm_1_timer};
-        ledc_channel_config_t *pwm_channels[2] = {&pwm_0_channel, &pwm_1_channel};
-
         xSemaphoreTake(xSemaphore, portMAX_DELAY);
-        uint8_t resolutions[2] = {esp_out_status.pwm[0].duty_resolution, esp_out_status.pwm[1].duty_resolution};
-        uint32_t freqs[2]      = {esp_out_status.pwm[0].frequency, esp_out_status.pwm[1].frequency};
-        uint16_t duties[2]     = {esp_out_status.pwm[0].duty, esp_out_status.pwm[1].duty};
+        uint8_t resolutions[2] = {pwm_data[0].duty_resolution, pwm_data[1].duty_resolution};
+        uint32_t freqs[2]      = {pwm_data[0].frequency, pwm_data[1].frequency};
+        uint16_t duties[2]     = {pwm_data[0].duty, pwm_data[1].duty};
         xSemaphoreGive(xSemaphore);
 
         for (int i = 0; i < 2; i++)
         {
             int pwm_enable            = duties[i] > 0;
-            int pwm_reenable          = pwm_enable && pwm_channels[i]->duty == 0;
-            int pwm_update_resolution = pwm_enable && resolutions[i] != pwm_timers[i]->duty_resolution;
-            int pwm_update_frequency  = pwm_enable && freqs[i] != pwm_timers[i]->freq_hz;
-            int pwm_update_duty       = pwm_enable && duties[i] != pwm_channels[i]->duty;
+            int pwm_reenable          = pwm_enable && pwm_channels[i].duty == 0;
+            int pwm_update_resolution = pwm_enable && resolutions[i] != pwm_timers[i].duty_resolution;
+            int pwm_update_frequency  = pwm_enable && freqs[i] != pwm_timers[i].freq_hz;
+            int pwm_update_duty       = pwm_enable && duties[i] != pwm_channels[i].duty;
 
-            pwm_timers[i]->freq_hz         = freqs[i];
-            pwm_timers[i]->duty_resolution = resolutions[i];
-            pwm_channels[i]->duty          = duties[i];
+            pwm_timers[i].freq_hz         = freqs[i];
+            pwm_timers[i].duty_resolution = resolutions[i];
+            pwm_channels[i].duty          = duties[i];
 
-            if (!pwm_enable && pwm_channels[i]->duty != 0)
+            if (!pwm_enable && pwm_channels[i].duty != 0)
             {
                 ESP_ERROR_CHECK(ledc_stop(LEDC_HIGH_SPEED_MODE, led_channels[i], 0));
                 ESP_ERROR_CHECK(ledc_timer_pause(LEDC_HIGH_SPEED_MODE, led_timers[i]));
@@ -176,12 +229,12 @@ void run_pwm(void *parameters)
             {
                 ESP_ERROR_CHECK(ledc_stop(LEDC_HIGH_SPEED_MODE, led_channels[i], 0));
                 ESP_ERROR_CHECK(ledc_timer_pause(LEDC_HIGH_SPEED_MODE, led_timers[i]));
-                ESP_ERROR_CHECK(ledc_timer_config(pwm_timers[i]));
-                ESP_ERROR_CHECK(ledc_channel_config(pwm_channels[i]));
+                ESP_ERROR_CHECK(ledc_timer_config(&pwm_timers[i]));
+                ESP_ERROR_CHECK(ledc_channel_config(&pwm_channels[i]));
                 ESP_ERROR_CHECK(ledc_timer_resume(LEDC_HIGH_SPEED_MODE, led_timers[i]));
             } else if (pwm_update_duty)
             {
-                ESP_ERROR_CHECK(ledc_set_duty(LEDC_HIGH_SPEED_MODE, led_channels[i], pwm_channels[i]->duty));
+                ESP_ERROR_CHECK(ledc_set_duty(LEDC_HIGH_SPEED_MODE, led_channels[i], pwm_channels[i].duty));
                 ESP_ERROR_CHECK(ledc_update_duty(LEDC_HIGH_SPEED_MODE, led_channels[i]));
             }
         }
@@ -199,10 +252,10 @@ void run_dac(void *parameters)
     {
         xSemaphoreTake(xSemaphore, portMAX_DELAY);
 
-        uint8_t dac_1_value = (255 * esp_out_status.dac[0]) / vdd_a;
+        uint8_t dac_1_value = (255 * dac_data[0].dac) / vdd_a;
         ESP_ERROR_CHECK(dac_output_voltage(DAC_CHANNEL_1, dac_1_value));
 
-        uint8_t dac_2_value = (255 * esp_out_status.dac[1]) / vdd_a;
+        uint8_t dac_2_value = (255 * dac_data[1].dac) / vdd_a;
         ESP_ERROR_CHECK(dac_output_voltage(DAC_CHANNEL_2, dac_2_value));
 
         xSemaphoreGive(xSemaphore);
@@ -252,7 +305,7 @@ void run_adc(void *parameters)
         uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_readings[j], &calib);
 
         xSemaphoreTake(xSemaphore, portMAX_DELAY);
-        esp_in_status.adc[j] = voltage;
+        adc_data[j].adc = voltage;
         xSemaphoreGive(xSemaphore);
     }
 }
@@ -261,7 +314,7 @@ void run_hall_effect(void *parameters)
 {
     (void)parameters;
     xSemaphoreTake(xSemaphore, portMAX_DELAY);
-    esp_in_status.hall_effect = hall_sensor_read();
+    hall_data.hall = hall_sensor_read();
     xSemaphoreGive(xSemaphore);
 }
 
@@ -271,9 +324,9 @@ void run_din(void *parameters)
     while (1)
     {
         xSemaphoreTake(xSemaphore, portMAX_DELAY);
-        esp_in_status.din[0] = gpio_get_level(ECU_DIN_1);
-        esp_in_status.din[1] = gpio_get_level(ECU_DIN_2);
-        esp_in_status.din[2] = gpio_get_level(ECU_DIN_3);
+        din_data[0].din = gpio_get_level(ECU_DIN_1);
+        din_data[1].din = gpio_get_level(ECU_DIN_2);
+        din_data[2].din = gpio_get_level(ECU_DIN_3);
         xSemaphoreGive(xSemaphore);
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     }
@@ -291,7 +344,7 @@ void run_dout(void *parameters)
     while (1)
     {
         xSemaphoreTake(xSemaphore, portMAX_DELAY);
-        gpio_set_level(ECU_DOUT_1, esp_out_status.dout[0]);
+        gpio_set_level(ECU_DOUT_1, dout_data.dout);
         xSemaphoreGive(xSemaphore);
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     }
