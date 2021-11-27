@@ -107,7 +107,6 @@ void run_spi(void *parameters)
         if (rx_msg.checksum != calc_crc(&rx_msg, offsetof(ESP32_Request_t, checksum)))
         {
             ecu_warn("SPI - Received invalid message - bad CRC");
-            spi_send_nack_wait();
             continue;
         }
 
@@ -134,6 +133,7 @@ void run_spi(void *parameters)
             spi_send_rcv_wait(&hall_data, empty_buf, sizeof(ESP32_In_Hall_t));
 
             xSemaphoreGive(xSemaphore);
+            break;
         }
         case ESP32_IN_DIN: {
             xSemaphoreTake(xSemaphore, portMAX_DELAY);
@@ -141,9 +141,10 @@ void run_spi(void *parameters)
             din_data[rx_msg.channel].seed = esp_random();
             din_data[rx_msg.channel].checksum =
                 calc_crc(&(din_data[rx_msg.channel]), offsetof(ESP32_In_DIN_t, checksum));
-            spi_send_rcv_wait(&din_data[rx_msg.channel], empty_buf, sizeof(ESP32_In_DIN_t));
+            spi_send_rcv_wait(&(din_data[rx_msg.channel]), empty_buf, sizeof(ESP32_In_DIN_t));
 
             xSemaphoreGive(xSemaphore);
+            break;
         }
         case ESP32_OUT_DAC: {
             spi_send_rcv_wait(empty_buf, &dac_data[rx_msg.channel], sizeof(ESP32_Out_DAC_t));

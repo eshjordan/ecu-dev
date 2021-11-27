@@ -14,7 +14,7 @@
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
-#define SPI_WAIT_TIME pdMS_TO_TICKS(2)
+#define SPI_WAIT_TIME pdMS_TO_TICKS(0)
 
 static const char *const device = "/dev/spidev0.0";
 static bool esp32_spi_inited    = false;
@@ -23,8 +23,12 @@ static int spi_fd               = -1;
 static SemaphoreHandle_t xSemaphore = NULL;
 static StaticSemaphore_t xMutexBuffer;
 
-// static ESP32_In_Msg_t esp_status  = {};
-// static ESP32_Out_Msg_t esp_output = {};
+static ALIGN ESP32_In_ADC_t adc_data[9]    = {0};
+static ALIGN ESP32_In_Hall_t hall_data[1]  = {0};
+static ALIGN ESP32_In_DIN_t din_data[3]    = {0};
+static ALIGN ESP32_Out_DAC_t dac_data[2]   = {0};
+static ALIGN ESP32_Out_PWM_t pwm_data[2]   = {0};
+static ALIGN ESP32_Out_DOUT_t dout_data[1] = {0};
 
 static int init_esp32_spi(void)
 {
@@ -82,54 +86,63 @@ void request_peripheral(uint8_t type, uint8_t channel)
     System::IO::spi_transfer(0, sizeof(ESP32_Request_t), &tx_msg, &rx_buf);
 }
 
-REGISTER_ROUTINE(esp_get_status, 60)
+bool receive_ack(void)
 {
-    xSemaphoreTakeRecursive(xSemaphore, portMAX_DELAY);
-    // Send request
-    request_peripheral(ESP32_IN_ADC, 0);
-
-    vTaskDelay(SPI_WAIT_TIME);
-
-    // Receive acknowledgement
     ALIGN ESP32_Request_t ack_msg = {0};
     System::IO::spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
         puts("SPI - Received invalid acknowledgement msg - bad CRC");
-        return;
+        return false;
     }
-
     if (ack_msg.type != ESP32_ACK)
     {
         puts("SPI - Received invalid ack command");
-        return;
+        return false;
     }
 
+    return true;
+}
+
+void update_adc(int channel)
+{
+    xSemaphoreTakeRecursive(xSemaphore, portMAX_DELAY);
+
+    // Send request
+    request_peripheral(ESP32_IN_ADC, channel);
     vTaskDelay(SPI_WAIT_TIME);
 
-    ALIGN ESP32_In_ADC_t adc = {0};
-    System::IO::spi_read(0, sizeof(ESP32_In_ADC_t), &adc);
+    // Receive acknowledgement
+    bool ack = receive_ack();
+    vTaskDelay(SPI_WAIT_TIME);
 
-    if (adc.checksum != calc_crc(&adc, offsetof(ESP32_In_ADC_t, checksum)))
+    if (!ack) { return; }
+
+    // Receive data
+    ESP32_In_ADC_t adc_msg = {0};
+    System::IO::spi_read(0, sizeof(ESP32_In_ADC_t), &adc_msg);
+
+    if (adc_msg.checksum != calc_crc(&adc_msg, offsetof(ESP32_In_ADC_t, checksum)))
     {
         puts("SPI - Received invalid adc msg - bad CRC");
+        vTaskDelay(SPI_WAIT_TIME);
         return;
     }
 
-    std::cout << "ADC: " << adc.adc << "\n";
+    adc_data[channel].adc = adc_msg.adc;
 
     vTaskDelay(SPI_WAIT_TIME);
 
     xSemaphoreGiveRecursive(xSemaphore);
 }
 
-REGISTER_ROUTINE(esp_pwm, 60)
+void update_hall(int channel)
 {
     xSemaphoreTakeRecursive(xSemaphore, portMAX_DELAY);
-    // Send request
-    request_peripheral(ESP32_OUT_PWM, 0);
 
+    // Send request
+    request_peripheral(ESP32_IN_HALL, channel);
     vTaskDelay(SPI_WAIT_TIME);
 
     // Receive acknowledgement
@@ -139,30 +152,229 @@ REGISTER_ROUTINE(esp_pwm, 60)
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
         puts("SPI - Received invalid acknowledgement msg - bad CRC");
+        vTaskDelay(SPI_WAIT_TIME);
         return;
     }
-
     if (ack_msg.type != ESP32_ACK)
     {
         puts("SPI - Received invalid ack command");
+        vTaskDelay(SPI_WAIT_TIME);
         return;
     }
 
     vTaskDelay(SPI_WAIT_TIME);
 
-    static int count          = 0;
-    ALIGN ESP32_Out_PWM_t pwm = {0};
-    pwm.seed                  = rand();
-    pwm.duty_resolution       = 8;
-    pwm.frequency             = 5000;
-    pwm.duty                  = count++;
-    pwm.checksum              = calc_crc(&pwm, offsetof(ESP32_Out_PWM_t, checksum));
-    if (count >= 255) { count = 0; }
-    System::IO::spi_write(0, sizeof(ESP32_Out_PWM_t), &pwm);
+    ESP32_In_Hall_t hall_msg = {0};
+
+    System::IO::spi_read(0, sizeof(ESP32_In_Hall_t), &hall_msg);
+
+    if (hall_msg.checksum != calc_crc(&hall_msg, offsetof(ESP32_In_Hall_t, checksum)))
+    {
+        puts("SPI - Received invalid hall msg - bad CRC");
+        vTaskDelay(SPI_WAIT_TIME);
+        return;
+    }
+
+    hall_data[channel].hall = hall_msg.hall;
 
     vTaskDelay(SPI_WAIT_TIME);
 
     xSemaphoreGiveRecursive(xSemaphore);
+}
+
+void update_din(int channel)
+{
+    xSemaphoreTakeRecursive(xSemaphore, portMAX_DELAY);
+
+    // Send request
+    request_peripheral(ESP32_IN_DIN, channel);
+    vTaskDelay(SPI_WAIT_TIME);
+
+    // Receive acknowledgement
+    ALIGN ESP32_Request_t ack_msg = {0};
+    System::IO::spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
+
+    if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
+    {
+        puts("SPI - Received invalid acknowledgement msg - bad CRC");
+        vTaskDelay(SPI_WAIT_TIME);
+        return;
+    }
+    if (ack_msg.type != ESP32_ACK)
+    {
+        puts("SPI - Received invalid ack command");
+        vTaskDelay(SPI_WAIT_TIME);
+        return;
+    }
+
+    vTaskDelay(SPI_WAIT_TIME);
+
+    ESP32_In_DIN_t din_msg = {0};
+
+    System::IO::spi_read(0, sizeof(ESP32_In_DIN_t), &din_msg);
+
+    if (din_msg.checksum != calc_crc(&din_msg, offsetof(ESP32_In_DIN_t, checksum)))
+    {
+        puts("SPI - Received invalid hall msg - bad CRC");
+        vTaskDelay(SPI_WAIT_TIME);
+        return;
+    }
+
+    din_data[channel].din = din_msg.din;
+
+    vTaskDelay(SPI_WAIT_TIME);
+
+    xSemaphoreGiveRecursive(xSemaphore);
+}
+
+void update_dac(int channel)
+{
+    xSemaphoreTakeRecursive(xSemaphore, portMAX_DELAY);
+
+    // Send request
+    request_peripheral(ESP32_OUT_DAC, channel);
+    vTaskDelay(SPI_WAIT_TIME);
+
+    // Receive acknowledgement
+    ALIGN ESP32_Request_t ack_msg = {0};
+    System::IO::spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
+
+    if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
+    {
+        puts("SPI - Received invalid acknowledgement msg - bad CRC");
+        vTaskDelay(SPI_WAIT_TIME);
+        return;
+    }
+    if (ack_msg.type != ESP32_ACK)
+    {
+        puts("SPI - Received invalid ack command");
+        vTaskDelay(SPI_WAIT_TIME);
+        return;
+    }
+
+    vTaskDelay(SPI_WAIT_TIME);
+
+    dac_data[channel].seed     = rand();
+    dac_data[channel].checksum = calc_crc(&dac_data[channel], offsetof(ESP32_Out_DAC_t, checksum));
+
+    System::IO::spi_write(0, sizeof(ESP32_Out_DAC_t), &dac_data[channel]);
+
+    vTaskDelay(SPI_WAIT_TIME);
+
+    xSemaphoreGiveRecursive(xSemaphore);
+}
+
+void update_pwm(int channel)
+{
+    xSemaphoreTakeRecursive(xSemaphore, portMAX_DELAY);
+
+    // Send request
+    request_peripheral(ESP32_OUT_PWM, channel);
+    vTaskDelay(SPI_WAIT_TIME);
+
+    // Receive acknowledgement
+    ALIGN ESP32_Request_t ack_msg = {0};
+    System::IO::spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
+
+    if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
+    {
+        puts("SPI - Received invalid acknowledgement msg - bad CRC");
+        vTaskDelay(SPI_WAIT_TIME);
+        return;
+    }
+    if (ack_msg.type != ESP32_ACK)
+    {
+        puts("SPI - Received invalid ack command");
+        vTaskDelay(SPI_WAIT_TIME);
+        return;
+    }
+
+    vTaskDelay(SPI_WAIT_TIME);
+
+    pwm_data[channel].seed     = rand();
+    pwm_data[channel].checksum = calc_crc(&pwm_data[channel], offsetof(ESP32_Out_PWM_t, checksum));
+
+    System::IO::spi_write(0, sizeof(ESP32_Out_PWM_t), &pwm_data[channel]);
+
+    vTaskDelay(SPI_WAIT_TIME);
+
+    xSemaphoreGiveRecursive(xSemaphore);
+}
+
+void update_dout(int channel)
+{
+    xSemaphoreTakeRecursive(xSemaphore, portMAX_DELAY);
+
+    // Send request
+    request_peripheral(ESP32_OUT_DOUT, channel);
+    vTaskDelay(SPI_WAIT_TIME);
+
+    // Receive acknowledgement
+    ALIGN ESP32_Request_t ack_msg = {0};
+    System::IO::spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
+
+    if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
+    {
+        puts("SPI - Received invalid acknowledgement msg - bad CRC");
+        vTaskDelay(SPI_WAIT_TIME);
+        return;
+    }
+    if (ack_msg.type != ESP32_ACK)
+    {
+        puts("SPI - Received invalid ack command");
+        vTaskDelay(SPI_WAIT_TIME);
+        return;
+    }
+
+    vTaskDelay(SPI_WAIT_TIME);
+
+    dout_data[channel].seed     = rand();
+    dout_data[channel].checksum = calc_crc(&dout_data[channel], offsetof(ESP32_Out_DOUT_t, checksum));
+
+    System::IO::spi_write(0, sizeof(ESP32_Out_DOUT_t), &dout_data[channel]);
+
+    vTaskDelay(SPI_WAIT_TIME);
+
+    xSemaphoreGiveRecursive(xSemaphore);
+}
+
+REGISTER_ROUTINE(esp_in_update, 60)
+{
+    // Inputs
+    for (int i = 0; i < ARRAY_SIZE(adc_data); i++)
+    {
+        update_adc(i);
+    }
+
+    for (int i = 0; i < ARRAY_SIZE(hall_data); i++)
+    {
+        update_hall(i);
+    }
+
+    for (int i = 0; i < ARRAY_SIZE(din_data); i++)
+    {
+        update_din(i);
+    }
+}
+
+REGISTER_ROUTINE(esp_out_update, 1 / 0.025)
+{
+    // Outputs
+
+    for (int i = 0; i < ARRAY_SIZE(dac_data); i++)
+    {
+        update_dac(i);
+    }
+
+    for (int i = 0; i < ARRAY_SIZE(pwm_data); i++)
+    {
+        update_pwm(i);
+    }
+
+    for (int i = 0; i < ARRAY_SIZE(dout_data); i++)
+    {
+        update_dout(i);
+    }
 }
 
 namespace System {
@@ -181,32 +393,31 @@ int port_init_io(void)
     return 1;
 }
 
-double read_analogue_input(int channel) { return 0; }
+uint32_t read_analogue_input(int channel) { return adc_data[channel].adc; }
 
-void write_analogue_output(int channel, double value) {}
+uint32_t read_hall_input(int channel) { return hall_data[channel].hall; }
 
-int read_digital_input(int channel)
+uint8_t read_digital_input(int channel) { return din_data[channel].din; }
+
+void write_analogue_output(int channel, uint32_t value)
 {
-    switch (channel)
-    {
-    case 0: {
-        // return esp_status.din[0];
-    }
-    case 1: {
-        // return esp_status.din[1];
-    }
-    case 2: {
-        // return esp_status.din[2];
-    }
-    default: {
-        return 0;
-    }
-    }
+    dac_data[channel].dac = value;
+    update_dac(channel);
 }
 
-void write_digital_output(int channel, int value) {}
+void write_digital_output(int channel, uint8_t value)
+{
+    dout_data[channel].dout = value;
+    update_dout(channel);
+}
 
-void write_pwm_output(int channel, double freq, double duty) {}
+void write_pwm_output(int channel, uint16_t duty, uint32_t freq, uint8_t duty_resolution)
+{
+    pwm_data[channel].duty            = duty;
+    pwm_data[channel].frequency       = freq;
+    pwm_data[channel].duty_resolution = duty_resolution;
+    update_pwm(channel);
+}
 
 CAN_Msg_t read_can_input(int bus, int id) { return {}; }
 

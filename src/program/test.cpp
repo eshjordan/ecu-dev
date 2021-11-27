@@ -24,4 +24,5 @@ REGISTER_ROUTINE(print_state, 1)
     auto acc = System::get_parameter<double>("acceleration");
 
     // std::cout << "pos: " << pos << " vel: " << vel << " acc: " << acc << std::endl;
+    std::cout << "Analogue Input 4: " << System::IO::read_analogue_input(4) << "mV\n";
 }
