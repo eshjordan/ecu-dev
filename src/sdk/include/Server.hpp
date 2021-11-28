@@ -1,3 +1,5 @@
+#ifndef STM32_BUILD
+
 #pragma once
 
 #include "Connection.hpp"
@@ -32,3 +34,5 @@ public:
 
 } // namespace Impl
 } // namespace System
+
+#endif

@@ -1,3 +1,6 @@
+
+#ifndef STM32_BUILD
+
 #include "Server.hpp"
 #include "RTOS_IP.hpp"
 #include "portmacro.h"
@@ -165,3 +168,5 @@ void System::Impl::Server::shutdown(void)
 extern "C" {
 void rtos_ip_start(void) { System::Impl::Server::start(); }
 }
+
+#endif 

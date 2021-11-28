@@ -7,16 +7,6 @@
 #include <unistd.h>
 
 /**
- * @brief When configSUPPORT_STATIC_ALLOCATION is set to 1 the application
- * writer can use a callback function to optionally provide the memory required
- * by the idle and timer tasks.  This is the stack that will be used by the
- * timer task.  It is declared here, as a global, so it can be checked by a test
- * that is implemented in a different file.
- *
- */
-static StackType_t uxTimerTaskStack[configTIMER_TASK_STACK_DEPTH];
-
-/**
  * @brief Override the new operator to use the FreeRTOS malloc function.
  *
  * @param size Bytes to allocate.
@@ -60,6 +50,18 @@ void operator delete[](void *ptr) noexcept { vPortFree(ptr); }
 
 //     return __dest;
 // }
+
+#ifndef STM32_BUILD
+
+/**
+ * @brief When configSUPPORT_STATIC_ALLOCATION is set to 1 the application
+ * writer can use a callback function to optionally provide the memory required
+ * by the idle and timer tasks.  This is the stack that will be used by the
+ * timer task.  It is declared here, as a global, so it can be checked by a test
+ * that is implemented in a different file.
+ *
+ */
+static StackType_t uxTimerTaskStack[configTIMER_TASK_STACK_DEPTH];
 
 void vApplicationIdleHook(void) { usleep(15000); }
 
@@ -148,3 +150,5 @@ void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer, StackT
 // {
 //     return 0;
 // }
+
+#endif

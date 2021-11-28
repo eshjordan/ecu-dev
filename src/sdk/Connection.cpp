@@ -1,3 +1,5 @@
+#ifndef STM32_BUILD
+
 #include "Connection.hpp"
 #include "CRC.h"
 #include "ECU_Msg.h"
@@ -198,3 +200,5 @@ void Connection::process_message(ECU_Msg_t *message)
 
 } // namespace Impl
 } // namespace System
+
+#endif

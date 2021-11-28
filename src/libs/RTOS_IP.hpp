@@ -1,3 +1,5 @@
+#ifndef STM32_BUILD
+
 #pragma once
 
 extern "C" {
@@ -130,3 +132,5 @@ void rtos_ip_start(void);
  */
 void vApplicationIPNetworkEventHook(eIPCallbackEvent_t eNetworkEvent);
 }
+
+#endif

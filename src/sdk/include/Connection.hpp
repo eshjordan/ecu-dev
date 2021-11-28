@@ -1,3 +1,5 @@
+#ifndef STM32_BUILD
+
 #pragma once
 
 #include "ECU_Msg.h"
@@ -54,3 +56,5 @@ public:
 
 } // namespace Impl
 } // namespace System
+
+#endif

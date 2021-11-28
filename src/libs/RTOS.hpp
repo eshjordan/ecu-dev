@@ -11,6 +11,8 @@ extern "C" {
 #include "semphr.h"
 #include "task.h"
 
+#ifndef STM32_BUILD
+
 // extern void *memcpy(void *__restrict __dest, const void *__restrict __src, size_t __n) __THROW __nonnull((1, 2));
 
 /* Prototypes for the standard FreeRTOS extern callback/hook functions we should
@@ -111,6 +113,8 @@ void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer, StackTyp
  */
 void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer, StackType_t **ppxTimerTaskStackBuffer,
                                     uint32_t *pulTimerTaskStackSize);
+
+#endif
 
 /* timers.h must be included after declaring the prototypes. */
 #include "timers.h"

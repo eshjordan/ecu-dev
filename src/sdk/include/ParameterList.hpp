@@ -63,7 +63,11 @@ template <typename T> void ParameterList::add_parameter(const std::string &name,
     for (int i = 0; i < m_parameter_count; i++)
     {
         auto *parameter = m_parameters[i];
-        if (parameter->get_name() == name) { throw std::runtime_error("Parameter '" + name + "' already registered."); }
+        if (parameter->get_name() == name)
+        {
+            printf("Parameter '%s' already registered.", name.c_str());
+            return;
+        }
     }
 
     m_parameters[m_parameter_count++] = new Parameter<T>(name, value);
@@ -74,10 +78,11 @@ template <typename T> [[nodiscard]] T ParameterList::get_parameter(const std::st
     for (int i = 0; i < m_parameter_count; i++)
     {
         auto *parameter = m_parameters[i];
-        if (parameter->get_name() == name) { return dynamic_cast<Parameter<T> *>(parameter)->get_value(); }
+        if (parameter->get_name() == name) { return ((Parameter<T> *)(parameter))->get_value(); }
     }
 
-    throw std::range_error("Parameter '" + name + "' not found.");
+    printf("Parameter '%s' not found.", name.c_str());
+    return {};
 }
 
 template <typename T> void ParameterList::set_parameter(const std::string &name, const T &value)
@@ -89,15 +94,15 @@ template <typename T> void ParameterList::set_parameter(const std::string &name,
         {
             if (type_hash<T>() != parameter->get_type())
             {
-                throw std::runtime_error("Parameter '" + name
-                                         + "' set to wrong type, explicitly set the typename template argument.");
+                printf("Parameter '%s' set to wrong type, explicitly set the typename template argument.",
+                       name.c_str());
             }
-            dynamic_cast<Parameter<T> *>(parameter)->set_value(value);
+            ((Parameter<T> *)parameter)->set_value(value);
             return;
         }
     }
 
-    throw std::range_error("Parameter '" + name + "' not found.");
+    printf("Parameter '%s' not found.", name.c_str());
 }
 
 } // namespace Impl

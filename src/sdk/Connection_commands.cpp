@@ -1,3 +1,5 @@
+#ifndef STM32_BUILD
+
 #include "Connection.hpp"
 #include "ECU_Msg.h"
 #include "System.hpp"
@@ -376,3 +378,5 @@ void Connection::download_firmware(ECU_Msg_t *message)
 
 } // namespace Impl
 } // namespace System
+
+#endif

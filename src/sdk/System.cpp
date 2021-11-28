@@ -44,7 +44,10 @@ void init(int argc, char **argv)
         }
 
         init_crc();
+#ifndef STM32_BUILD
         System::Impl::Server::init();
+#endif
+        
         System::IO::port_init_io();
 
         System::Impl::ParameterList::add_parameter("position", 0.0);
@@ -74,11 +77,11 @@ void restart(int signal)
     {
         argv[i] = new char[System::Impl::s_argv[i].size() + 1];
         strcpy(argv[i], System::Impl::s_argv[i].c_str());
-        std::cout << argv[i] << std::endl;
+        printf("%s\n", argv[i]);
     }
     argv[System::Impl::s_argc] = nullptr;
 
-    std::cout << "Restarting - " << argv[0] << std::endl;
+    printf("Restarting - %s\n", argv[0]);
 
     // Currently the child becomes an orphan. This is apparently ok? as it gets adopted by init at the highest level.
     bool parent = false;
@@ -100,7 +103,9 @@ void restart(int signal)
 
 void shutdown(int signal)
 {
+#ifndef STM32_BUILD
     System::Impl::Server::shutdown();
+#endif
 
     // /* Stop the RTOS schedule, stop tasks and timers running. */
     // vTaskEndScheduler();
