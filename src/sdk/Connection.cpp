@@ -143,7 +143,7 @@ void Connection::process_message(ECU_Msg_t *message)
     case ECU_Msg_t::RESTART_CMD: {
         // Shut down all connections nicely
         xTaskCreate(System::restart, "ECU_RESTART", 10000, /* Stack size in words, not bytes. */
-                    memset(malloc(1), EXIT_SUCCESS, 1),    /* Parameter passed into the task. */
+                    memset(pvPortMalloc(1), 0, 1),    /* Parameter passed into the task. */
                     tskIDLE_PRIORITY,                      /* Priority of the task. */
                     nullptr);                              /* Don't need to keep the task handle. */
 
@@ -177,7 +177,7 @@ void Connection::process_message(ECU_Msg_t *message)
 
         // Shut down all connections nicely
         xTaskCreate(System::restart, "ECU_RESTART", 10000, /* Stack size in words, not bytes. */
-                    memset(malloc(1), EXIT_SUCCESS, 1),    /* Parameter passed into the task. */
+                    memset(pvPortMalloc(1), 0, 1),    /* Parameter passed into the task. */
                     tskIDLE_PRIORITY,                      /* Priority of the task. */
                     nullptr);                              /* Don't need to keep the task handle. */
 

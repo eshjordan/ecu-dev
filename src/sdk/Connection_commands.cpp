@@ -5,8 +5,6 @@
 #include "System.hpp"
 #include <cstdio>
 #include <cstring>
-#include <fstream>
-#include <string>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <vector>
@@ -39,7 +37,7 @@ void Connection::send_status(ECU_Msg_t *message)
     }
 
     char status_buffer[msg_size] = {0};
-    uint offset                  = 0;
+    uint32_t offset              = 0;
 
     // Copy task info header into buffer
     strncpy(status_buffer, task_list_header, sizeof(task_list_header));
@@ -250,14 +248,19 @@ void Connection::download_firmware(ECU_Msg_t *message)
         ECU_Msg_t file_header;
         receive_message(&file_header);
 
-        std::string type_and_name = file_header.name;
-        std::string file_type     = type_and_name.substr(0, type_and_name.find_first_of('/'));
-        std::string filename      = type_and_name.substr(type_and_name.find_first_of('/') + 1);
+        const char *type_and_name = file_header.name;
+        const char *one_past_end  = strstr(type_and_name, "/");
+
+        char *file_type = (char *)pvPortMalloc(one_past_end - type_and_name);
+        memcpy(file_type, type_and_name, one_past_end - type_and_name);
+
+        char *filename = (char *)pvPortMalloc(strlen(type_and_name) - (one_past_end - type_and_name));
+        memcpy(filename, one_past_end + 1, strlen(one_past_end + 1));
 
         auto firmware_size = ((uint32_t *)&file_header.data)[0];
         auto firmware_crc  = ((uint32_t *)&file_header.data)[1];
 
-        vLoggingPrintf("Downloading %s file %s...\n", file_type.c_str(), filename.c_str());
+        vLoggingPrintf("Downloading %s file %s...\n", file_type, filename);
         vLoggingPrintf("Firmware size: %u\n", firmware_size);
         vLoggingPrintf("Firmware CRC: %u\n", firmware_crc);
 
@@ -316,31 +319,32 @@ void Connection::download_firmware(ECU_Msg_t *message)
 
         puts("Received OK!");
 
-        std::string filepath;
-        std::string base_dir = "/home/pi/ecu/";
+        const char *base_dir = "/home/pi/ecu/";
 
-        if (file_type == "bin")
+        char *filepath = (char *)pvPortMalloc(strlen(base_dir) + strlen(file_type) + 1 + strlen(filename) + 1);
+
+        if (strcmp(file_type, "bin") == 0)
         {
-            filepath = base_dir + "bin/" + filename;
-        } else if (file_type == "lib")
+            strcat(strcat(strcat(filepath, base_dir), "bin/"), filename);
+        } else if (strcmp(file_type, "lib") == 0)
         {
-            filepath = base_dir + "lib/" + filename;
+            strcat(strcat(strcat(filepath, base_dir), "lib/"), filename);
         } else
         {
-            vLoggingPrintf("Unknown file type: %s\n", file_type.c_str());
+            vLoggingPrintf("Unknown file type: %s\n", file_type);
             return;
         }
 
-        printf("Writing to %s\n", filepath.c_str());
+        printf("Writing to %s\n", filepath);
 
         struct stat file_status = {};
-        stat(filepath.c_str(), &file_status);
-        unlink(filepath.c_str());
+        stat(filepath, &file_status);
+        unlink(filepath);
 
-        FILE *output_f = fopen(filepath.c_str(), "wb");
+        FILE *output_f = fopen(filepath, "wb");
         if (output_f == nullptr)
         {
-            vLoggingPrintf("Error opening file %s for writing!\n", filepath.c_str());
+            vLoggingPrintf("Error opening file %s for writing!\n", filepath);
             fclose(output_f);
             return;
         }
@@ -355,8 +359,8 @@ void Connection::download_firmware(ECU_Msg_t *message)
         fclose(output_f);
 
         // Retain the file permissions
-        chown(filepath.c_str(), file_status.st_uid, file_status.st_gid);
-        chmod(filepath.c_str(), file_status.st_mode);
+        chown(filepath, file_status.st_uid, file_status.st_gid);
+        chmod(filepath, file_status.st_mode);
 
         ack_msg = ecu_msg_make(m_seq++,           /* Message ID number. */
                                "sync_ack",        /* Message name. */

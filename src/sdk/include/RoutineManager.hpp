@@ -4,7 +4,6 @@
 #include "Routine.hpp"
 #include <cstdint>
 #include <cstring>
-#include <string>
 
 namespace System {
 namespace Impl {
@@ -76,9 +75,9 @@ public:
 
         char task_name[128]  = "";
         char timer_name[128] = "";
-        strncat(strncpy(task_name, rout->m_name.data(), sizeof(task_name)), "_task",
+        strncat(strncpy(task_name, rout->m_name, sizeof(task_name)), "_task",
                 sizeof(task_name) - strlen(task_name));
-        strncat(strncpy(timer_name, rout->m_name.data(), sizeof(timer_name)), "_timer",
+        strncat(strncpy(timer_name, rout->m_name, sizeof(timer_name)), "_timer",
                 sizeof(timer_name) - strlen(timer_name));
 
         TaskHandle_t task = nullptr;

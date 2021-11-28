@@ -30,7 +30,7 @@ template class Parameter<double>;
 template class Parameter<long double>;
 
 // Other useful types
-template class Parameter<std::string>;
+template class Parameter<const char *>;
 
 } // namespace Impl
 } // namespace System

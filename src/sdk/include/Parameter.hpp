@@ -8,7 +8,7 @@ namespace System {
 namespace Impl {
 
 /**
- * @brief Enum class to represent each of the generic C types (and std::string), so we can record types in member
+ * @brief Enum class to represent each of the generic C types, so we can record types in member
  * variables.
  *
  */
@@ -61,7 +61,7 @@ template <typename T> constexpr TYPE_ID type_hash(void)
                                                         ((bool)std::is_same<T, float>::value) ? TYPE_ID::FLOAT : (
                                                             ((bool)std::is_same<T, double>::value) ? TYPE_ID::DOUBLE : (
                                                                 ((bool)std::is_same<T, long double>::value) ? TYPE_ID::LONG_DOUBLE : (
-                                                                    ((bool)std::is_same<T, std::string>::value) ? TYPE_ID::STRING : (
+                                                                    ((bool)std::is_same<T, const char *>::value) ? TYPE_ID::STRING : (
                                                                         TYPE_ID::UNDEFINED
                                                                     )
                                                                 )
@@ -94,9 +94,9 @@ public:
     /**
      * @brief Get the name of the parameter.
      *
-     * @return std::string Parameter name.
+     * @return const char * Parameter name.
      */
-    [[nodiscard]] virtual std::string get_name(void) const = 0;
+    [[nodiscard]] virtual const char * get_name(void) const = 0;
 
     /**
      * @brief Get the type enum of the parameter.
@@ -118,7 +118,7 @@ private:
     T m_value{};
 
     /** @brief Name of the Parameter. */
-    const std::string m_name{};
+    const char * m_name{};
 
     /** @brief Type of the Parameter. */
     const TYPE_ID m_type = TYPE_ID::UNDEFINED;
@@ -130,7 +130,7 @@ public:
      * @param name Parameter name.
      * @param value Initial value of the Parameter.
      */
-    Parameter<T>(std::string name, const T &value) : m_type(type_hash<T>()), m_name(std::move(name))
+    Parameter<T>(const char * name, const T &value) : m_type(type_hash<T>()), m_name(name)
     {
         (void)name;
         set_value(value);
@@ -185,9 +185,9 @@ public:
     /**
      * @brief Get the Parameter's name.
      *
-     * @return std::string Parameter name.
+     * @return const char * Parameter name.
      */
-    [[nodiscard]] std::string get_name(void) const override { return m_name; }
+    [[nodiscard]] const char * get_name(void) const override { return m_name; }
 
     /**
      * @brief Get the Parameter's type.

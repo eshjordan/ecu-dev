@@ -1,7 +1,6 @@
 #pragma once
 
 #include "RTOS.hpp"
-#include <string>
 #include <utility>
 
 namespace System {
@@ -15,7 +14,7 @@ class Routine
 {
 private:
     /** @brief Routine name. */
-    const std::string m_name{};
+    const char *m_name{};
 
     /** @brief Frequency of Routine's timer (Hz). */
     const double m_frequency{};
@@ -36,7 +35,7 @@ public:
      * @param name Name of the routine, used for debugging.
      * @param frequency Frequency the routine is called, in Hz.
      */
-    Routine(std::string name, const double &frequency) : m_name(std::move(name)), m_frequency(frequency)
+    Routine(const char* name, const double &frequency) : m_name(name), m_frequency(frequency)
     {
         (void)name;
         (void)frequency;

@@ -3,7 +3,6 @@
 #include "IO.hpp"
 #include "Routine.hpp"
 #include "RoutineManager.hpp"
-#include <string>
 #include <vector>
 
 /**
@@ -17,14 +16,14 @@ namespace Impl {
 class ParameterList
 {
 public:
-    template <typename T> static void add_parameter(const std::string &name, const T &value);
-    template <typename T> static T get_parameter(const std::string &name);
-    template <typename T> static void set_parameter(const std::string &name, const T &value);
+    template <typename T> static void add_parameter(const char *name, const T &value);
+    template <typename T> static T get_parameter(const char *name);
+    template <typename T> static void set_parameter(const char *name, const T &value);
 };
 
 static int s_argc = 0;
 
-static std::vector<std::string> s_argv;
+static std::vector<const char *> s_argv;
 
 /** @brief Stop chat users from resetting everything accidentally. */
 static bool initialised = false;
@@ -35,9 +34,9 @@ static bool network_up = false;
 /**
  * @brief Get the executable path object
  *
- * @return std::string Path to the executable, from argv[0]
+ * @return const char * Path to the executable, from argv[0]
  */
-std::string get_executable_path();
+const char * get_executable_path();
 
 } // namespace Impl
 
@@ -78,7 +77,7 @@ void shutdown(int signal);
  * @param name Name of the Parameter.
  * @return T Current value of the Parameter.
  */
-template <typename T> [[nodiscard]] T get_parameter(const std::string &name)
+template <typename T> [[nodiscard]] T get_parameter(const char *name)
 {
     return System::Impl::ParameterList::get_parameter<T>(name);
 }
@@ -90,7 +89,7 @@ template <typename T> [[nodiscard]] T get_parameter(const std::string &name)
  * @param name Name of the Parameter.
  * @param value New value of the Parameter.
  */
-template <typename T> void set_parameter(const std::string &name, const T &value)
+template <typename T> void set_parameter(const char *name, const T &value)
 {
     System::Impl::ParameterList::set_parameter<T>(name, value);
 }

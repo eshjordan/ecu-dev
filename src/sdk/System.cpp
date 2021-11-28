@@ -3,7 +3,7 @@
 #include "RTOS.hpp"
 #include <csignal>
 #include <cstring>
-#include <iostream>
+#include <stdlib.h>
 #include <unistd.h>
 
 static void end(int signal)
@@ -28,7 +28,7 @@ public:
 
 } // namespace Impl
 
-std::string System::Impl::get_executable_path() { return System::Impl::s_argv[0]; }
+const char* System::Impl::get_executable_path() { return System::Impl::s_argv[0]; }
 
 void init(int argc, char **argv)
 {
@@ -75,8 +75,8 @@ void restart(int signal)
     char **argv = new char *[System::Impl::s_argc + 1];
     for (int i = 0; i < System::Impl::s_argc; i++)
     {
-        argv[i] = new char[System::Impl::s_argv[i].size() + 1];
-        strcpy(argv[i], System::Impl::s_argv[i].c_str());
+        argv[i] = new char[strlen(System::Impl::s_argv[i]) + 1];
+        strcpy(argv[i], System::Impl::s_argv[i]);
         printf("%s\n", argv[i]);
     }
     argv[System::Impl::s_argc] = nullptr;
