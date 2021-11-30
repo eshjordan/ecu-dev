@@ -75,18 +75,17 @@ public:
 
         char task_name[128]  = "";
         char timer_name[128] = "";
-        strncat(strncpy(task_name, rout->m_name, sizeof(task_name)), "_task",
-                sizeof(task_name) - strlen(task_name));
+        strncat(strncpy(task_name, rout->m_name, sizeof(task_name)), "_task", sizeof(task_name) - strlen(task_name));
         strncat(strncpy(timer_name, rout->m_name, sizeof(timer_name)), "_timer",
                 sizeof(timer_name) - strlen(timer_name));
 
-        TaskHandle_t task = nullptr;
-        xTaskCreate(rout->task_cb,    /* Function that implements the task. */
-                    task_name,        /* Name of the task. */
-                    10000,            /* Stack size in words, not bytes. */
-                    nullptr,          /* Parameter passed into the task. */
-                    tskIDLE_PRIORITY, /* Priority of the task. */
-                    &task             /* Pointer to the task's handle. */
+        TaskHandle_t task = xTaskCreateStatic(rout->task_cb,        /* Function that implements the task. */
+                                              task_name,            /* Name of the task. */
+                                              10000,                /* Stack size in words, not bytes. */
+                                              nullptr,              /* Parameter passed into the task. */
+                                              tskIDLE_PRIORITY,     /* Priority of the task. */
+                                              rout->m_task_stack,   /* Pointer to the task's stack. */
+                                              &rout->m_task_storage /* Pointer to the task's storage. */
         );
 
         rout->task_handle = task;
@@ -99,18 +98,19 @@ public:
         const auto period      = (size_t)(1000.0 / rout->m_frequency);
         const TickType_t ticks = pdMS_TO_TICKS(period);
 
-        rout->timer_handle = xTimerCreate(timer_name,    /* The text name assigned to the software timer - for
-                                                                      debug only as it is not used by the kernel. */
-                                          ticks,         /* The period of the software timer in ticks. */
-                                          true,          /* xAutoReload is set to pdTRUE. */
-                                          nullptr,       /* The timer's ID is not used. */
-                                          rout->timer_cb /* The function executed when the timer expires. */
+        rout->timer_handle = xTimerCreateStatic(timer_name,     /* The text name assigned to the software timer - for
+                                                                       debug only as it is not used by the kernel. */
+                                                ticks,          /* The period of the software timer in ticks. */
+                                                true,           /* xAutoReload is set to pdTRUE. */
+                                                nullptr,        /* The timer's ID is not used. */
+                                                rout->timer_cb, /* The function executed when the timer expires. */
+                                                &rout->m_timer_storage /* Pointer to the timer's storage. */
         );
 
         RoutineManager::m_timers[RoutineManager::m_timers_count] = &rout->timer_handle;
         RoutineManager::m_timers_count++;
 
-        xTimerStart(rout->timer_handle, 0);
+        if (xTimerStart(rout->timer_handle, 0) != pdTRUE) { printf("Timer %s start failed!", task_name); }
 
         return rout;
     }

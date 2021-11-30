@@ -19,6 +19,12 @@ private:
     /** @brief Frequency of Routine's timer (Hz). */
     const double m_frequency{};
 
+    StaticTask_t m_task_storage;
+
+    StackType_t m_task_stack[10000];
+
+    StaticTimer_t m_timer_storage;
+
     friend class RoutineManager;
 
 protected:
