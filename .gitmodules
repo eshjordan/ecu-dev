@@ -1,4 +1,4 @@
 [submodule "cppcheck"]
 	path = cppcheck
-	url = ./cppcheck
+	url = git@github.com:danmar/cppcheck.git
 	branch = main
