@@ -20,7 +20,7 @@ CRC ecu_msg_calc_checksum(ECU_Msg_t *msg) { return msg->checksum = calc_crc(msg,
 
 ecu_err_t ecu_msg_check(const ECU_Msg_t *const msg)
 {
-    if (msg->header.start_byte != ECU_MSG_START_BYTE) { return -ERR_INVALID_START_BYTE; }
+    if (msg->header.start_byte != ECU_HEADER_START_BYTE) { return -ERR_INVALID_START_BYTE; }
 
     if (msg->checksum != calc_crc(msg, offsetof(ECU_Msg_t, checksum))) { return -ERR_CRC_FAILED; }
     return 1;

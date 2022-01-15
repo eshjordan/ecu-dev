@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
+#include "types.h"
 
 /*
  * The width of the CRC calculation and result.
@@ -14,14 +14,14 @@ extern "C" {
 #define CRC_WIDTH 32
 
 #if CRC_WIDTH != 32
-typedef uint16_t CRC;
+typedef u16 CRC;
 #else
-typedef uint32_t CRC;
+typedef u32 CRC;
 #endif
 
 void init_crc(void);
 
-CRC calc_crc(const void *data, uint16_t length);
+CRC calc_crc(const void *data, u16 length);
 
 #ifdef __cplusplus
 } // extern "C"

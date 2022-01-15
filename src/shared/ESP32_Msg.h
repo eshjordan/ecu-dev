@@ -33,47 +33,47 @@ extern "C" {
 #define ESP32_OUT_CAN 0xAU
 
 typedef struct ESP32_Request_t {
-    uint8_t seed;
-    uint8_t type;
-    uint8_t channel;
+    u8 seed;
+    u8 type;
+    u8 channel;
     CRC checksum;
 } ALIGN ESP32_Request_t;
 
 typedef struct ESP32_In_ADC_t {
-    uint8_t seed;
-    uint32_t adc;
+    u8 seed;
+    u32 adc;
     CRC checksum;
 } ALIGN ESP32_In_ADC_t;
 
 typedef struct ESP32_In_Hall_t {
-    uint8_t seed;
-    uint32_t hall;
+    u8 seed;
+    u32 hall;
     CRC checksum;
 } ALIGN ESP32_In_Hall_t;
 
 typedef struct ESP32_In_DIN_t {
-    uint8_t seed;
-    uint8_t din;
+    u8 seed;
+    u8 din;
     CRC checksum;
 } ALIGN ESP32_In_DIN_t;
 
 typedef struct ESP32_Out_DAC_t {
-    uint8_t seed;
-    uint8_t dac; // 0-255, 0 = 0V, 255 = 3.3V
+    u8 seed;
+    u8 dac; // 0-255, 0 = 0V, 255 = 3.3V
     CRC checksum;
 } ALIGN ESP32_Out_DAC_t;
 
 typedef struct ESP32_Out_PWM_t {
-    uint8_t seed;
-    uint8_t duty_resolution;
-    uint16_t duty;
-    uint32_t frequency;
+    u8 seed;
+    u8 duty_resolution;
+    u16 duty;
+    u32 frequency;
     CRC checksum;
 } ALIGN ESP32_Out_PWM_t;
 
 typedef struct ESP32_Out_DOUT_t {
-    uint8_t seed;
-    uint8_t dout;
+    u8 seed;
+    u8 dout;
     CRC checksum;
 } ALIGN ESP32_Out_DOUT_t;
 

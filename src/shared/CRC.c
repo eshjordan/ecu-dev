@@ -1,5 +1,5 @@
 #include "CRC.h"
-#include <assert.h>
+// #include <assert.h>
 
 #if CRC_WIDTH != 32
 
@@ -17,22 +17,25 @@
 
 #endif
 
-static CRC reflect(CRC data, uint8_t num_bits);
+static CRC reflect(CRC data, u8 num_bits);
 
-#define REFLECT_DATA(X) ((uint8_t)reflect((X), 8))
+#define REFLECT_DATA(X) ((u8)reflect((X), 8))
 #define REFLECT_REMAINDER(X) ((CRC)reflect((X), WIDTH))
 
 #define WIDTH (8U * sizeof(CRC))
 #define TOPBIT 1U << (WIDTH - 1U)
 
-typedef uint8_t byte_t;
+typedef u8 byte_t;
 
 static CRC crcTable[256] = {0};
-static uint8_t inited    = 0;
+static u8 inited    = 0;
 
 void init_crc(void)
 {
-    for (uint16_t dividend = 0; dividend < 256; dividend++) /* iterate over all possible input byte values 0 - 255 */
+    u16 dividend;
+    u8 bit;
+
+    for (dividend = 0; dividend < 256; dividend++) /* iterate over all possible input byte values 0 - 255 */
     {
         /*
          * Start with the dividend followed by zeros.
@@ -42,7 +45,7 @@ void init_crc(void)
         /*
          * Perform modulo-2 division, a bit at a time.
          */
-        for (uint8_t bit = 0; bit < 8; bit++)
+        for (bit = 0; bit < 8; bit++)
         {
             /*
              * Try to divide the current data bit.
@@ -64,17 +67,19 @@ void init_crc(void)
     }
 
     inited = 1;
-    assert(calc_crc("123456789", 9) == CHECK_VALUE);
+    // assert(calc_crc("123456789", 9) == CHECK_VALUE);
 }
 
-CRC calc_crc(const void *const data, const uint16_t length)
+CRC calc_crc(const void *const data, const u16 length)
 {
+    u16 i;
+
     if (!inited) { init_crc(); }
 
     byte_t *bytes = (byte_t *)data;
 
     CRC remainder = INITIAL_REMAINDER; /* CRC is set to specified initial value */
-    for (uint16_t i = 0; i < length; i++)
+    for (i = 0; i < length; i++)
     {
         byte_t b = bytes[i];
         /* reflect input byte if specified, otherwise input byte is taken as it is */
@@ -91,14 +96,15 @@ CRC calc_crc(const void *const data, const uint16_t length)
     return (CRC)(remainder ^ FINAL_XOR_VALUE);
 }
 
-static CRC reflect(CRC data, const uint8_t num_bits)
+static CRC reflect(CRC data, const u8 num_bits)
 {
+    u8 bit;
     CRC reflection = 0;
 
     /*
      * Reflect the data about the center bit.
      */
-    for (uint8_t bit = 0; bit < num_bits; ++bit)
+    for (bit = 0; bit < num_bits; ++bit)
     {
         /*
          * If the LSB bit is set, set the reflection of it.

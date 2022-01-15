@@ -26,20 +26,22 @@ extern "C" {
 #define ALIGN __attribute__((aligned(4)))
 
 struct Time_t {
-    int64_t tv_sec;  /* Seconds.  */
-    int64_t tv_nsec; /* Nanoseconds.  */
+    s64 tv_sec;  /* Seconds.  */
+    s64 tv_nsec; /* Nanoseconds.  */
 } ALIGN;
 
 typedef struct Time_t Time_t;
 
 struct Header_t {
-    uint8_t start_byte START_BYTE_INIT;
-    uint32_t length STRUCT_INIT;
-    uint32_t id STRUCT_INIT;
+    u8 start_byte START_BYTE_INIT;
+    u32 length STRUCT_INIT;
+    u32 id STRUCT_INIT;
     Time_t stamp STRUCT_INIT;
 } ALIGN;
 
 typedef struct Header_t Header_t;
+
+#ifdef USERSPACE_BUILD
 
 struct timeval time_to_timeval(const Time_t *time);
 
@@ -47,7 +49,9 @@ Time_t timeval_to_time(const struct timeval *time);
 
 Time_t get_time_now(void);
 
-struct Header_t header_make(uint32_t id, uint32_t length);
+struct Header_t header_make(u32 id, u32 length);
+
+#endif
 
 #ifdef __cplusplus
 } // extern "C"

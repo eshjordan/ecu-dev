@@ -1,4 +1,7 @@
 #include "ECU_Error.h"
+
+#ifdef USERSPACE_BUILD
+
 #include <stdio.h>
 
 void ecu_err_to_str(char *str, const ecu_err_t err_code)
@@ -23,3 +26,5 @@ void ecu_err_to_str(char *str, const ecu_err_t err_code)
     }
     }
 }
+
+#endif

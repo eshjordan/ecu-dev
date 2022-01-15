@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 project(ECU_SHARED)
 
+add_compile_definitions(-D USERSPACE_BUILD)
+
 file(GLOB ECU_SHARED_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/*.c
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
