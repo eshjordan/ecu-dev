@@ -55,6 +55,8 @@ typedef enum ECU_Command_t ECU_Command_t;
 
 typedef struct ECU_Msg_t ECU_Msg_t;
 
+#ifdef USERSPACE_BUILD
+
 struct ECU_Msg_t ecu_msg_make(uint32_t id, const char name[64], const void *data, ECU_Command_t command);
 
 CRC ecu_msg_calc_checksum(ECU_Msg_t *msg);
@@ -68,6 +70,8 @@ ecu_err_t ecu_msg_check(const ECU_Msg_t *msg);
  * @param msg
  */
 void ecu_msg_to_str(char *str, const ECU_Msg_t *msg);
+
+#endif
 
 #ifdef __cplusplus
 } // extern "C"

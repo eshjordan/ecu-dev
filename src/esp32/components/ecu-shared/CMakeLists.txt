@@ -8,5 +8,5 @@ idf_component_register(
         "${CMAKE_SOURCE_DIR}/../shared/CAN_Msg.c"
     INCLUDE_DIRS
         "include"
-        "${CMAKE_SOURCE_DIR}/../shared"
+        "${CMAKE_SOURCE_DIR}/../shared/include"
 )

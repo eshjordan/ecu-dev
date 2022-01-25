@@ -19,9 +19,13 @@ typedef u16 CRC;
 typedef u32 CRC;
 #endif
 
+#ifdef USERSPACE_BUILD
+
 void init_crc(void);
 
 CRC calc_crc(const void *data, u16 length);
+
+#endif
 
 #ifdef __cplusplus
 } // extern "C"

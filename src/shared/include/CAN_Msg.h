@@ -36,6 +36,8 @@ struct CAN_Msg_t {
 
 typedef struct CAN_Msg_t CAN_Msg_t;
 
+#ifdef USERSPACE_BUILD
+
 CRC can_msg_calc_checksum(CAN_Msg_t *msg);
 
 ecu_err_t can_msg_check(const CAN_Msg_t *msg);
@@ -47,6 +49,8 @@ ecu_err_t can_msg_check(const CAN_Msg_t *msg);
  * @param msg
  */
 void can_msg_to_str(char *str, const CAN_Msg_t *msg);
+
+#endif
 
 #ifdef __cplusplus
 } // extern "C"

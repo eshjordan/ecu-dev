@@ -117,3 +117,7 @@ static CRC reflect(CRC data, const u8 num_bits)
     return (reflection);
 
 } /* reflect() */
+
+
+//MODULE_LICENSE("GPL v2");
+
