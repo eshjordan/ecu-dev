@@ -39,14 +39,14 @@ static int init_esp32_spi(void)
     spi_fd = open(device, O_RDWR);
     if (spi_fd < 0)
     {
-        puts("can't open device");
+        printf("can't open device\n");
         return -1;
     }
 
     int ret = ioctl(spi_fd, SPI_IOC_WR_MODE, &spi_mode);
     if (ret == -1)
     {
-        puts("can't set spi mode");
+        printf("can't set spi mode\n");
         close(spi_fd);
         return -1;
     }
@@ -54,7 +54,7 @@ static int init_esp32_spi(void)
     ret = ioctl(spi_fd, SPI_IOC_WR_BITS_PER_WORD, &spi_bits_per_word);
     if (ret == -1)
     {
-        puts("can't set bits per word");
+        printf("can't set bits per word\n");
         close(spi_fd);
         return -1;
     }
@@ -62,12 +62,12 @@ static int init_esp32_spi(void)
     ret = ioctl(spi_fd, SPI_IOC_WR_MAX_SPEED_HZ, &spi_speed_hz);
     if (ret == -1)
     {
-        puts("can't set max speed hz");
+        printf("can't set max speed hz\n");
         close(spi_fd);
         return -1;
     }
 
-    puts("SPI init success");
+    printf("SPI init success\n");
 
     esp32_spi_inited = true;
 
@@ -93,12 +93,12 @@ bool receive_ack(void)
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
-        puts("SPI - Received invalid acknowledgement msg - bad CRC");
+        printf("SPI - Received invalid acknowledgement msg - bad CRC\n");
         return false;
     }
     if (ack_msg.type != ESP32_ACK)
     {
-        puts("SPI - Received invalid ack command");
+        printf("SPI - Received invalid ack command\n");
         return false;
     }
 
@@ -125,7 +125,7 @@ void update_adc(int channel)
 
     if (adc_msg.checksum != calc_crc(&adc_msg, offsetof(ESP32_In_ADC_t, checksum)))
     {
-        puts("SPI - Received invalid adc msg - bad CRC");
+        printf("SPI - Received invalid adc msg - bad CRC\n");
         vTaskDelay(SPI_WAIT_TIME);
         return;
     }
@@ -151,13 +151,13 @@ void update_hall(int channel)
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
-        puts("SPI - Received invalid acknowledgement msg - bad CRC");
+        printf("SPI - Received invalid acknowledgement msg - bad CRC\n");
         vTaskDelay(SPI_WAIT_TIME);
         return;
     }
     if (ack_msg.type != ESP32_ACK)
     {
-        puts("SPI - Received invalid ack command");
+        printf("SPI - Received invalid ack command\n");
         vTaskDelay(SPI_WAIT_TIME);
         return;
     }
@@ -170,7 +170,7 @@ void update_hall(int channel)
 
     if (hall_msg.checksum != calc_crc(&hall_msg, offsetof(ESP32_In_Hall_t, checksum)))
     {
-        puts("SPI - Received invalid hall msg - bad CRC");
+        printf("SPI - Received invalid hall msg - bad CRC\n");
         vTaskDelay(SPI_WAIT_TIME);
         return;
     }
@@ -196,13 +196,13 @@ void update_din(int channel)
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
-        puts("SPI - Received invalid acknowledgement msg - bad CRC");
+        printf("SPI - Received invalid acknowledgement msg - bad CRC\n");
         vTaskDelay(SPI_WAIT_TIME);
         return;
     }
     if (ack_msg.type != ESP32_ACK)
     {
-        puts("SPI - Received invalid ack command");
+        printf("SPI - Received invalid ack command\n");
         vTaskDelay(SPI_WAIT_TIME);
         return;
     }
@@ -215,7 +215,7 @@ void update_din(int channel)
 
     if (din_msg.checksum != calc_crc(&din_msg, offsetof(ESP32_In_DIN_t, checksum)))
     {
-        puts("SPI - Received invalid hall msg - bad CRC");
+        printf("SPI - Received invalid hall msg - bad CRC\n");
         vTaskDelay(SPI_WAIT_TIME);
         return;
     }
@@ -241,13 +241,13 @@ void update_dac(int channel)
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
-        puts("SPI - Received invalid acknowledgement msg - bad CRC");
+        printf("SPI - Received invalid acknowledgement msg - bad CRC\n");
         vTaskDelay(SPI_WAIT_TIME);
         return;
     }
     if (ack_msg.type != ESP32_ACK)
     {
-        puts("SPI - Received invalid ack command");
+        printf("SPI - Received invalid ack command\n");
         vTaskDelay(SPI_WAIT_TIME);
         return;
     }
@@ -278,13 +278,13 @@ void update_pwm(int channel)
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
-        puts("SPI - Received invalid acknowledgement msg - bad CRC");
+        printf("SPI - Received invalid acknowledgement msg - bad CRC\n");
         vTaskDelay(SPI_WAIT_TIME);
         return;
     }
     if (ack_msg.type != ESP32_ACK)
     {
-        puts("SPI - Received invalid ack command");
+        printf("SPI - Received invalid ack command\n");
         vTaskDelay(SPI_WAIT_TIME);
         return;
     }
@@ -315,13 +315,13 @@ void update_dout(int channel)
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
-        puts("SPI - Received invalid acknowledgement msg - bad CRC");
+        printf("SPI - Received invalid acknowledgement msg - bad CRC\n");
         vTaskDelay(SPI_WAIT_TIME);
         return;
     }
     if (ack_msg.type != ESP32_ACK)
     {
-        puts("SPI - Received invalid ack command");
+        printf("SPI - Received invalid ack command\n");
         vTaskDelay(SPI_WAIT_TIME);
         return;
     }
@@ -437,7 +437,7 @@ int spi_transfer(int channel, uint32_t size, void *tx_buffer, void *rx_buffer)
     int ret = ioctl(spi_fd, SPI_IOC_MESSAGE(1), &tr);
     if (ret < 1)
     {
-        puts("can't send spi message");
+        printf("can't send spi message\n");
         return -1;
     }
 

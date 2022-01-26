@@ -140,7 +140,7 @@ void Connection::synchronize_connection(ECU_Msg_t *message)
             break;
         }
         default: {
-            puts("Bad message command, must send one of: PING, ACK, SYNC");
+            printf("Bad message command, must send one of: PING, ACK, SYNC\n");
             failed_count++;
             continue;
         }
@@ -317,7 +317,7 @@ void Connection::download_firmware(ECU_Msg_t *message)
             return;
         }
 
-        puts("Received OK!");
+        printf("Received OK!\n");
 
         const char *base_dir = "/home/pi/ecu/";
 
@@ -351,7 +351,7 @@ void Connection::download_firmware(ECU_Msg_t *message)
 
         if (fwrite(received_firmware, 1, success_count, output_f) != success_count)
         {
-            puts("Error writing file!");
+            printf("Error writing file!\n");
             fclose(output_f);
             return;
         }
@@ -371,13 +371,13 @@ void Connection::download_firmware(ECU_Msg_t *message)
         // Send acknowledgement
         if (send_message(&ack_msg) < 0)
         {
-            puts("Error sending ACK!");
+            printf("Error sending ACK!\n");
             close();
             return;
         }
     }
 
-    puts("Download complete!");
+    printf("Download complete!\n");
 }
 
 } // namespace Impl

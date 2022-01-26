@@ -13,6 +13,7 @@ namespace Impl {
  *
  */
 enum class TYPE_ID {
+    UNDEFINED,
     SHORT_INT,
     INT,
     LONG_INT,
@@ -31,8 +32,7 @@ enum class TYPE_ID {
     FLOAT,
     DOUBLE,
     LONG_DOUBLE,
-    STRING,
-    UNDEFINED
+    STRING
 };
 
 // clang-format off

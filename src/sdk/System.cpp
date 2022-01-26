@@ -68,7 +68,7 @@ void restart(int signal)
 {
     System::shutdown(signal);
 
-    puts("Shutdown ok");
+    printf("Shutdown ok\n");
 
     /* Restart the program */
 

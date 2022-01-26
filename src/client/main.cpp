@@ -19,7 +19,7 @@ int main(int argc, char **argv)
         s_argv.emplace_back(argv[i]);
     }
 
-    if (!init()) { puts("Failed to initialize"); }
+    if (!init()) { printf("Failed to initialize\n"); }
 
     auto print_options = []() {
         puts("Test options:\n"
@@ -96,7 +96,7 @@ int init()
     sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
     if (sock < 0)
     {
-        puts("open error");
+        printf("open error\n");
         return 0;
     }
 
@@ -110,111 +110,111 @@ int init()
         switch (errno)
         {
         case EACCES: {
-            puts("EACCES");
+            printf("EACCES\n");
             break;
         }
         case EPERM: {
-            puts("EPERM");
+            printf("EPERM\n");
             break;
         }
         case EADDRINUSE: {
-            puts("EADDRINUSE");
+            printf("EADDRINUSE\n");
             break;
         }
         case EAGAIN: {
-            puts("EAGAIN");
+            printf("EAGAIN\n");
             break;
         }
         case ECONNREFUSED: {
-            puts("ECONNREFUSED");
+            printf("ECONNREFUSED\n");
             break;
         }
         case EFAULT: {
-            puts("EFAULT");
+            printf("EFAULT\n");
             break;
         }
         case EINPROGRESS: {
-            puts("EINPROGRESS");
+            printf("EINPROGRESS\n");
             break;
         }
         case EINTR: {
-            puts("EINTR");
+            printf("EINTR\n");
             break;
         }
         case EISCONN: {
-            puts("EISCONN");
+            printf("EISCONN\n");
             break;
         }
         case ENETUNREACH: {
-            puts("ENETUNREACH");
+            printf("ENETUNREACH\n");
             break;
         }
         case EAFNOSUPPORT: {
-            puts("EAFNOSUPPORT");
+            printf("EAFNOSUPPORT\n");
             break;
         }
         case EALREADY: {
-            puts("EALREADY");
+            printf("EALREADY\n");
             break;
         }
         case EPROTOTYPE: {
-            puts("EPROTOTYPE");
+            printf("EPROTOTYPE\n");
             break;
         }
         case ENOPROTOOPT: {
-            puts("ENOPROTOOPT");
+            printf("ENOPROTOOPT\n");
             break;
         }
         case ETIMEDOUT: {
-            puts("ETIMEDOUT");
+            printf("ETIMEDOUT\n");
             break;
         }
         case EBADF: {
-            puts("EBADF");
+            printf("EBADF\n");
             break;
         }
 
         case EINVAL: {
-            puts("EINVAL");
+            printf("EINVAL\n");
             break;
         }
         case ENOTSOCK: {
-            puts("ENOTSOCK");
+            printf("ENOTSOCK\n");
             break;
         }
         case EADDRNOTAVAIL: {
-            puts("EADDRNOTAVAIL");
+            printf("EADDRNOTAVAIL\n");
             break;
         }
         case ELOOP: {
-            puts("ELOOP");
+            printf("ELOOP\n");
             break;
         }
         case ENAMETOOLONG: {
-            puts("ENAMETOOLONG");
+            printf("ENAMETOOLONG\n");
             break;
         }
         case ENOENT: {
-            puts("ENOENT");
+            printf("ENOENT\n");
             break;
         }
         case ENOMEM: {
-            puts("ENOMEM");
+            printf("ENOMEM\n");
             break;
         }
 
         case ENOTDIR: {
-            puts("ENOTDIR");
+            printf("ENOTDIR\n");
             break;
         }
 
         case EROFS: {
-            puts("EROFS");
+            printf("EROFS\n");
             break;
         }
 
         default: {
-            puts("default");
+            printf("default\n");
             break;
         }
         }
@@ -237,11 +237,11 @@ int reconnect()
     disconnect();
     if (init())
     {
-        puts("Reconnected");
+        printf("Reconnected\n");
         return 1;
     }
 
-    puts("Failed to reconnect");
+    printf("Failed to reconnect\n");
     return 0;
 }
 
@@ -255,7 +255,7 @@ void send_file(const std::filesystem::directory_entry &file, const std::string &
     FILE *input_file = fopen(file.path().c_str(), "rb");
     if (!input_file)
     {
-        puts("Failed to open file");
+        printf("Failed to open file\n");
         return;
     }
 
@@ -268,7 +268,7 @@ void send_file(const std::filesystem::directory_entry &file, const std::string &
     if (fread(buf, sizeof(uint8_t), file_size, input_file) != file_size)
     {
         fclose(input_file);
-        puts("fread error");
+        printf("fread error\n");
         return;
     }
 
@@ -293,7 +293,7 @@ void send_file(const std::filesystem::directory_entry &file, const std::string &
 
     if (send(sock, &file_header, sizeof(ECU_Msg_t), 0) < 0)
     {
-        puts("File header send failed");
+        printf("File header send failed\n");
         return;
     }
 
@@ -302,11 +302,11 @@ void send_file(const std::filesystem::directory_entry &file, const std::string &
     // Wait for server to acknowledge
     if (recv(sock, &ack_msg, sizeof(ECU_Msg_t), 0) < 0)
     {
-        puts("ACK recv failed");
+        printf("ACK recv failed\n");
         return;
     }
 
-    puts("recv OK!");
+    printf("recv OK!\n");
 
     // Start sending firmware
     auto bytes_to_send = file_size;
@@ -330,11 +330,11 @@ void send_file(const std::filesystem::directory_entry &file, const std::string &
     // Wait for server to acknowledge
     if (recv(sock, &ack_msg, sizeof(ECU_Msg_t), 0) < 0)
     {
-        puts("ACK recv failed");
+        printf("ACK recv failed\n");
         return;
     }
 
-    puts("Sent OK!");
+    printf("Sent OK!\n");
 }
 
 void echo_test()
@@ -352,7 +352,7 @@ void sync_test()
 
     if (send(sock, &init_msg, sizeof(ECU_Msg_t), 0) < 0)
     {
-        puts("Init send failed");
+        printf("Init send failed\n");
         return;
     }
 
@@ -361,7 +361,7 @@ void sync_test()
     // Wait for server to acknowledge
     if (recv(sock, buf, sizeof(ECU_Msg_t), 0) < 0)
     {
-        puts("ACK recv failed");
+        printf("ACK recv failed\n");
         return;
     }
 
@@ -379,7 +379,7 @@ void sync_test()
         // Wait for server to acknowledge
         if (recv(sock, buf, sizeof(ECU_Msg_t), 0) < 0)
         {
-            puts("ACK recv failed");
+            printf("ACK recv failed\n");
             return;
         }
     }
@@ -389,13 +389,13 @@ void sync_test()
 
     if ((bytes_received = recv(sock, &sync_status, sizeof(ECU_Msg_t), 0)) < 0)
     {
-        puts("Sec recv failed");
+        printf("Sec recv failed\n");
         return;
     }
 
     if (ecu_msg_check(&sync_status) < 0)
     {
-        puts("Received message is not a message");
+        printf("Received message is not a message\n");
         return;
     }
 
@@ -403,13 +403,13 @@ void sync_test()
 
     if ((bytes_received = recv(sock, &sync_status, sizeof(ECU_Msg_t), 0)) < 0)
     {
-        puts("Nsec recv failed");
+        printf("Nsec recv failed\n");
         return;
     }
 
     if (ecu_msg_check(&sync_status) < 0)
     {
-        puts("Received message is not a message");
+        printf("Received message is not a message\n");
         return;
     }
 
@@ -474,14 +474,14 @@ void firmware_update_test()
 
     if (send(sock, &init_msg, sizeof(ECU_Msg_t), 0) < 0)
     {
-        puts("Command send failed");
+        printf("Command send failed\n");
         return;
     }
 
     ECU_Msg_t ack_msg;
     if (recv(sock, &ack_msg, sizeof(ECU_Msg_t), 0) < 0)
     {
-        puts("ACK recv failed");
+        printf("ACK recv failed\n");
         return;
     }
 
@@ -499,7 +499,7 @@ void firmware_update_test()
     shutdown(sock, SHUT_RDWR);
     close(sock);
 
-    puts("Restarting client...");
+    printf("Restarting client...\n");
 }
 
 void software_update_test() {}
@@ -540,11 +540,11 @@ void restart()
     chown(client_filename, file_status.st_uid, file_status.st_gid);
     chmod(client_filename, file_status.st_mode);
 
-    puts("Restarting!");
+    printf("Restarting!\n");
 
     execl(client_filename, client_filename, (char *)nullptr);
 
-    puts("Shutdown ok");
+    printf("Shutdown ok\n");
 
     /* Restart the program */
 

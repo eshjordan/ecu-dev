@@ -57,10 +57,10 @@
 
 // 	for (ret = 0; ret < ARRAY_SIZE(tx); ret++) {
 // 		if (!(ret % 6))
-// 			puts("");
+// 			printf("\n");
 // 		printf("%.2X ", rx[ret]);
 // 	}
-// 	puts("");
+// 	printf("\n");
 // }
 
 // static void print_usage(const char *prog)

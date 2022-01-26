@@ -21,25 +21,25 @@ static void transfer()
 
     if (fd < 0)
     {
-        puts("spi not open");
+        printf("spi not open\n");
         return;
     }
 
     int ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
     if (ret < 1)
     {
-        puts("can't send spi message");
+        printf("can't send spi message\n");
         return;
     }
 
-    puts("spi message:");
+    printf("spi message:\n");
 
     char msg_str[128] = {};
 
     msg_to_str(msg_str, &rx_msg);
     printf("%s\n", msg_str);
 
-    puts("");
+    printf("\n");
 }
 
 int port_init_io(void)
@@ -50,21 +50,21 @@ int port_init_io(void)
     fd = open(device, O_RDWR);
     if (fd < 0)
     {
-        puts("can't open device");
+        printf("can't open device\n");
         return 0;
     }
 
     int ret = ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &spi_bits_per_word);
     if (ret == -1)
     {
-        puts("can't set bits per word");
+        printf("can't set bits per word\n");
         return 0;
     }
 
     ret = ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &spi_speed_hz);
     if (ret == -1)
     {
-        puts("can't set max speed hz");
+        printf("can't set max speed hz\n");
         return 0;
     }
 
@@ -76,10 +76,10 @@ static int count_val = 0;
 REGISTER_ROUTINE(esp_get_status, 1)
 {
     if (!io_inited) {
-        puts("io not inited");
+        printf("io not inited\n");
         port_init_io(nullptr);
     }
-    puts("esp_get_status");
+    printf("esp_get_status\n");
     transfer();
 }
 
