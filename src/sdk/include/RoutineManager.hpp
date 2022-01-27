@@ -1,61 +1,63 @@
 #pragma once
 
 #include "RTOS.hpp"
-#include "Routine.hpp"
+#include "portmacro.h"
 #include <cstdint>
 #include <cstring>
 
-namespace System {
-namespace Impl {
+using RoutineFunction_t = TaskFunction_t;
+
+namespace System
+{
+namespace Impl
+{
 
 /**
  * @brief Singleton record of all managed Routines. Manages all user-defined auto-generated routines.
  *
  */
-class RoutineManager
-{
+class RoutineManager {
+    private:
+	/** Member variables */
 
-private:
-    /** Member variables */
-
-    /**
+	/**
      * @brief List of routines to be executed.
      *
      */
-    static Routine *m_routines[];
+	static TaskHandle_t m_routines[];
 
-    /**
+	/**
      * @brief List of tasks under execution.
      *
      */
-    static TaskHandle_t *m_tasks[];
+	static TaskHandle_t m_tasks[];
 
-    /**
+	/**
      * @brief List of timers under execution.
      *
      */
-    static TimerHandle_t *m_timers[];
+	static TimerHandle_t m_timers[];
 
-    /**
+	/**
      * @brief The number of routines in the system.
      *
      */
-    static uint32_t m_routines_count;
+	static uint32_t m_routines_count;
 
-    /**
+	/**
      * @brief The number of tasks in the system.
      *
      */
-    static uint32_t m_tasks_count;
+	static uint32_t m_tasks_count;
 
-    /**
+	/**
      * @brief The number of timers in the system.
      *
      */
-    static uint32_t m_timers_count;
+	static uint32_t m_timers_count;
 
-public:
-    /**
+    public:
+	/**
      * @brief Register a block of code to be executed by a task on a timer. Used by the REGISTER_ROUTINE macro.
      *
      * @tparam T Custom class unique to this routine, as defined within the REGISTER_ROUTINE macro.
@@ -63,57 +65,55 @@ public:
      * @param factory Used to create an instance of the generated class, which contains the FunctionBody.
      * @return Routine* Pointer to the created routine (as Routine class).
      */
-    template <typename T> static Routine *register_routine(RoutineFactory<T> *factory)
-    {
-        /* Register Routine */
-        T *rout = factory->create_routine();
+	static int register_routine(const char *name, uint32_t frequency,
+				    TaskFunction_t function, StackType_t *stack,
+				    uint32_t stack_size,
+				    StaticTask_t *task_storage,
+				    TaskHandle_t **task_handle,
+				    TimerCallbackFunction_t timer_callback,
+				    StaticTimer_t *timer_storage)
+	{
+		/* Register Routine */
+		*task_handle =
+			&RoutineManager::m_tasks[RoutineManager::m_tasks_count];
 
-        RoutineManager::m_routines[RoutineManager::m_routines_count] = rout;
-        RoutineManager::m_routines_count++;
+		**task_handle = xTaskCreateStatic(
+			function, /* Function that implements the task. */
+			NULL, /* Name of the task. */
+			stack_size / 2, /* Stack size in words, not bytes. */
+			nullptr, /* Parameter passed into the task. */
+			tskIDLE_PRIORITY, /* Priority of the task. */
+			stack, /* Pointer to the task's stack. */
+			task_storage /* Pointer to the task's storage. */
+		);
 
-        /* Register its Task */
+		RoutineManager::m_tasks_count++;
 
-        char task_name[128]  = "";
-        char timer_name[128] = "";
-        strncat(strncpy(task_name, rout->m_name, sizeof(task_name)), "_task", sizeof(task_name) - strlen(task_name));
-        strncat(strncpy(timer_name, rout->m_name, sizeof(timer_name)), "_timer",
-                sizeof(timer_name) - strlen(timer_name));
+		/* Register its Timer */
 
-        TaskHandle_t task = xTaskCreateStatic(rout->task_cb,        /* Function that implements the task. */
-                                              task_name,            /* Name of the task. */
-                                              10000,                /* Stack size in words, not bytes. */
-                                              nullptr,              /* Parameter passed into the task. */
-                                              tskIDLE_PRIORITY,     /* Priority of the task. */
-                                              rout->m_task_stack,   /* Pointer to the task's stack. */
-                                              &rout->m_task_storage /* Pointer to the task's storage. */
-        );
+		const auto period = (size_t)(1000.0 / frequency);
+		const TickType_t ticks = pdMS_TO_TICKS(period);
 
-        rout->task_handle = task;
+		TimerHandle_t *const timer_handle =
+			&RoutineManager::m_timers[RoutineManager::m_timers_count];
 
-        RoutineManager::m_tasks[RoutineManager::m_tasks_count] = &rout->task_handle;
-        RoutineManager::m_tasks_count++;
+		*timer_handle = xTimerCreateStatic(
+			name, /* The text name assigned to the software timer - for debug only as it is not used by the kernel. */
+			ticks, /* The period of the software timer in ticks. */
+			true, /* xAutoReload is set to pdTRUE. */
+			nullptr, /* The timer's ID is not used. */
+			timer_callback, /* The function executed when the timer expires. */
+			timer_storage /* Pointer to the timer's storage. */
+		);
 
-        /* Register its Timer */
+		RoutineManager::m_timers_count++;
 
-        const auto period      = (size_t)(1000.0 / rout->m_frequency);
-        const TickType_t ticks = pdMS_TO_TICKS(period);
+		if (xTimerStart(*timer_handle, 0) != pdTRUE) {
+			printf("Timer %s start failed!", name);
+		}
 
-        rout->timer_handle = xTimerCreateStatic(timer_name,     /* The text name assigned to the software timer - for
-                                                                       debug only as it is not used by the kernel. */
-                                                ticks,          /* The period of the software timer in ticks. */
-                                                true,           /* xAutoReload is set to pdTRUE. */
-                                                nullptr,        /* The timer's ID is not used. */
-                                                rout->timer_cb, /* The function executed when the timer expires. */
-                                                &rout->m_timer_storage /* Pointer to the timer's storage. */
-        );
-
-        RoutineManager::m_timers[RoutineManager::m_timers_count] = &rout->timer_handle;
-        RoutineManager::m_timers_count++;
-
-        if (xTimerStart(rout->timer_handle, 0) != pdTRUE) { printf("Timer %s start failed!", task_name); }
-
-        return rout;
-    }
+		return 0;
+	}
 };
 
 } // namespace Impl

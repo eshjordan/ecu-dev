@@ -73,7 +73,7 @@ int port_init_io(void)
 
 static int count_val = 0;
 
-REGISTER_ROUTINE(esp_get_status, 1)
+REGISTER_ROUTINE(esp_get_status, 1, 128)
 {
     if (!io_inited) {
         printf("io not inited\n");

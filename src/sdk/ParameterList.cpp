@@ -1,6 +1,6 @@
 #include "ParameterList.hpp"
 
-System::Impl::ParameterBase *System::Impl::ParameterList::m_parameters[1000];
+System::Impl::ParameterBase *System::Impl::ParameterList::m_parameters[128];
 uint32_t System::Impl::ParameterList::m_parameter_count = 0;
 
 // clang-format off

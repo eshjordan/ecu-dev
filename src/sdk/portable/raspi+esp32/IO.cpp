@@ -338,7 +338,7 @@ void update_dout(int channel)
     xSemaphoreGiveRecursive(xSemaphore);
 }
 
-REGISTER_ROUTINE(esp_in_update, 60)
+REGISTER_ROUTINE(esp_in_update, 60, 128)
 {
     // Inputs
     for (int i = 0; i < ARRAY_SIZE(adc_data); i++)
@@ -357,7 +357,7 @@ REGISTER_ROUTINE(esp_in_update, 60)
     }
 }
 
-REGISTER_ROUTINE(esp_out_update, 1 / 0.025)
+REGISTER_ROUTINE(esp_out_update, 1 / 0.025, 128)
 {
     // Outputs
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "IO.hpp"
-#include "Routine.hpp"
 #include "RoutineManager.hpp"
 #include <vector>
 
@@ -9,16 +8,19 @@
  * @brief Hide the implementation of the system from the user. Expose only the simplest part of the interface.
  *
  */
-namespace System {
-
-namespace Impl {
-
-class ParameterList
+namespace System
 {
-public:
-    template <typename T> static void add_parameter(const char *name, const T &value);
-    template <typename T> static T get_parameter(const char *name);
-    template <typename T> static void set_parameter(const char *name, const T &value);
+
+namespace Impl
+{
+
+class ParameterList {
+    public:
+	template <typename T>
+	static void add_parameter(const char *name, const T &value);
+	template <typename T> static T get_parameter(const char *name);
+	template <typename T>
+	static void set_parameter(const char *name, const T &value);
 };
 
 static int s_argc = 0;
@@ -36,7 +38,7 @@ static bool network_up = false;
  *
  * @return const char * Path to the executable, from argv[0]
  */
-const char * get_executable_path();
+const char *get_executable_path();
 
 } // namespace Impl
 
@@ -62,7 +64,10 @@ void restart(int signal);
  * @brief
  *
  */
-inline void restart(void *signal) { restart(*reinterpret_cast<int *>(signal)); }
+inline void restart(void *signal)
+{
+	restart(*reinterpret_cast<int *>(signal));
+}
 
 /**
  * @brief
@@ -79,7 +84,7 @@ void shutdown(int signal);
  */
 template <typename T> [[nodiscard]] T get_parameter(const char *name)
 {
-    return System::Impl::ParameterList::get_parameter<T>(name);
+	return System::Impl::ParameterList::get_parameter<T>(name);
 }
 
 /**
@@ -91,15 +96,15 @@ template <typename T> [[nodiscard]] T get_parameter(const char *name)
  */
 template <typename T> void set_parameter(const char *name, const T &value)
 {
-    System::Impl::ParameterList::set_parameter<T>(name, value);
+	System::Impl::ParameterList::set_parameter<T>(name, value);
 }
 
 } // namespace System
 
 // clang-format off
 
-#define REGISTER_ROUTINE(name, frequency) \
- /** \
+#define REGISTER_ROUTINE(name, frequency, stack_size)                                                                    \
+/** \
  * @brief What's going on here? Based on the macro arguments (name and frequency), this macro auto-generates a new \
  *      Routine. First the class definition, inheriting from System::Impl::Routine. Static functions: \
  *          FunctionBody - The user-defined function to call at the specified frequency. \
@@ -112,50 +117,48 @@ template <typename T> void set_parameter(const char *name, const T &value)
  *      (parent) pointer. The last line is left as a hanging function declaration, and the user's function body \
  *      below the macro is used. \
  * \
- */ \
-namespace System { \
-namespace Generated { \
-class name##_t : public System::Impl::Routine \
-{ \
-public: \
-    name##_t(void) : System::Impl::Routine((#name), (frequency)) {} \
- \
-    static void FunctionBody(void); \
- \
-    static void task_cb(void *parameters); \
- \
-    static void timer_cb(TimerHandle_t xTimer); \
- \
-private: \
-    const static System::Impl::Routine *const result_; \
-    static System::Impl::RoutineFactory<name##_t> factory_; \
-    friend class System::Impl::RoutineManager; \
-}; \
-} /* namespace Generated */ \
-} /* namespace System */ \
- \
-void System::Generated::name##_t::task_cb(void *parameters) \
-{ \
-    while (true) \
-    { \
-        xTaskNotifyWait(0, 0, nullptr, portMAX_DELAY); \
- \
-        System::Generated::name##_t::FunctionBody(); \
+ */                                                                                                            \
+namespace System                                                                                                 \
+{                                                                                                                \
+namespace Generated                                                                                              \
+{                                                                                                                \
+static void name##_fn(void);                                                                                     \
+static StackType_t name##_task_stack[stack_size];                                                                \
+static StaticTask_t name##_task_storage;                                                                         \
+static TaskHandle_t *name##_task_handle = NULL;                                                                        \
+static StaticTimer_t name##_timer_storage;                                                                       \
+                                                                                                                        \
+static void name##_task_cb(void *parameters)                                                                     \
+{                                                                                                                \
+    while (true) {                                                                                           \
+        xTaskNotifyWait(0, 0, nullptr, portMAX_DELAY);                                                   \
+        name##_fn();                                                                                     \
+    }                                                                                                        \
+}                                                                                                                \
+                                                                                                                        \
+static void name##_timer_cb(TimerHandle_t xTimer)                                                                \
+{                                                                                                                \
+    if (name##_task_handle) { \
+        xTaskNotify(*name##_task_handle, 0, eNoAction);                                                         \
     } \
-} \
- \
-void System::Generated::name##_t::timer_cb(TimerHandle_t xTimer) \
-{ \
-    auto *res = (name##_t *)result_; \
-    xTaskNotify(res->task_handle, 0, eNoAction); \
-} \
- \
- \
-System::Impl::RoutineFactory<System::Generated::name##_t> System::Generated::name##_t::factory_{}; \
-const System::Impl::Routine *const System::Generated::name##_t::result_ = \
-    System::Impl::RoutineManager::register_routine(&System::Generated::name##_t::factory_); \
- \
-void System::Generated::name##_t::FunctionBody()
+}                                                                                                                \
+                                                                                                                        \
+static const int name##_tmp = System::Impl::RoutineManager::register_routine(                                    \
+    #name, /* Routine name */                                                                                \
+    frequency, /* Routine frequency */                                                                               \
+    name##_task_cb, /* Routine task callback loop */                                                         \
+    name##_task_stack, /* Routine task stack */                                                              \
+    stack_size, /* Size of routine stack */                                                                  \
+    &name##_task_storage, /* Routine name */                                                                 \
+    &name##_task_handle, /* Routine task handle pointer pointer. Will be set by the register_routine call  */ \
+    name##_timer_cb, /* Routine timer callback to trigger task */                                            \
+    &name##_timer_storage /* Routine timer storage */                                                        \
+);                                                                                                               \
+                                                                                                                        \
+} /* namespace Generated */                                                                                      \
+} /* namespace System */                                                                                         \
+                                                                                                                        \
+static void System::Generated::name##_fn(void)
 
 // clang-format on
 
