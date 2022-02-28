@@ -11,7 +11,7 @@ extern "C" {
 #define ERR_INVALID_LENGTH 2
 #define ERR_INVALID_START_BYTE 3
 
-typedef u16 ecu_err_t;
+typedef s16 ecu_err_t;
 
 #ifdef USERSPACE_BUILD
 void ecu_err_to_str(char *str, ecu_err_t err_code);
