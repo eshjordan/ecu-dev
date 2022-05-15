@@ -1,12 +1,12 @@
 /* System includes. */
-#include "System.hpp"
+#include "System.h"
 
 int main(int argc, char *argv[])
 {
-    System::init(argc, argv);
+    systemInit(argc, argv);
 
     /* Add tasks here. */
-    System::run();
+    systemRun();
 
     /* If all is well, the scheduler will now be running, and the following
      * line will never be reached.  If the following line does execute, then

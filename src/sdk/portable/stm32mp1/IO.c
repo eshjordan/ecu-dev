@@ -1,9 +1,9 @@
-#include "IO.hpp"
+#include "IO.h"
 #include "CRC.h"
 #include "ECU_Msg.h"
 #include "ESP32_Msg.h"
 #include "Header.h"
-#include "System.hpp"
+#include "System.h"
 #include "main.h"
 #include "cmsis_os.h"
 #include "stm32mp1xx_hal_spi.h"
@@ -13,16 +13,16 @@
 
 #define SPI_WAIT_TIME pdMS_TO_TICKS(1)
 
-static TaskHandle_t in_update_handle = {};
-static TaskHandle_t out_update_handle = {};
+static TaskHandle_t in_update_handle = {0};
+static TaskHandle_t out_update_handle = {0};
 
-static StackType_t in_update_stack[4] = {};
-static StackType_t out_update_stack[4] = {};
+static StackType_t in_update_stack[4] = {0};
+static StackType_t out_update_stack[4] = {0};
 
-static StaticTask_t in_update_tsk_buf = {};
-static StaticTask_t out_update_tsk_buf = {};
+static StaticTask_t in_update_tsk_buf = {0};
+static StaticTask_t out_update_tsk_buf = {0};
 
-static bool esp32_spi_inited    = false;
+static boolean esp32_spi_inited    = FALSE;
 
 extern SPI_HandleTypeDef hspi5;
 
@@ -39,7 +39,7 @@ static int init_esp32_spi(void)
 {
     printf("SPI init success\n");
 
-    esp32_spi_inited = true;
+    esp32_spi_inited = TRUE;
 
     return 1;
 }
@@ -53,26 +53,26 @@ void request_peripheral(uint8_t type, uint8_t channel)
     tx_msg.channel               = channel;
     tx_msg.checksum              = calc_crc(&tx_msg, offsetof(ESP32_Request_t, checksum));
 
-    System::IO::spi_transfer(0, sizeof(ESP32_Request_t), &tx_msg, &rx_buf);
+    spi_transfer(0, sizeof(ESP32_Request_t), &tx_msg, &rx_buf);
 }
 
-bool receive_ack(void)
+boolean receive_ack(void)
 {
     ALIGN ESP32_Request_t ack_msg = {0};
-    System::IO::spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
+    spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
         printf("SPI - Received invalid acknowledgement msg - bad CRC\n");
-        return false;
+        return FALSE;
     }
     if (ack_msg.type != ESP32_ACK)
     {
         printf("SPI - Received invalid ack command\n");
-        return false;
+        return FALSE;
     }
 
-    return true;
+    return TRUE;
 }
 
 void update_adc(int channel)
@@ -84,7 +84,7 @@ void update_adc(int channel)
     vTaskDelay(SPI_WAIT_TIME);
 
     // Receive acknowledgement
-    bool ack = receive_ack();
+    boolean ack = receive_ack();
     vTaskDelay(SPI_WAIT_TIME);
 
     if (!ack) {
@@ -94,7 +94,7 @@ void update_adc(int channel)
 
     // Receive data
     ESP32_In_ADC_t adc_msg = {0};
-    System::IO::spi_read(0, sizeof(ESP32_In_ADC_t), &adc_msg);
+    spi_read(0, sizeof(ESP32_In_ADC_t), &adc_msg);
 
     if (adc_msg.checksum != calc_crc(&adc_msg, offsetof(ESP32_In_ADC_t, checksum)))
     {
@@ -121,7 +121,7 @@ void update_hall(int channel)
 
     // Receive acknowledgement
     ALIGN ESP32_Request_t ack_msg = {0};
-    System::IO::spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
+    spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
@@ -142,7 +142,7 @@ void update_hall(int channel)
 
     ESP32_In_Hall_t hall_msg = {0};
 
-    System::IO::spi_read(0, sizeof(ESP32_In_Hall_t), &hall_msg);
+    spi_read(0, sizeof(ESP32_In_Hall_t), &hall_msg);
 
     if (hall_msg.checksum != calc_crc(&hall_msg, offsetof(ESP32_In_Hall_t, checksum)))
     {
@@ -169,7 +169,7 @@ void update_din(int channel)
 
     // Receive acknowledgement
     ALIGN ESP32_Request_t ack_msg = {0};
-    System::IO::spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
+    spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
@@ -190,7 +190,7 @@ void update_din(int channel)
 
     ESP32_In_DIN_t din_msg = {0};
 
-    System::IO::spi_read(0, sizeof(ESP32_In_DIN_t), &din_msg);
+    spi_read(0, sizeof(ESP32_In_DIN_t), &din_msg);
 
     if (din_msg.checksum != calc_crc(&din_msg, offsetof(ESP32_In_DIN_t, checksum)))
     {
@@ -217,7 +217,7 @@ void update_dac(int channel)
 
     // Receive acknowledgement
     ALIGN ESP32_Request_t ack_msg = {0};
-    System::IO::spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
+    spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
@@ -239,7 +239,7 @@ void update_dac(int channel)
     dac_data[channel].seed     = rand();
     dac_data[channel].checksum = calc_crc(&dac_data[channel], offsetof(ESP32_Out_DAC_t, checksum));
 
-    System::IO::spi_write(0, sizeof(ESP32_Out_DAC_t), &dac_data[channel]);
+    spi_write(0, sizeof(ESP32_Out_DAC_t), &dac_data[channel]);
 
     vTaskDelay(SPI_WAIT_TIME);
 
@@ -256,7 +256,7 @@ void update_pwm(int channel)
 
     // Receive acknowledgement
     ALIGN ESP32_Request_t ack_msg = {0};
-    System::IO::spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
+    spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
@@ -278,7 +278,7 @@ void update_pwm(int channel)
     pwm_data[channel].seed     = rand();
     pwm_data[channel].checksum = calc_crc(&pwm_data[channel], offsetof(ESP32_Out_PWM_t, checksum));
 
-    System::IO::spi_write(0, sizeof(ESP32_Out_PWM_t), &pwm_data[channel]);
+    spi_write(0, sizeof(ESP32_Out_PWM_t), &pwm_data[channel]);
 
     vTaskDelay(SPI_WAIT_TIME);
 
@@ -295,7 +295,7 @@ void update_dout(int channel)
 
     // Receive acknowledgement
     ALIGN ESP32_Request_t ack_msg = {0};
-    System::IO::spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
+    spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
@@ -317,14 +317,14 @@ void update_dout(int channel)
     dout_data[channel].seed     = rand();
     dout_data[channel].checksum = calc_crc(&dout_data[channel], offsetof(ESP32_Out_DOUT_t, checksum));
 
-    System::IO::spi_write(0, sizeof(ESP32_Out_DOUT_t), &dout_data[channel]);
+    spi_write(0, sizeof(ESP32_Out_DOUT_t), &dout_data[channel]);
 
     vTaskDelay(SPI_WAIT_TIME);
 
     xSemaphoreGive(esp32DataMutexHandle);
 }
 
-extern "C" void esp_in_update(TimerHandle_t handle)
+void esp_in_update(TimerHandle_t handle)
 {
 //	while(1)
 //	{
@@ -348,7 +348,7 @@ extern "C" void esp_in_update(TimerHandle_t handle)
 //	}
 }
 
-extern "C" void esp_out_update(TimerHandle_t handle)
+void esp_out_update(TimerHandle_t handle)
 {
 //	while(1)
 //	{
@@ -371,9 +371,6 @@ extern "C" void esp_out_update(TimerHandle_t handle)
 //		vTaskDelay(pdMS_TO_TICKS(16));
 //	}
 }
-
-namespace System {
-namespace IO {
 
 int port_init_io(void)
 {
@@ -433,7 +430,10 @@ void write_pwm_output(int channel, uint16_t duty, uint32_t freq, uint8_t duty_re
     update_pwm(channel);
 }
 
-CAN_Msg_t read_can_input(int bus, int id) { return {}; }
+CAN_Msg_t read_can_input(int bus, int id) {
+    CAN_Msg_t msg = {0};
+    return msg;
+}
 
 void write_can_output(int bus, int id, CAN_Msg_t msg) {}
 
@@ -476,6 +476,3 @@ int spi_transfer(int channel, uint32_t size, void *tx_buffer, void *rx_buffer)
 
     return 1;
 }
-
-} // namespace IO
-} // namespace System

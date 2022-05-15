@@ -1,7 +1,5 @@
 #include "CAN_Msg.h"
 
-namespace System {
-namespace IO {
 
 int port_init_io(void);
 
@@ -26,6 +24,3 @@ int spi_read(int channel, uint32_t size, void *buffer);
 int spi_write(int channel, uint32_t size, void *buffer);
 
 int spi_transfer(int channel, uint32_t size, void *tx_buffer, void *rx_buffer);
-
-} // namespace IO
-} // namespace System

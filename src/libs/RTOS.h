@@ -1,8 +1,6 @@
 #pragma once
 
-#include <cstdio>
-
-extern "C" {
+#include <stdio.h>
 
 /* FreeRTOS Kernel includes */
 
@@ -120,4 +118,3 @@ void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer, StackT
 #include "timers.h"
 
 #include "projdefs.h"
-}
