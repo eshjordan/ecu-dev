@@ -7,7 +7,7 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "stm32mp1xx_hal_spi.h"
-#include "stm32.h"
+#include "stm32System.h"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
