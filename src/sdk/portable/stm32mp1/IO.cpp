@@ -9,6 +9,10 @@
 #include "stm32mp1xx_hal_spi.h"
 #include "stm32System.h"
 
+extern "C" {
+#include "CANSPI.h"
+}
+
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
 #define SPI_WAIT_TIME pdMS_TO_TICKS(1)
@@ -23,8 +27,10 @@ static StaticTask_t in_update_tsk_buf = {};
 static StaticTask_t out_update_tsk_buf = {};
 
 static bool esp32_spi_inited    = false;
+static bool can_inited    = false;
 
-extern SPI_HandleTypeDef hspi5;
+extern SPI_HandleTypeDef *const esp32_spi_handle;
+extern SPI_HandleTypeDef *const mcp2515_spi_handle;
 
 extern osMutexId esp32DataMutexHandle;
 
@@ -384,6 +390,12 @@ int port_init_io(void)
         if (init_esp32_spi() < 0) { return -1; }
     }
 
+    if (!can_inited) {
+        uint8_t status = 0;
+        status = CANSPI_Initialize();
+        can_inited = 1 == status;
+    }
+
 //    in_update_handle = xTaskCreateStatic(
 //    		esp_in_update,
 //    		"in_update_tsk",
@@ -433,19 +445,120 @@ void write_pwm_output(IOPWMChannel_en channel, uint16_t duty, uint32_t freq, uin
     update_pwm(channel);
 }
 
-CAN_Msg_t read_can_input(IOCANChannel_en bus, int id) { return {}; }
+static CAN_Msg_t ucanmsg_to_can_msg(uCAN_MSG *msg)
+{
+    CAN_Msg_t msg_out;
 
-void write_can_output(IOCANChannel_en bus, int id, CAN_Msg_t msg) {}
+    msg_out.header = header_make(0, sizeof(CAN_Msg_t));
+    msg_out.identifier = msg->frame.id;
+    msg_out.data_length_code = msg->frame.dlc;
+
+    msg_out.data[0] = msg->frame.data0;
+    msg_out.data[1] = msg->frame.data1;
+    msg_out.data[2] = msg->frame.data2;
+    msg_out.data[3] = msg->frame.data3;
+    msg_out.data[4] = msg->frame.data4;
+    msg_out.data[5] = msg->frame.data5;
+    msg_out.data[6] = msg->frame.data6;
+    msg_out.data[7] = msg->frame.data7;
+
+    can_msg_calc_checksum(&msg_out);
+    return msg_out;
+}
+
+static uCAN_MSG can_msg_to_ucanmsg(CAN_Msg_t *msg)
+{
+    uCAN_MSG msg_out = {
+        .frame = {
+            .id = msg->identifier,
+            .dlc = msg->data_length_code,
+            .data0 = msg->data[0],
+            .data1 = msg->data[1],
+            .data2 = msg->data[2],
+            .data3 = msg->data[3],
+            .data4 = msg->data[4],
+            .data5 = msg->data[5],
+            .data6 = msg->data[6],
+            .data7 = msg->data[7]
+        }
+    };
+
+    return msg_out;
+}
+
+CAN_Msg_t read_can_input(IOCANChannel_en bus, int id) {
+    uint8_t success = 0;
+    uCAN_MSG msg = {0};
+
+    switch (bus) {
+    case IO_CAN_CHANNEL_01:
+    {
+        success = CANSPI_Receive(&msg);
+        break;
+    }
+    case IO_CAN_CHANNEL_02:
+    case IO_CAN_CHANNEL_03:
+    default:
+    {
+        break;
+    }
+    }
+
+    if (msg.frame.id == 0)
+    {
+        return {};
+    }
+
+    return ucanmsg_to_can_msg(&msg);
+}
+
+void write_can_output(IOCANChannel_en bus, int id, CAN_Msg_t msg) {
+    uCAN_MSG out_msg = can_msg_to_ucanmsg(&msg);
+    switch (bus) {
+    case IO_CAN_CHANNEL_01:
+    {
+        CANSPI_Transmit(&out_msg);
+        break;
+    }
+    case IO_CAN_CHANNEL_02:
+    case IO_CAN_CHANNEL_03:
+    default:
+    {
+        break;
+    }
+    }
+}
 
 int spi_read(IOSPIChannel_en channel, uint32_t size, void *buffer) {
 	/*##-1- Start the Full Duplex Communication process ########################*/
 	/* While the SPI in TransmitReceive process, user can transmit data through
 	   "aTxBuffer" buffer & receive data through "aRxBuffer" */
-	if(HAL_SPI_Receive(&hspi5, (uint8_t*)buffer, size, 100) != HAL_OK)
-	{
-	  /* Transfer error in transmission process */
-	  return -1;
-	}
+    
+    switch (channel) {
+    case IO_SPI_CHANNEL_01:
+    {
+        if(HAL_SPI_Receive(esp32_spi_handle, (uint8_t*)buffer, size, 100) != HAL_OK)
+        {
+            /* Transfer error in transmission process */
+            return -1;
+        }
+        break;
+    }
+    case IO_SPI_CHANNEL_02:
+    {
+        if(HAL_SPI_Receive(mcp2515_spi_handle, (uint8_t*)buffer, size, 100) != HAL_OK)
+        {
+            /* Transfer error in transmission process */
+            return -1;
+        }
+        break;
+    }
+    case IO_SPI_CHANNEL_03:
+    default:
+    {
+        return -1;
+    }
+    }
 
 	return 1;
 }
@@ -454,11 +567,32 @@ int spi_write(IOSPIChannel_en channel, uint32_t size, void *buffer) {
 	/*##-1- Start the Full Duplex Communication process ########################*/
 	/* While the SPI in TransmitReceive process, user can transmit data through
 	   "aTxBuffer" buffer & receive data through "aRxBuffer" */
-	if(HAL_SPI_Transmit(&hspi5, (uint8_t*)buffer, size, 100) != HAL_OK)
-	{
-	  /* Transfer error in transmission process */
-		return -1;
-	}
+
+    switch (channel) {
+    case IO_SPI_CHANNEL_01:
+    {
+        if(HAL_SPI_Transmit(esp32_spi_handle, (uint8_t*)buffer, size, 100) != HAL_OK)
+        {
+            /* Transfer error in transmission process */
+            return -1;
+        }
+        break;
+    }
+    case IO_SPI_CHANNEL_02:
+    {
+        if(HAL_SPI_Transmit(mcp2515_spi_handle, (uint8_t*)buffer, size, 100) != HAL_OK)
+        {
+            /* Transfer error in transmission process */
+            return -1;
+        }
+        break;
+    }
+    case IO_SPI_CHANNEL_03:
+    default:
+    {
+        return -1;
+    }
+    }
 
 	return 1;
 }
@@ -468,11 +602,32 @@ int spi_transfer(IOSPIChannel_en channel, uint32_t size, void *tx_buffer, void *
 	/*##-1- Start the Full Duplex Communication process ########################*/
 	/* While the SPI in TransmitReceive process, user can transmit data through
 	   "aTxBuffer" buffer & receive data through "aRxBuffer" */
-	if(HAL_SPI_TransmitReceive(&hspi5, (uint8_t*)tx_buffer, (uint8_t *)&rx_buffer, size, 100) != HAL_OK)
-	{
-	  /* Transfer error in transmission process */
-	  return -1;
-	}
+
+    switch (channel) {
+    case IO_SPI_CHANNEL_01:
+    {
+        if(HAL_SPI_TransmitReceive(esp32_spi_handle, (uint8_t*)tx_buffer, (uint8_t*)rx_buffer, size, 100) != HAL_OK)
+        {
+            /* Transfer error in transmission process */
+            return -1;
+        }
+        break;
+    }
+    case IO_SPI_CHANNEL_02:
+    {
+        if(HAL_SPI_TransmitReceive(mcp2515_spi_handle, (uint8_t*)tx_buffer, (uint8_t*)rx_buffer, size, 100) != HAL_OK)
+        {
+            /* Transfer error in transmission process */
+            return -1;
+        }
+        break;
+    }
+    case IO_SPI_CHANNEL_03:
+    default:
+    {
+        return -1;
+    }
+    }
 
     return 1;
 }
