@@ -53,13 +53,13 @@ void request_peripheral(uint8_t type, uint8_t channel)
     tx_msg.channel               = channel;
     tx_msg.checksum              = calc_crc(&tx_msg, offsetof(ESP32_Request_t, checksum));
 
-    System::IO::spi_transfer(0, sizeof(ESP32_Request_t), &tx_msg, &rx_buf);
+    System::IO::spi_transfer(IO_SPI_CHANNEL_01, sizeof(ESP32_Request_t), &tx_msg, &rx_buf);
 }
 
 bool receive_ack(void)
 {
     ALIGN ESP32_Request_t ack_msg = {0};
-    System::IO::spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
+    System::IO::spi_read(IO_SPI_CHANNEL_01, sizeof(ESP32_Request_t), &ack_msg);
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
@@ -75,7 +75,7 @@ bool receive_ack(void)
     return true;
 }
 
-void update_adc(int channel)
+void update_adc(IOADCChannel_en channel)
 {
     xSemaphoreTake(esp32DataMutexHandle, portMAX_DELAY);
 
@@ -94,7 +94,7 @@ void update_adc(int channel)
 
     // Receive data
     ESP32_In_ADC_t adc_msg = {0};
-    System::IO::spi_read(0, sizeof(ESP32_In_ADC_t), &adc_msg);
+    System::IO::spi_read(IO_SPI_CHANNEL_01, sizeof(ESP32_In_ADC_t), &adc_msg);
 
     if (adc_msg.checksum != calc_crc(&adc_msg, offsetof(ESP32_In_ADC_t, checksum)))
     {
@@ -111,7 +111,7 @@ void update_adc(int channel)
     xSemaphoreGive(esp32DataMutexHandle);
 }
 
-void update_hall(int channel)
+void update_hall(IOHallChannel channel)
 {
     xSemaphoreTake(esp32DataMutexHandle, portMAX_DELAY);
 
@@ -121,7 +121,7 @@ void update_hall(int channel)
 
     // Receive acknowledgement
     ALIGN ESP32_Request_t ack_msg = {0};
-    System::IO::spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
+    System::IO::spi_read(IO_SPI_CHANNEL_01, sizeof(ESP32_Request_t), &ack_msg);
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
@@ -142,7 +142,7 @@ void update_hall(int channel)
 
     ESP32_In_Hall_t hall_msg = {0};
 
-    System::IO::spi_read(0, sizeof(ESP32_In_Hall_t), &hall_msg);
+    System::IO::spi_read(IO_SPI_CHANNEL_01, sizeof(ESP32_In_Hall_t), &hall_msg);
 
     if (hall_msg.checksum != calc_crc(&hall_msg, offsetof(ESP32_In_Hall_t, checksum)))
     {
@@ -159,7 +159,7 @@ void update_hall(int channel)
     xSemaphoreGive(esp32DataMutexHandle);
 }
 
-void update_din(int channel)
+void update_din(IODINChannel_en channel)
 {
     xSemaphoreTake(esp32DataMutexHandle, portMAX_DELAY);
 
@@ -169,7 +169,7 @@ void update_din(int channel)
 
     // Receive acknowledgement
     ALIGN ESP32_Request_t ack_msg = {0};
-    System::IO::spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
+    System::IO::spi_read(IO_SPI_CHANNEL_01, sizeof(ESP32_Request_t), &ack_msg);
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
@@ -190,7 +190,7 @@ void update_din(int channel)
 
     ESP32_In_DIN_t din_msg = {0};
 
-    System::IO::spi_read(0, sizeof(ESP32_In_DIN_t), &din_msg);
+    System::IO::spi_read(IO_SPI_CHANNEL_01, sizeof(ESP32_In_DIN_t), &din_msg);
 
     if (din_msg.checksum != calc_crc(&din_msg, offsetof(ESP32_In_DIN_t, checksum)))
     {
@@ -207,7 +207,7 @@ void update_din(int channel)
     xSemaphoreGive(esp32DataMutexHandle);
 }
 
-void update_dac(int channel)
+void update_dac(IODACChannel_en channel)
 {
     xSemaphoreTake(esp32DataMutexHandle, portMAX_DELAY);
 
@@ -217,7 +217,7 @@ void update_dac(int channel)
 
     // Receive acknowledgement
     ALIGN ESP32_Request_t ack_msg = {0};
-    System::IO::spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
+    System::IO::spi_read(IO_SPI_CHANNEL_01, sizeof(ESP32_Request_t), &ack_msg);
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
@@ -239,14 +239,14 @@ void update_dac(int channel)
     dac_data[channel].seed     = rand();
     dac_data[channel].checksum = calc_crc(&dac_data[channel], offsetof(ESP32_Out_DAC_t, checksum));
 
-    System::IO::spi_write(0, sizeof(ESP32_Out_DAC_t), &dac_data[channel]);
+    System::IO::spi_write(IO_SPI_CHANNEL_01, sizeof(ESP32_Out_DAC_t), &dac_data[channel]);
 
     vTaskDelay(SPI_WAIT_TIME);
 
     xSemaphoreGive(esp32DataMutexHandle);
 }
 
-void update_pwm(int channel)
+void update_pwm(IOPWMChannel_en channel)
 {
     xSemaphoreTake(esp32DataMutexHandle, portMAX_DELAY);
 
@@ -256,7 +256,7 @@ void update_pwm(int channel)
 
     // Receive acknowledgement
     ALIGN ESP32_Request_t ack_msg = {0};
-    System::IO::spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
+    System::IO::spi_read(IO_SPI_CHANNEL_01, sizeof(ESP32_Request_t), &ack_msg);
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
@@ -278,14 +278,14 @@ void update_pwm(int channel)
     pwm_data[channel].seed     = rand();
     pwm_data[channel].checksum = calc_crc(&pwm_data[channel], offsetof(ESP32_Out_PWM_t, checksum));
 
-    System::IO::spi_write(0, sizeof(ESP32_Out_PWM_t), &pwm_data[channel]);
+    System::IO::spi_write(IO_SPI_CHANNEL_01, sizeof(ESP32_Out_PWM_t), &pwm_data[channel]);
 
     vTaskDelay(SPI_WAIT_TIME);
 
     xSemaphoreGive(esp32DataMutexHandle);
 }
 
-void update_dout(int channel)
+void update_dout(IODOUTChannel channel)
 {
     xSemaphoreTake(esp32DataMutexHandle, portMAX_DELAY);
 
@@ -295,7 +295,7 @@ void update_dout(int channel)
 
     // Receive acknowledgement
     ALIGN ESP32_Request_t ack_msg = {0};
-    System::IO::spi_read(0, sizeof(ESP32_Request_t), &ack_msg);
+    System::IO::spi_read(IO_SPI_CHANNEL_01, sizeof(ESP32_Request_t), &ack_msg);
 
     if (ack_msg.checksum != calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum)))
     {
@@ -317,7 +317,7 @@ void update_dout(int channel)
     dout_data[channel].seed     = rand();
     dout_data[channel].checksum = calc_crc(&dout_data[channel], offsetof(ESP32_Out_DOUT_t, checksum));
 
-    System::IO::spi_write(0, sizeof(ESP32_Out_DOUT_t), &dout_data[channel]);
+    System::IO::spi_write(IO_SPI_CHANNEL_01, sizeof(ESP32_Out_DOUT_t), &dout_data[channel]);
 
     vTaskDelay(SPI_WAIT_TIME);
 
@@ -329,19 +329,19 @@ extern "C" void esp_in_update(TimerHandle_t handle)
 //	while(1)
 //	{
 		// Inputs
-		for (int i = 0; i < ARRAY_SIZE(adc_data); i++)
+		for (int i = IO_ADC_CHANNEL_01; i < ARRAY_SIZE(adc_data); i++)
 		{
-			update_adc(i);
+			update_adc((IOADCChannel_en)i);
 		}
 
-		for (int i = 0; i < ARRAY_SIZE(hall_data); i++)
+		for (int i = IO_HALL_CHANNEL_01; i < ARRAY_SIZE(hall_data); i++)
 		{
-			update_hall(i);
+			update_hall((IOHallChannel)i);
 		}
 
-		for (int i = 0; i < ARRAY_SIZE(din_data); i++)
+		for (int i = IO_DIN_CHANNEL_01; i < ARRAY_SIZE(din_data); i++)
 		{
-			update_din(i);
+			update_din((IODINChannel_en)i);
 		}
 
 //		vTaskDelay(pdMS_TO_TICKS(16));
@@ -353,19 +353,19 @@ extern "C" void esp_out_update(TimerHandle_t handle)
 //	while(1)
 //	{
 		// Outputs
-		for (int i = 0; i < ARRAY_SIZE(dac_data); i++)
+		for (int i = IO_DAC_CHANNEL_01; i < ARRAY_SIZE(dac_data); i++)
 		{
-			update_dac(i);
+			update_dac((IODACChannel_en)i);
 		}
 
-		for (int i = 0; i < ARRAY_SIZE(pwm_data); i++)
+		for (int i = IO_PWM_CHANNEL_01; i < ARRAY_SIZE(pwm_data); i++)
 		{
-			update_pwm(i);
+			update_pwm((IOPWMChannel_en)i);
 		}
 
-		for (int i = 0; i < ARRAY_SIZE(dout_data); i++)
+		for (int i = IO_DOUT_CHANNEL_01; i < ARRAY_SIZE(dout_data); i++)
 		{
-			update_dout(i);
+			update_dout((IODOUTChannel)i);
 		}
 
 //		vTaskDelay(pdMS_TO_TICKS(16));
@@ -407,25 +407,25 @@ int port_init_io(void)
     return 1;
 }
 
-uint32_t read_analogue_input(int channel) { return adc_data[channel].adc; }
+uint32_t read_analogue_input(IOADCChannel_en channel) { return adc_data[channel].adc; }
 
-uint32_t read_hall_input(int channel) { return hall_data[channel].hall; }
+uint32_t read_hall_input(IOHallChannel channel) { return hall_data[channel].hall; }
 
-uint8_t read_digital_input(int channel) { return din_data[channel].din; }
+uint8_t read_digital_input(IODINChannel_en channel) { return din_data[channel].din; }
 
-void write_analogue_output(int channel, uint32_t value)
+void write_analogue_output(IODACChannel_en channel, uint32_t value)
 {
     dac_data[channel].dac = value;
     update_dac(channel);
 }
 
-void write_digital_output(int channel, uint8_t value)
+void write_digital_output(IODOUTChannel channel, uint8_t value)
 {
     dout_data[channel].dout = value;
     update_dout(channel);
 }
 
-void write_pwm_output(int channel, uint16_t duty, uint32_t freq, uint8_t duty_resolution)
+void write_pwm_output(IOPWMChannel_en channel, uint16_t duty, uint32_t freq, uint8_t duty_resolution)
 {
     pwm_data[channel].duty            = duty;
     pwm_data[channel].frequency       = freq;
@@ -433,11 +433,11 @@ void write_pwm_output(int channel, uint16_t duty, uint32_t freq, uint8_t duty_re
     update_pwm(channel);
 }
 
-CAN_Msg_t read_can_input(int bus, int id) { return {}; }
+CAN_Msg_t read_can_input(IOCANChannel_en bus, int id) { return {}; }
 
-void write_can_output(int bus, int id, CAN_Msg_t msg) {}
+void write_can_output(IOCANChannel_en bus, int id, CAN_Msg_t msg) {}
 
-int spi_read(int channel, uint32_t size, void *buffer) {
+int spi_read(IOSPIChannel_en channel, uint32_t size, void *buffer) {
 	/*##-1- Start the Full Duplex Communication process ########################*/
 	/* While the SPI in TransmitReceive process, user can transmit data through
 	   "aTxBuffer" buffer & receive data through "aRxBuffer" */
@@ -450,7 +450,7 @@ int spi_read(int channel, uint32_t size, void *buffer) {
 	return 1;
 }
 
-int spi_write(int channel, uint32_t size, void *buffer) {
+int spi_write(IOSPIChannel_en channel, uint32_t size, void *buffer) {
 	/*##-1- Start the Full Duplex Communication process ########################*/
 	/* While the SPI in TransmitReceive process, user can transmit data through
 	   "aTxBuffer" buffer & receive data through "aRxBuffer" */
@@ -463,7 +463,7 @@ int spi_write(int channel, uint32_t size, void *buffer) {
 	return 1;
 }
 
-int spi_transfer(int channel, uint32_t size, void *tx_buffer, void *rx_buffer)
+int spi_transfer(IOSPIChannel_en channel, uint32_t size, void *tx_buffer, void *rx_buffer)
 {
 	/*##-1- Start the Full Duplex Communication process ########################*/
 	/* While the SPI in TransmitReceive process, user can transmit data through
