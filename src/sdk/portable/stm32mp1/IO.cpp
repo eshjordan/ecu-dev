@@ -509,7 +509,9 @@ CAN_Msg_t read_can_input(IOCANChannel_en bus, int id) {
         return {};
     }
 
-    return ucanmsg_to_can_msg(&msg);
+    CAN_Msg_t out_msg = ucanmsg_to_can_msg(&msg);
+
+    return out_msg;
 }
 
 void write_can_output(IOCANChannel_en bus, int id, CAN_Msg_t msg) {

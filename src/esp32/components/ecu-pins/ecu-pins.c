@@ -268,9 +268,10 @@ int ecu_pins_init(void)
     init_hall_effect();
     ecu_log("Hall Effect Sensor initialised");
 
-    /* Initialise DIN. */
-    init_din();
-    ecu_log("DIN initialised");
+    // TODO: Conflicts with CAN SPI
+    // /* Initialise DIN. */
+    // init_din();
+    ecu_warn("Skipping DIN initialisation - conflicts with CAN SPI");
 
     /* Initialise DOUT. */
     init_dout();

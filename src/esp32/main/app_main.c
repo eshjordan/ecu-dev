@@ -18,6 +18,7 @@
 #include "esp_random.h"
 #include "freertos/projdefs.h"
 #include "hal/ledc_types.h"
+#include "CANSPI.h"
 
 static SemaphoreHandle_t xSemaphore = NULL;
 static StaticSemaphore_t xMutexBuffer;
@@ -181,7 +182,45 @@ void run_uart(void *parameters)
 void run_can(void *parameters)
 {
     (void)parameters;
-    vTaskSuspend(NULL);
+    // vTaskSuspend(NULL);
+
+    uCAN_MSG msg = {
+        .frame.idType = 0,
+        .frame.id = 0x123,
+        .frame.dlc = 1,
+        .frame.data0 = 0x69
+    };
+
+    while (1) {
+
+        xSemaphoreTake(xSemaphore, portMAX_DELAY);
+
+        uint8_t success = CANSPI_Transmit(&msg);
+
+        if (success != 1) {
+            ecu_warn("CAN - Failed to transmit message");
+        }
+
+        ecu_log("CAN - Transmit message OK!");
+
+        xSemaphoreGive(xSemaphore);
+
+        vTaskDelay(pdMS_TO_TICKS(1000)); // TODO: Implement CAN
+
+        xSemaphoreTake(xSemaphore, portMAX_DELAY);
+
+        uCAN_MSG recv_msg = {0};
+        success = CANSPI_Receive(&recv_msg);
+
+        if (success != 1) {
+            ecu_warn("CAN - Failed to receive message");
+        }
+
+        ecu_log("CAN - Receive message OK! - ID: %x", recv_msg.frame.id);
+
+        xSemaphoreGive(xSemaphore);
+    }
+
 }
 
 void run_pwm(void *parameters)
@@ -381,11 +420,16 @@ void app_main(void)
     xSemaphore = xSemaphoreCreateMutexStatic(&xMutexBuffer);
     ecu_pins_init();
 
+    CANSPI_Initialize();
+
+    ecu_log("Finished CANSPI_Initialize()");
+
     vTaskDelay(pdMS_TO_TICKS(500));
 
-    ESP_ERROR_CHECK(gpio_isr_handler_add(ECU_DIN_1, &din_cb, NULL));
-    ESP_ERROR_CHECK(gpio_isr_handler_add(ECU_DIN_2, &din_cb, NULL));
-    ESP_ERROR_CHECK(gpio_isr_handler_add(ECU_DIN_3, &din_cb, NULL));
+    // TODO: DIN conflicts with CAN SPI
+    // ESP_ERROR_CHECK(gpio_isr_handler_add(ECU_DIN_1, &din_cb, NULL));
+    // ESP_ERROR_CHECK(gpio_isr_handler_add(ECU_DIN_2, &din_cb, NULL));
+    // ESP_ERROR_CHECK(gpio_isr_handler_add(ECU_DIN_3, &din_cb, NULL));
 
     xTaskCreate(run_spi, "run_spi", 4096, NULL, 5, &spi_task);
 
@@ -417,7 +461,8 @@ void app_main(void)
         xTimerStart(hall_timer, 0);
     }
 
-    xTaskCreate(run_din, "run_din", 4096, NULL, 2, &din_task);
+    // TODO: DIN conflicts with CAN SPI
+    // xTaskCreate(run_din, "run_din", 4096, NULL, 2, &din_task);
 
     xTaskCreate(run_dout, "run_dout", 4096, NULL, 2, &dout_task);
 

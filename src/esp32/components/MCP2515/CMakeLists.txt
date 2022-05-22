@@ -1,11 +1,10 @@
 
 idf_component_register(
     SRCS
-        "app_main.c"
+        "CANSPI.c"
+        "MCP2515.c"
     INCLUDE_DIRS
         "include"
     REQUIRES
         ecu-pins
-        ecu-shared
-        MCP2515
 )

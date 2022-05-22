@@ -10,6 +10,7 @@ extern "C" {
 #include "driver/gpio.h"
 #include "driver/ledc.h"
 #include "driver/spi_slave.h"
+#include "driver/spi_master.h"
 #include "driver/twai.h"
 #include "driver/uart.h"
 
@@ -25,6 +26,7 @@ extern "C" {
 
 /* Extra configuration. */
 #define ECU_SPI_RCV_HOST HSPI_HOST
+#define ECU_CAN_SPI_RCV_HOST VSPI_HOST
 #define ECU_ADC_ATTENUATION ADC_ATTEN_DB_11 // ~ 3.55x 800mV (2.84V)
 #define ECU_ENABLE_HALL_EFFECT (1)
 
@@ -38,6 +40,13 @@ extern "C" {
 #define ECU_SPI_SCLK GPIO_NUM_14
 #define ECU_SPI_CS GPIO_NUM_15
 #define ECU_SPI_MASK (GPIO_SEL_12 | GPIO_SEL_13 | GPIO_SEL_14 | GPIO_SEL_15)
+
+/* Serial Peripheral Interface (SPI) for MCP2515 CAN module */
+#define ECU_CAN_SPI_MISO GPIO_NUM_19
+#define ECU_CAN_SPI_MOSI GPIO_NUM_23
+#define ECU_CAN_SPI_SCLK GPIO_NUM_18
+#define ECU_CAN_SPI_CS GPIO_NUM_5
+#define ECU_CAN_SPI_MASK (GPIO_SEL_5 | GPIO_SEL_18 | GPIO_SEL_19 | GPIO_SEL_23)
 
 /* Universal Asynchronous Receive + Transmit (UART).
  * Potential future changes:
@@ -113,7 +122,7 @@ extern "C" {
 #define ECU_DAC_2 GPIO_NUM_26
 #define ECU_DAC_MASK (GPIO_SEL_25 | GPIO_SEL_26)
 
-/* Digital Input (DIN). */
+/* Digital Input (DIN). Currently conflicts with CAN SPI */
 #define ECU_DIN_1 GPIO_NUM_5
 #define ECU_DIN_2 GPIO_NUM_18
 #define ECU_DIN_3 GPIO_NUM_19
