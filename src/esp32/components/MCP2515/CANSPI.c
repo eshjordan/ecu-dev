@@ -1,6 +1,5 @@
 #include "CANSPI.h"
 #include "MCP2515.h"
-#include "ecu-pins.h"
 
 /** Local Function Prototypes */  
 static uint32_t convertReg2ExtendedCANid(uint8_t tempRXBn_EIDH, uint8_t tempRXBn_EIDL, uint8_t tempRXBn_SIDH, uint8_t tempRXBn_SIDL);
@@ -30,56 +29,56 @@ void CANSPI_Sleep(void)
 uint8_t CANSPI_Initialize(void)
 {
   ecu_log("CANSPI_Initialize()");
-  RXF0 RXF0reg;
-  RXF1 RXF1reg;
-  RXF2 RXF2reg;
-  RXF3 RXF3reg;
-  RXF4 RXF4reg;
-  RXF5 RXF5reg;
-  RXM0 RXM0reg;
-  RXM1 RXM1reg;
+  // RXF0 RXF0reg;
+  // RXF1 RXF1reg;
+  // RXF2 RXF2reg;
+  // RXF3 RXF3reg;
+  // RXF4 RXF4reg;
+  // RXF5 RXF5reg;
+  // RXM0 RXM0reg;
+  // RXM1 RXM1reg;
       
-  /* Rx Mask values 초기화 */
-  RXM0reg.RXM0SIDH = 0x00;
-  RXM0reg.RXM0SIDL = 0x00;
-  RXM0reg.RXM0EID8 = 0x00;
-  RXM0reg.RXM0EID0 = 0x00;
+  // /* Rx Mask values 초기화 */
+  // RXM0reg.RXM0SIDH = 0x00;
+  // RXM0reg.RXM0SIDL = 0x00;
+  // RXM0reg.RXM0EID8 = 0x00;
+  // RXM0reg.RXM0EID0 = 0x00;
   
-  RXM1reg.RXM1SIDH = 0x00;
-  RXM1reg.RXM1SIDL = 0x00;
-  RXM1reg.RXM1EID8 = 0x00;
-  RXM1reg.RXM1EID0 = 0x00;
+  // RXM1reg.RXM1SIDH = 0x00;
+  // RXM1reg.RXM1SIDL = 0x00;
+  // RXM1reg.RXM1EID8 = 0x00;
+  // RXM1reg.RXM1EID0 = 0x00;
   
-  /* Rx Filter values 초기화 */
-  RXF0reg.RXF0SIDH = 0x00;      
-  RXF0reg.RXF0SIDL = 0x00;      //Starndard Filter
-  RXF0reg.RXF0EID8 = 0x00;
-  RXF0reg.RXF0EID0 = 0x00;
+  // /* Rx Filter values 초기화 */
+  // RXF0reg.RXF0SIDH = 0x00;      
+  // RXF0reg.RXF0SIDL = 0x00;      //Starndard Filter
+  // RXF0reg.RXF0EID8 = 0x00;
+  // RXF0reg.RXF0EID0 = 0x00;
   
-  RXF1reg.RXF1SIDH = 0x00;
-  RXF1reg.RXF1SIDL = 0x08;      //Exntended Filter
-  RXF1reg.RXF1EID8 = 0x00;
-  RXF1reg.RXF1EID0 = 0x00;
+  // RXF1reg.RXF1SIDH = 0x00;
+  // RXF1reg.RXF1SIDL = 0x08;      //Exntended Filter
+  // RXF1reg.RXF1EID8 = 0x00;
+  // RXF1reg.RXF1EID0 = 0x00;
   
-  RXF2reg.RXF2SIDH = 0x00;
-  RXF2reg.RXF2SIDL = 0x00;
-  RXF2reg.RXF2EID8 = 0x00;
-  RXF2reg.RXF2EID0 = 0x00;
+  // RXF2reg.RXF2SIDH = 0x00;
+  // RXF2reg.RXF2SIDL = 0x00;
+  // RXF2reg.RXF2EID8 = 0x00;
+  // RXF2reg.RXF2EID0 = 0x00;
   
-  RXF3reg.RXF3SIDH = 0x00;
-  RXF3reg.RXF3SIDL = 0x00;
-  RXF3reg.RXF3EID8 = 0x00;
-  RXF3reg.RXF3EID0 = 0x00;
+  // RXF3reg.RXF3SIDH = 0x00;
+  // RXF3reg.RXF3SIDL = 0x00;
+  // RXF3reg.RXF3EID8 = 0x00;
+  // RXF3reg.RXF3EID0 = 0x00;
   
-  RXF4reg.RXF4SIDH = 0x00;
-  RXF4reg.RXF4SIDL = 0x00;
-  RXF4reg.RXF4EID8 = 0x00;
-  RXF4reg.RXF4EID0 = 0x00;
+  // RXF4reg.RXF4SIDH = 0x00;
+  // RXF4reg.RXF4SIDL = 0x00;
+  // RXF4reg.RXF4EID8 = 0x00;
+  // RXF4reg.RXF4EID0 = 0x00;
   
-  RXF5reg.RXF5SIDH = 0x00;
-  RXF5reg.RXF5SIDL = 0x08;
-  RXF5reg.RXF5EID8 = 0x00;
-  RXF5reg.RXF5EID0 = 0x00;
+  // RXF5reg.RXF5SIDH = 0x00;
+  // RXF5reg.RXF5SIDL = 0x08;
+  // RXF5reg.RXF5EID8 = 0x00;
+  // RXF5reg.RXF5EID0 = 0x00;
   
   /* MCP2515 초기화, SPI 통신 상태 확인 */
   if(!MCP2515_Initialize())
@@ -90,14 +89,14 @@ uint8_t CANSPI_Initialize(void)
     return 0;
   
   /* Filter & Mask 값 설정 */
-  MCP2515_WriteByteSequence(MCP2515_RXM0SIDH, MCP2515_RXM0EID0, &(RXM0reg.RXM0SIDH));
-  MCP2515_WriteByteSequence(MCP2515_RXM1SIDH, MCP2515_RXM1EID0, &(RXM1reg.RXM1SIDH));
-  MCP2515_WriteByteSequence(MCP2515_RXF0SIDH, MCP2515_RXF0EID0, &(RXF0reg.RXF0SIDH));
-  MCP2515_WriteByteSequence(MCP2515_RXF1SIDH, MCP2515_RXF1EID0, &(RXF1reg.RXF1SIDH));
-  MCP2515_WriteByteSequence(MCP2515_RXF2SIDH, MCP2515_RXF2EID0, &(RXF2reg.RXF2SIDH));
-  MCP2515_WriteByteSequence(MCP2515_RXF3SIDH, MCP2515_RXF3EID0, &(RXF3reg.RXF3SIDH));
-  MCP2515_WriteByteSequence(MCP2515_RXF4SIDH, MCP2515_RXF4EID0, &(RXF4reg.RXF4SIDH));
-  MCP2515_WriteByteSequence(MCP2515_RXF5SIDH, MCP2515_RXF5EID0, &(RXF5reg.RXF5SIDH));
+  // MCP2515_WriteByteSequence(MCP2515_RXM0SIDH, MCP2515_RXM0EID0, &(RXM0reg.RXM0SIDH));
+  // MCP2515_WriteByteSequence(MCP2515_RXM1SIDH, MCP2515_RXM1EID0, &(RXM1reg.RXM1SIDH));
+  // MCP2515_WriteByteSequence(MCP2515_RXF0SIDH, MCP2515_RXF0EID0, &(RXF0reg.RXF0SIDH));
+  // MCP2515_WriteByteSequence(MCP2515_RXF1SIDH, MCP2515_RXF1EID0, &(RXF1reg.RXF1SIDH));
+  // MCP2515_WriteByteSequence(MCP2515_RXF2SIDH, MCP2515_RXF2EID0, &(RXF2reg.RXF2SIDH));
+  // MCP2515_WriteByteSequence(MCP2515_RXF3SIDH, MCP2515_RXF3EID0, &(RXF3reg.RXF3SIDH));
+  // MCP2515_WriteByteSequence(MCP2515_RXF4SIDH, MCP2515_RXF4EID0, &(RXF4reg.RXF4SIDH));
+  // MCP2515_WriteByteSequence(MCP2515_RXF5SIDH, MCP2515_RXF5EID0, &(RXF5reg.RXF5SIDH));
   
   /* Accept All (Standard + Extended) */
   MCP2515_WriteByte(MCP2515_RXB0CTRL, 0x04);    //Enable BUKT, Accept Filter 0
@@ -111,21 +110,21 @@ uint8_t CANSPI_Initialize(void)
   */
   
   /* 00(SJW 1tq) 000000 */  
-  MCP2515_WriteByte(MCP2515_CNF1, 0x00);
+  // MCP2515_WriteByte(MCP2515_CNF1, 0x00);
   
   /* 1 1 100(5tq) 101(6tq) */  
-  MCP2515_WriteByte(MCP2515_CNF2, 0xE5);
+  // MCP2515_WriteByte(MCP2515_CNF2, 0xE5);
   
   /* 1 0 000 011(4tq) */  
-  MCP2515_WriteByte(MCP2515_CNF3, 0x83);
+  // MCP2515_WriteByte(MCP2515_CNF3, 0x83);
   
-  /* Normal 모드로 설정 */
-  if(!MCP2515_SetNormalMode())
-    return 0;
-
-  // /* Loopback */
-  // if(!MCP2515_SetLoopbackMode())
+  // /* Normal 모드로 설정 */
+  // if(!MCP2515_SetNormalMode())
   //   return 0;
+
+  /* Loopback */
+  if(!MCP2515_SetLoopbackMode())
+    return 0;
   
   return 1;
 }

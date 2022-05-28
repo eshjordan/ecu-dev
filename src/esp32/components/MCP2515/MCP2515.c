@@ -1,61 +1,145 @@
 #include "MCP2515.h"
-#include "ecu-pins.h"
+// #include "ecu-pins.h"
 
 /* Pin 설정에 맞게 수정필요. Modify below items for your SPI configurations */
 // extern SPI_HandleTypeDef        hspi4;
 // #define SPI_CAN                 &hspi4
 #define SPI_TIMEOUT             10
-#define MCP2515_CS_HIGH()   // HAL_GPIO_WritePin(CAN_CS_GPIO_Port, CAN_CS_Pin, GPIO_PIN_SET)
-#define MCP2515_CS_LOW()    // HAL_GPIO_WritePin(CAN_CS_GPIO_Port, CAN_CS_Pin, GPIO_PIN_RESET)
+#define MCP2515_CS_HIGH()   // ESP_ERROR_CHECK(gpio_set_level(ECU_CAN_SPI_CS, 0x0U))
+#define MCP2515_CS_LOW()    // ESP_ERROR_CHECK(gpio_set_level(ECU_CAN_SPI_CS, 0x1U))
+
+
+
+
+spi_device_handle_t handle = {0};
+
+spi_device_interface_config_t devcfg = {
+    // .command_bits = 10,
+    .clock_speed_hz = SPI_MASTER_FREQ_8M,
+    .mode = 0,          //SPI mode 0
+    /*
+        * The timing requirements to read the busy signal from the EEPROM cannot be easily emulated
+        * by SPI transactions. We need to control CS pin by SW to check the busy signal manually.
+        */
+    // .spics_io_num = -1,
+    .spics_io_num = ECU_CAN_SPI_CS,
+    .queue_size = 1,
+    // .flags = SPI_DEVICE_POSITIVE_CS,
+    .pre_cb = NULL,
+    .post_cb = NULL,
+    .input_delay_ns = 0,  //the EEPROM output the data half a SPI clock behind.
+};
+
+gpio_config_t cs_cfg = {
+    .pin_bit_mask = BIT64(ECU_CAN_SPI_CS),
+    .mode = GPIO_MODE_OUTPUT,
+};
+
+spi_bus_config_t buscfg = {
+    .miso_io_num = ECU_CAN_SPI_MISO,
+    .mosi_io_num = ECU_CAN_SPI_MOSI,
+    .sclk_io_num = ECU_CAN_SPI_SCLK,
+    .quadwp_io_num = -1,
+    .quadhd_io_num = -1,
+    .max_transfer_sz = 32,
+};
+
+
+
+
+
+
+
 
 /* Prototypes */
-static spi_device_handle_t can_spi_dev_handle = {0};
+// static spi_device_handle_t handle = {0};
 static void SPI_Tx(uint8_t data);
 static void SPI_TxBuffer(uint8_t *buffer, uint8_t length);
 static uint8_t SPI_Rx(void);
 static void SPI_RxBuffer(uint8_t *buffer, uint8_t length);
 
+
+
+
+
+
+
+
+esp_err_t spi_init()
+{
+    esp_err_t err = ESP_OK;
+
+    ecu_log("CALLING gpio_set_level");
+    err = gpio_set_level(ECU_CAN_SPI_CS, 0);
+    if  (err != ESP_OK) {
+        goto cleanup;
+    }
+
+    ecu_log("CALLING gpio_config");
+    err = gpio_config(&cs_cfg);
+    if  (err != ESP_OK) {
+        goto cleanup;
+    }
+
+    //Initialize the SPI bus
+    ecu_log("CALLING spi_bus_initialize");
+    err = spi_bus_initialize(ECU_CAN_SPI_RCV_HOST, &buscfg, SPI_DMA_CH_AUTO);
+    ESP_ERROR_CHECK(err);
+
+    //Attach the EEPROM to the SPI bus
+    ecu_log("CALLING spi_bus_add_device");
+    err = spi_bus_add_device(ECU_CAN_SPI_RCV_HOST, &devcfg, &handle);
+    if  (err != ESP_OK) {
+        goto cleanup;
+    }
+
+    // err = spi_device_acquire_bus(handle, portMAX_DELAY);
+    // if  (err != ESP_OK) {
+    //     goto cleanup;
+    // }
+
+    // spi_transaction_t t = {
+    //     .cmd = 0x0,
+    //     .user = NULL
+    // };
+
+    // ecu_log("CALLING spi_device_polling_transmit");
+    // err = spi_device_polling_transmit(handle, &t);
+    // ESP_ERROR_CHECK(err);
+
+    ecu_log("CALLING SPI_Tx");
+    SPI_Tx(0x0U);
+
+    return ESP_OK;
+
+cleanup:
+    // ecu_log("CALLING spi_device_release_bus");
+    // ESP_ERROR_CHECK(spi_device_release_bus(handle));
+    ecu_log("CALLING spi_bus_remove_device");
+    ESP_ERROR_CHECK(spi_bus_remove_device(handle));
+
+    return err;
+}
+
+
+
+
+
+
+
+
 /* MCP2515 초기화 */
 uint8_t MCP2515_Initialize(void)
 {
-  MCP2515_CS_HIGH();    
+  MCP2515_CS_HIGH();
 
   /* SPI Ready 확인 */
 
-  // Configuration for the SPI bus
-  spi_bus_config_t can_spi_buscfg = {
-      .mosi_io_num   = ECU_CAN_SPI_MOSI,
-      .miso_io_num   = ECU_CAN_SPI_MISO,
-      .sclk_io_num   = ECU_CAN_SPI_SCLK,
-      .quadwp_io_num = -1,
-      .quadhd_io_num = -1,
-  };
+  ESP_ERROR_CHECK(spi_init());
 
-  // Configuration for the SPI device interface
-  spi_device_interface_config_t can_spi_devcfg = {
-    .mode = 1,
-    .clock_speed_hz = SPI_MASTER_FREQ_10M,
-    .spics_io_num = ECU_CAN_SPI_CS,
-    .queue_size = 3,
-    .flags = 0,
-    .pre_cb = NULL,
-    .post_cb = NULL,
-  };
-
-
-  // Enable pull-ups on SPI lines so we don't detect rogue pulses when no master is connected.
-  ESP_ERROR_CHECK(gpio_set_pull_mode(ECU_CAN_SPI_MOSI, GPIO_PULLUP_ONLY));
-  ESP_ERROR_CHECK(gpio_set_pull_mode(ECU_CAN_SPI_SCLK, GPIO_PULLUP_ONLY));
-  ESP_ERROR_CHECK(gpio_set_pull_mode(ECU_CAN_SPI_CS, GPIO_PULLUP_ONLY));
-
-  // ESP_ERROR_CHECK(spi_slave_initialize(ECU_CAN_SPI_RCV_HOST, &can_spi_buscfg, &can_spi_slvcfg, SPI_DMA_CH1));
-
-  esp_err_t status;
-
-  status = spi_bus_initialize(ECU_CAN_SPI_RCV_HOST, &can_spi_buscfg, SPI_DMA_CH2);
-  ESP_ERROR_CHECK(status);
-  status = spi_bus_add_device(ECU_CAN_SPI_RCV_HOST, &can_spi_devcfg, &can_spi_dev_handle);
-  ESP_ERROR_CHECK(status);
+  // printf("RXF2EID0: \x", MCP2515_ReadByte(MCP2515_RXF2EID0));
+  // printf("CANSTAT: \x", MCP2515_ReadByte(MCP2515_CANSTAT));
+  // printf("CANCTRL: \x", MCP2515_ReadByte(MCP2515_CANCTRL));
 
   return 1;
 }
@@ -282,12 +366,14 @@ static void SPI_Tx(uint8_t data)
   // clang-format off
   spi_transaction_t trans_desc = {
       .tx_buffer = &data,
+      .rx_buffer = NULL,
       .length = sizeof(data) * 8
   };
   // clang-format on
 
   // Wait for the master to send a query, acknowledge we're here
-  esp_err_t status = spi_device_transmit(can_spi_dev_handle, &trans_desc);
+  ecu_log("CALLING spi_device_transmit");
+  esp_err_t status = spi_device_transmit(handle, &trans_desc);
   ESP_ERROR_CHECK(status);
 }
 
@@ -299,12 +385,13 @@ static void SPI_TxBuffer(uint8_t *buffer, uint8_t length)
   // clang-format off
   spi_transaction_t trans_desc = {
       .tx_buffer = buffer,
+      .rx_buffer = NULL,
       .length = length * 8
   };
   // clang-format on
 
   // Wait for the master to send a query, acknowledge we're here
-  esp_err_t status = spi_device_transmit(can_spi_dev_handle, &trans_desc);
+  esp_err_t status = spi_device_transmit(handle, &trans_desc);
   ESP_ERROR_CHECK(status);
 }
 
@@ -316,13 +403,14 @@ static uint8_t SPI_Rx(void)
 
   // clang-format off
   spi_transaction_t trans_desc = {
+      .tx_buffer = NULL,
       .rx_buffer = &retVal,
       .length = sizeof(retVal) * 8
   };
   // clang-format on
 
   // Wait for the master to send a query, acknowledge we're here
-  esp_err_t status = spi_device_transmit(can_spi_dev_handle, &trans_desc);
+  esp_err_t status = spi_device_transmit(handle, &trans_desc);
   ESP_ERROR_CHECK(status);
 
   return retVal;
@@ -335,12 +423,13 @@ static void SPI_RxBuffer(uint8_t *buffer, uint8_t length)
 
   // clang-format off
   spi_transaction_t trans_desc = {
+      .tx_buffer = NULL,
       .rx_buffer = buffer,
       .length = length * 8
   };
   // clang-format on
 
   // Wait for the master to send a query, acknowledge we're here
-  esp_err_t status = spi_device_transmit(can_spi_dev_handle, &trans_desc);
+  esp_err_t status = spi_device_transmit(handle, &trans_desc);
   ESP_ERROR_CHECK(status);
 }

@@ -5,6 +5,4 @@ idf_component_register(
         "MCP2515.c"
     INCLUDE_DIRS
         "include"
-    REQUIRES
-        ecu-pins
 )

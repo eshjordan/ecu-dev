@@ -420,9 +420,9 @@ void app_main(void)
     xSemaphore = xSemaphoreCreateMutexStatic(&xMutexBuffer);
     ecu_pins_init();
 
-    // CANSPI_Initialize();
+    CANSPI_Initialize();
 
-    // ecu_log("Finished CANSPI_Initialize()");
+    ecu_log("Finished CANSPI_Initialize()");
 
     vTaskDelay(pdMS_TO_TICKS(500));
 

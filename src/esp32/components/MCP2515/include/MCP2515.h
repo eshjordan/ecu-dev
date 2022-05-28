@@ -3,6 +3,33 @@
 
 #include <stdint.h>
 
+
+
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/projdefs.h"
+#include "freertos/timers.h"
+#include "driver/spi_master.h"
+#include "driver/gpio.h"
+
+/* Useful macros. */
+#define ecu_log(fmt_str, ...) printf("\033[36;1m[  ECU_LOG] - \033[36m" fmt_str "\033[0m\n", ##__VA_ARGS__)
+#define ecu_warn(fmt_str, ...) printf("\033[33;1m[ ECU_WARN] - \033[33m" fmt_str "\033[0m\n", ##__VA_ARGS__)
+#define ecu_error(fmt_str, ...) printf("\033[31;1m[ECU_ERROR] - \033[31m" fmt_str "\033[0m\n", ##__VA_ARGS__)
+#define ecu_debug(fmt_str, ...) printf("\033[1m[ECU_DEBUG] - \033[0m" fmt_str "\n", ##__VA_ARGS__)
+
+/* Serial Peripheral Interface (SPI) for MCP2515 CAN module */
+#define ECU_CAN_SPI_RCV_HOST VSPI_HOST
+#define ECU_CAN_SPI_MISO GPIO_NUM_19
+#define ECU_CAN_SPI_MOSI GPIO_NUM_23
+#define ECU_CAN_SPI_SCLK GPIO_NUM_18
+#define ECU_CAN_SPI_CS GPIO_NUM_5
+#define ECU_CAN_SPI_MASK (GPIO_SEL_5 | GPIO_SEL_18 | GPIO_SEL_19 | GPIO_SEL_23)
+
+
+
+
+
 // #pragma anon_unions
 
 #define CAN_CS_Pin GPIO_PIN_6
