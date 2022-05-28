@@ -420,22 +420,22 @@ void app_main(void)
     xSemaphore = xSemaphoreCreateMutexStatic(&xMutexBuffer);
     ecu_pins_init();
 
-    CANSPI_Initialize();
+    // CANSPI_Initialize();
 
-    ecu_log("Finished CANSPI_Initialize()");
+    // ecu_log("Finished CANSPI_Initialize()");
 
     vTaskDelay(pdMS_TO_TICKS(500));
 
     // TODO: DIN conflicts with CAN SPI
-    // ESP_ERROR_CHECK(gpio_isr_handler_add(ECU_DIN_1, &din_cb, NULL));
-    // ESP_ERROR_CHECK(gpio_isr_handler_add(ECU_DIN_2, &din_cb, NULL));
-    // ESP_ERROR_CHECK(gpio_isr_handler_add(ECU_DIN_3, &din_cb, NULL));
+    ESP_ERROR_CHECK(gpio_isr_handler_add(ECU_DIN_1, &din_cb, NULL));
+    ESP_ERROR_CHECK(gpio_isr_handler_add(ECU_DIN_2, &din_cb, NULL));
+    ESP_ERROR_CHECK(gpio_isr_handler_add(ECU_DIN_3, &din_cb, NULL));
 
     xTaskCreate(run_spi, "run_spi", 4096, NULL, 5, &spi_task);
 
     xTaskCreate(run_uart, "run_uart", 4096, NULL, 2, &uart_task);
 
-    xTaskCreate(run_can, "run_can", 4096, NULL, 5, &can_task);
+    // xTaskCreate(run_can, "run_can", 4096, NULL, 5, &can_task);
 
     xTaskCreate(run_pwm, "run_pwm", 4096, NULL, 4, &pwm_task);
 
@@ -462,7 +462,7 @@ void app_main(void)
     }
 
     // TODO: DIN conflicts with CAN SPI
-    // xTaskCreate(run_din, "run_din", 4096, NULL, 2, &din_task);
+    xTaskCreate(run_din, "run_din", 4096, NULL, 2, &din_task);
 
     xTaskCreate(run_dout, "run_dout", 4096, NULL, 2, &dout_task);
 

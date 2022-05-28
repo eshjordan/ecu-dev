@@ -248,9 +248,9 @@ int ecu_pins_init(void)
     init_uart();
     ecu_log("UART initialised");
 
-    /* Initialise CAN. */
-    init_can();
-    ecu_log("CAN initialised");
+    // /* Initialise CAN. */
+    // init_can();
+    // ecu_log("CAN initialised");
 
     /* Initialise PWM. */
     init_pwm();
@@ -269,9 +269,10 @@ int ecu_pins_init(void)
     ecu_log("Hall Effect Sensor initialised");
 
     // TODO: Conflicts with CAN SPI
-    // /* Initialise DIN. */
-    // init_din();
-    ecu_warn("Skipping DIN initialisation - conflicts with CAN SPI");
+    /* Initialise DIN. */
+    init_din();
+    ecu_log("DIN initialised");
+    // ecu_warn("Skipping DIN initialisation - conflicts with CAN SPI");
 
     /* Initialise DOUT. */
     init_dout();
