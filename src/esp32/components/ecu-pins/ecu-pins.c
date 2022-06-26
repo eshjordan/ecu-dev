@@ -248,9 +248,9 @@ int ecu_pins_init(void)
     init_uart();
     ecu_log("UART initialised");
 
-    // /* Initialise CAN. */
-    // init_can();
-    // ecu_log("CAN initialised");
+    /* Initialise CAN. */
+    init_can();
+    ecu_log("CAN initialised");
 
     /* Initialise PWM. */
     init_pwm();

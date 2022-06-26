@@ -7,5 +7,4 @@ idf_component_register(
     REQUIRES
         ecu-pins
         ecu-shared
-        MCP2515
 )

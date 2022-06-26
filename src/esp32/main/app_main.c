@@ -18,7 +18,6 @@
 #include "esp_random.h"
 #include "freertos/projdefs.h"
 #include "hal/ledc_types.h"
-#include "CANSPI.h"
 
 static SemaphoreHandle_t xSemaphore = NULL;
 static StaticSemaphore_t xMutexBuffer;
@@ -184,21 +183,25 @@ void run_can(void *parameters)
     (void)parameters;
     // vTaskSuspend(NULL);
 
-    uCAN_MSG msg = {
-        .frame.idType = 0,
-        .frame.id = 0x123,
-        .frame.dlc = 1,
-        .frame.data0 = 0x69
-    };
+    //Configure message to transmit
+    twai_message_t tx_message;
+    tx_message.identifier = 0x123;
+    tx_message.extd = 0;
+    tx_message.data_length_code = 4;
+    for (uint8_t i = 0; i < 4; i++) {
+        tx_message.data[i] = i;
+    }
 
     while (1) {
 
         xSemaphoreTake(xSemaphore, portMAX_DELAY);
 
-        uint8_t success = CANSPI_Transmit(&msg);
-
-        if (success != 1) {
-            ecu_warn("CAN - Failed to transmit message");
+        //Queue message for transmission
+        // ESP_ERROR_CHECK(twai_transmit(&message, pdMS_TO_TICKS(1000)));
+        if (twai_transmit(&tx_message, pdMS_TO_TICKS(1000)) == ESP_OK) {
+            printf("Message queued for transmission\n");
+        } else {
+            printf("Failed to queue message for transmission\n");
         }
 
         ecu_log("CAN - Transmit message OK!");
@@ -209,14 +212,29 @@ void run_can(void *parameters)
 
         xSemaphoreTake(xSemaphore, portMAX_DELAY);
 
-        uCAN_MSG recv_msg = {0};
-        success = CANSPI_Receive(&recv_msg);
-
-        if (success != 1) {
-            ecu_warn("CAN - Failed to receive message");
+        //Wait for message to be received
+        twai_message_t rx_message;
+        if (twai_receive(&rx_message, pdMS_TO_TICKS(1000)) == ESP_OK) {
+            printf("Message received\n");
+        } else {
+            printf("Failed to receive message\n");
+            continue;
         }
 
-        ecu_log("CAN - Receive message OK! - ID: %x", recv_msg.frame.id);
+        //Process received message
+        if (rx_message.extd) {
+            printf("Message is in Extended Format\n");
+        } else {
+            printf("Message is in Standard Format\n");
+        }
+        printf("ID is %d\n", rx_message.identifier);
+        if (!(rx_message.rtr)) {
+            for (int i = 0; i < rx_message.data_length_code; i++) {
+                printf("Data byte %d = %d\n", i, rx_message.data[i]);
+            }
+        }
+
+        ecu_log("CAN - Receive message OK! - ID: %x", rx_message.identifier);
 
         xSemaphoreGive(xSemaphore);
     }
@@ -420,10 +438,6 @@ void app_main(void)
     xSemaphore = xSemaphoreCreateMutexStatic(&xMutexBuffer);
     ecu_pins_init();
 
-    CANSPI_Initialize();
-
-    ecu_log("Finished CANSPI_Initialize()");
-
     vTaskDelay(pdMS_TO_TICKS(500));
 
     // TODO: DIN conflicts with CAN SPI
@@ -435,7 +449,7 @@ void app_main(void)
 
     xTaskCreate(run_uart, "run_uart", 4096, NULL, 2, &uart_task);
 
-    // xTaskCreate(run_can, "run_can", 4096, NULL, 5, &can_task);
+    xTaskCreate(run_can, "run_can", 4096, NULL, 5, &can_task);
 
     xTaskCreate(run_pwm, "run_pwm", 4096, NULL, 4, &pwm_task);
 

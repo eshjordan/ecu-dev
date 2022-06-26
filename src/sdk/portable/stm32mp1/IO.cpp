@@ -29,6 +29,7 @@ static StaticTask_t out_update_tsk_buf = {};
 static bool esp32_spi_inited    = false;
 static bool can_inited    = false;
 
+extern FDCAN_HandleTypeDef *const hfdcan1;
 extern SPI_HandleTypeDef *const esp32_spi_handle;
 extern SPI_HandleTypeDef *const mcp2515_spi_handle;
 
@@ -487,13 +488,47 @@ static uCAN_MSG can_msg_to_ucanmsg(CAN_Msg_t *msg)
 }
 
 CAN_Msg_t read_can_input(IOCANChannel_en bus, int id) {
+	if (hfdcan1->State == HAL_FDCAN_STATE_RESET)
+	{
+		int status = HAL_FDCAN_Init(hfdcan1);
+		if (status != HAL_OK)
+		{
+			log_err("INIT FAILED");
+		}
+	}
     uint8_t success = 0;
-    uCAN_MSG msg = {0};
+    CAN_Msg_t msg;
+
+    if (hfdcan1->State == HAL_FDCAN_STATE_RESET)
+	{
+		log_warn("CAN still initialising");
+		return {};
+	}
+
+	if (hfdcan1->State == HAL_FDCAN_STATE_ERROR)
+	{
+		log_warn("CAN RX error");
+		return {};
+	}
 
     switch (bus) {
     case IO_CAN_CHANNEL_01:
     {
-        success = CANSPI_Receive(&msg);
+        uint32_t fill = HAL_FDCAN_GetRxFifoFillLevel(hfdcan1, FDCAN_RX_FIFO0);
+        if (fill == 0) {
+            log_warn("RX FIFO 0 is empty: %d", fill);
+            break;
+        }
+
+        FDCAN_RxHeaderTypeDef pRxHeader;
+        success = HAL_FDCAN_GetRxMessage(hfdcan1, FDCAN_RX_FIFO0, &pRxHeader, msg.data);
+        if (success != HAL_OK)
+        {
+            log_err("Not ok on CAN RX! %d", success);
+        }
+        msg.identifier = pRxHeader.Identifier;
+        msg.data_length_code = (uint8_t)(pRxHeader.DataLength >> 4U);
+
         break;
     }
     case IO_CAN_CHANNEL_02:
@@ -504,22 +539,48 @@ CAN_Msg_t read_can_input(IOCANChannel_en bus, int id) {
     }
     }
 
-    if (msg.frame.id == 0)
-    {
-        return {};
-    }
-
-    CAN_Msg_t out_msg = ucanmsg_to_can_msg(&msg);
-
-    return out_msg;
+    return msg;
 }
 
 void write_can_output(IOCANChannel_en bus, int id, CAN_Msg_t msg) {
-    uCAN_MSG out_msg = can_msg_to_ucanmsg(&msg);
+	if (hfdcan1->State == HAL_FDCAN_STATE_RESET)
+	{
+		int status = HAL_FDCAN_Init(hfdcan1);
+		if (status != HAL_OK)
+		{
+			log_err("INIT FAILED");
+		}
+	}
+    FDCAN_TxHeaderTypeDef pTxHeader;
+    pTxHeader.IdType = FDCAN_STANDARD_ID;
+    pTxHeader.Identifier = msg.identifier;
+    pTxHeader.DataLength = ((uint32_t)msg.data_length_code) << 4U;
+    pTxHeader.TxFrameType = FDCAN_DATA_FRAME;
+    pTxHeader.FDFormat = FDCAN_CLASSIC_CAN;
+
+    if (hfdcan1->State == HAL_FDCAN_STATE_RESET)
+    {
+    	log_warn("CAN still initialising");
+    	return;
+    }
+
+	if (hfdcan1->State == HAL_FDCAN_STATE_ERROR)
+	{
+		log_warn("CAN TX error");
+		return;
+	}
+
+    uint32_t freeLevel = HAL_FDCAN_GetTxFifoFreeLevel(hfdcan1);
+
+
     switch (bus) {
     case IO_CAN_CHANNEL_01:
     {
-        CANSPI_Transmit(&out_msg);
+        HAL_StatusTypeDef status = HAL_FDCAN_AddMessageToTxFifoQ(hfdcan1, &pTxHeader, msg.data);
+        if (status != HAL_OK)
+        {
+            log_err("Not ok on CAN TX! %d", status);
+        }
         break;
     }
     case IO_CAN_CHANNEL_02:
@@ -535,7 +596,7 @@ int spi_read(IOSPIChannel_en channel, uint32_t size, void *buffer) {
 	/*##-1- Start the Full Duplex Communication process ########################*/
 	/* While the SPI in TransmitReceive process, user can transmit data through
 	   "aTxBuffer" buffer & receive data through "aRxBuffer" */
-    
+
     switch (channel) {
     case IO_SPI_CHANNEL_01:
     {
