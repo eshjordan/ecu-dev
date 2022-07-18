@@ -178,10 +178,49 @@ void run_uart(void *parameters)
     vTaskSuspend(NULL);
 }
 
+esp_err_t handle_can_state(void)
+{
+    esp_err_t err = ESP_FAIL;
+
+    twai_status_info_t status;
+    ESP_ERROR_CHECK(twai_get_status_info(&status));
+
+    switch (status.state) {
+    case TWAI_STATE_STOPPED:
+    {
+        // Start the CAN bus
+        err = twai_start();
+        break;
+    }
+    case TWAI_STATE_RUNNING:
+    {
+        err = ESP_OK;
+        break;
+    }
+    case TWAI_STATE_BUS_OFF:
+    {
+        // Recover the CAN bus
+        err = twai_initiate_recovery();
+        if (err == ESP_OK) {
+            ecu_log("CAN - Recovery successfully initiated");
+        } else {
+            ecu_warn("CAN - TWAI driver is not in the bus-off state, or is not installed");
+        }
+        break;
+    }
+    case TWAI_STATE_RECOVERING:
+    default:
+    {
+        break;
+    }
+    }
+
+    return err;
+}
+
 void run_can(void *parameters)
 {
     (void)parameters;
-    // vTaskSuspend(NULL);
 
     //Configure message to transmit
     twai_message_t tx_message;
@@ -194,30 +233,63 @@ void run_can(void *parameters)
 
     while (1) {
 
-        xSemaphoreTake(xSemaphore, portMAX_DELAY);
-
-        //Queue message for transmission
-        // ESP_ERROR_CHECK(twai_transmit(&message, pdMS_TO_TICKS(1000)));
-        if (twai_transmit(&tx_message, pdMS_TO_TICKS(1000)) == ESP_OK) {
-            printf("Message queued for transmission\n");
-        } else {
-            printf("Failed to queue message for transmission\n");
+        esp_err_t can_state_ok = handle_can_state();
+        if (can_state_ok != ESP_OK)
+        {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            continue;
         }
 
-        ecu_log("CAN - Transmit message OK!");
+        esp_err_t tx_result = twai_transmit(&tx_message, pdMS_TO_TICKS(1000));
+        switch (tx_result) {
+        case ESP_OK:
+            ecu_log("CAN - Transmission successfully queued/initiated");
+            break;
+        case ESP_ERR_INVALID_ARG:
+            ecu_warn("CAN - Arguments are invalid");
+            continue;
+        case ESP_ERR_TIMEOUT:
+            ecu_warn("CAN - Timed out waiting for space on TX queue");
+            if (ESP_OK == twai_clear_transmit_queue())
+            {
+                ecu_log("CAN - Transmission queue cleared");
+            }
+            else
+            {
+                ecu_warn("CAN - Failed to clear TX queue");
+            }
+            continue;
+        case ESP_FAIL:
+            ecu_warn("CAN - TX queue is disabled and another message is currently transmitting");
+            continue;
+        case ESP_ERR_INVALID_STATE:
+            ecu_warn("CAN - TWAI driver is not in running state, or is not installed");
+            continue;
+        case ESP_ERR_NOT_SUPPORTED:
+            ecu_warn("CAN - Listen Only Mode does not support transmissions");
+            continue;
+        default:
+            ecu_warn("CAN - Unknown TX error");
+            continue;
+        }
 
-        xSemaphoreGive(xSemaphore);
-
-        vTaskDelay(pdMS_TO_TICKS(1000)); // TODO: Implement CAN
-
-        xSemaphoreTake(xSemaphore, portMAX_DELAY);
-
-        //Wait for message to be received
         twai_message_t rx_message;
-        if (twai_receive(&rx_message, pdMS_TO_TICKS(1000)) == ESP_OK) {
-            printf("Message received\n");
-        } else {
-            printf("Failed to receive message\n");
+        esp_err_t rx_result = twai_receive(&rx_message, pdMS_TO_TICKS(1000));
+        switch (rx_result) {
+        case ESP_OK:
+            ecu_log("CAN - Message successfully received from RX queue");
+            break;
+        case ESP_ERR_TIMEOUT:
+            ecu_warn("CAN - Timed out waiting for message");
+            continue;
+        case ESP_ERR_INVALID_ARG:
+            ecu_warn("CAN - Arguments are invalid");
+            continue;
+        case ESP_ERR_INVALID_STATE:
+            ecu_warn("CAN - TWAI driver is not installed");
+            continue;
+        default:
+            ecu_warn("CAN - Unknown RX error");
             continue;
         }
 
@@ -235,8 +307,6 @@ void run_can(void *parameters)
         }
 
         ecu_log("CAN - Receive message OK! - ID: %x", rx_message.identifier);
-
-        xSemaphoreGive(xSemaphore);
     }
 
 }

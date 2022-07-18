@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <cstring>
 
+extern "C" void Error_Handler(void);
+
 using RoutineFunction_t = TaskFunction_t;
 
 namespace System
@@ -110,6 +112,7 @@ class RoutineManager {
 
 		if (xTimerStart(*timer_handle, 0) != pdTRUE) {
 			printf("Timer %s start failed!", name);
+			Error_Handler();
 		}
 
 		return 0;
