@@ -2,6 +2,8 @@
 
 #include "IO.hpp"
 #include "RoutineManager.hpp"
+#include "ParameterList.hpp"
+#include "ModuleManager.hpp"
 #include <vector>
 
 /**
@@ -13,15 +15,6 @@ namespace System
 
 namespace Impl
 {
-
-class ParameterList {
-    public:
-	template <typename T>
-	static void add_parameter(const char *name, const T &value);
-	template <typename T> static T get_parameter(const char *name);
-	template <typename T>
-	static void set_parameter(const char *name, const T &value);
-};
 
 static int s_argc = 0;
 
@@ -76,6 +69,18 @@ inline void restart(void *signal)
 void shutdown(int signal);
 
 /**
+ * @brief Add a new parameter to the server.
+ *
+ * @tparam T Type of the Parameter's value. Set explicitly to avoid runtime errors.
+ * @param name Name of the Parameter.
+ * @param value Initial value of the Parameter.
+ */
+template <typename T> void add_parameter(const char *name, const T &value)
+{
+	System::Impl::ParameterList::add_parameter<T>(name, value);
+}
+
+/**
  * @brief Get the value of an existing parameter given its name.
  *
  * @tparam T Type of the Parameter's value. Set explicitly to avoid runtime errors.
@@ -102,6 +107,19 @@ template <typename T> void set_parameter(const char *name, const T &value)
 } // namespace System
 
 // clang-format off
+
+#define INIT_MODULE(module_name)                                            \
+namespace System                                                            \
+{                                                                           \
+namespace Generated                                                         \
+{                                                                           \
+static void init_##module_name(void);                                       \
+static const uint32_t module_name##_tmp =                                   \
+    System::Impl::ModuleManager::register_module_init(init_##module_name);  \
+}                                                                           \
+}                                                                           \
+static void System::Generated::init_##module_name(void)
+
 
 #define REGISTER_ROUTINE(name, frequency, stack_size)                                                                    \
 /** \

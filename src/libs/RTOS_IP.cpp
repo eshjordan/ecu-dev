@@ -1,3 +1,5 @@
+#ifndef STM32_BUILD
+
 #include "RTOS_IP.hpp"
 #include "FreeRTOS_IP_Private.h"
 #include <cstdarg>
@@ -300,3 +302,5 @@ void print_send_err(BaseType_t status)
     }
     }
 }
+
+#endif

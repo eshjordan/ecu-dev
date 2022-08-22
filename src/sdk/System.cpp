@@ -47,12 +47,9 @@ void init(int argc, char **argv)
 #ifndef STM32_BUILD
         System::Impl::Server::init();
 #endif
-        
-        System::IO::port_init_io();
 
-        System::Impl::ParameterList::add_parameter("position", 0.0);
-        System::Impl::ParameterList::add_parameter("velocity", 0.0);
-        System::Impl::ParameterList::add_parameter("acceleration", 1.0);
+        System::IO::port_init_io();
+        System::Impl::ModuleManager::init_modules();
     }
 
     System::Impl::initialised = true;

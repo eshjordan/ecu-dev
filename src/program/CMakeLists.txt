@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 project(ECU_PROGRAM)
 
-file(GLOB ECU_PROGRAM_SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/*.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
+set(ECU_PROGRAM_SRC
+    ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test.cpp
 )
 
 set(ECU_PROGRAM_INCLUDE

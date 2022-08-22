@@ -1,16 +1,22 @@
 cmake_minimum_required(VERSION 3.0)
 project(ECU_SDK)
 
-file(GLOB ECU_SDK_SRC
-    ${CMAKE_CURRENT_SOURCE_DIR}/*.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/portable/raspi+esp32/*.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/portable/raspi+esp32/*.cpp
+set(ECU_SDK_SRC
+    ${CMAKE_CURRENT_SOURCE_DIR}/Channel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Connection_commands.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Connection.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/ModuleManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Parameter.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/ParameterList.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/RoutineManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Server.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/System.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/portable/x86/IO.cpp
 )
 
 set(ECU_SDK_INCLUDE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/portable/raspi+esp32/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/portable/x86/include
 )
 
 include_directories(

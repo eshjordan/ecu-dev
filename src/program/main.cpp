@@ -1,5 +1,13 @@
 /* System includes. */
 #include "System.hpp"
+#include <cstdio>
+
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+
+#ifdef STM32_BUILD
+#include "mock_rtos.c"
+#endif
+
 
 int main(int argc, char *argv[])
 {
