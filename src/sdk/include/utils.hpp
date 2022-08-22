@@ -1,4 +1,7 @@
 #pragma once
+
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
 // #include "RTOS.hpp"
 // #include <sstream>
 // #include <string>

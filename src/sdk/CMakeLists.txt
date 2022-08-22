@@ -3,6 +3,7 @@ project(ECU_SDK)
 
 set(ECU_SDK_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/Channel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/ChannelList.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Connection_commands.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Connection.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ModuleManager.cpp

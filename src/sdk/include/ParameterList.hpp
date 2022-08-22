@@ -1,10 +1,8 @@
 #pragma once
 
 #include "Parameter.hpp"
-#include <cstddef>
-#include <cstring>
-#include <stdexcept>
-#include <vector>
+#include <stddef.h>
+#include <string.h>
 
 namespace System {
 namespace Impl {

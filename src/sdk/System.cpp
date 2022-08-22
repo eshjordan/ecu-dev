@@ -28,7 +28,7 @@ public:
 
 } // namespace Impl
 
-const char* System::Impl::get_executable_path() { return System::Impl::s_argv[0]; }
+const char* System::Impl::get_executable_path() { return ""; /* System::Impl::s_argv[0]; */ }
 
 void init(int argc, char **argv)
 {
@@ -40,7 +40,7 @@ void init(int argc, char **argv)
         System::Impl::s_argc = argc;
         for (int i = 0; i < argc; i++)
         {
-            System::Impl::s_argv.emplace_back(argv[i]);
+            // System::Impl::s_argv.emplace_back(argv[i]);
         }
 
         init_crc();
@@ -49,7 +49,10 @@ void init(int argc, char **argv)
 #endif
 
         System::IO::port_init_io();
+
         System::Impl::ModuleManager::init_modules();
+
+        System::Impl::ChannelList::start_logging();
     }
 
     System::Impl::initialised = true;
@@ -72,9 +75,10 @@ void restart(int signal)
     char **argv = new char *[System::Impl::s_argc + 1];
     for (int i = 0; i < System::Impl::s_argc; i++)
     {
-        argv[i] = new char[strlen(System::Impl::s_argv[i]) + 1];
-        strcpy(argv[i], System::Impl::s_argv[i]);
-        printf("%s\n", argv[i]);
+        argv[i] = new char[1];
+        // argv[i] = new char[strlen(System::Impl::s_argv[i]) + 1];
+        // strcpy(argv[i], System::Impl::s_argv[i]);
+        // printf("%s\n", argv[i]);
     }
     argv[System::Impl::s_argc] = nullptr;
 

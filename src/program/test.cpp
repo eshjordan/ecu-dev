@@ -7,6 +7,8 @@ INIT_MODULE(test)
 	System::add_parameter<double>("position", 0.0f);
 	System::add_parameter<double>("velocity", 0.0f);
 	System::add_parameter<double>("acceleration", 1.0f);
+	System::add_channel<double>("accel_log", 0.0f, CHANNEL_LOG_100HZ);
+	// System::Impl::ChannelList::start_logging();
 }
 
 REGISTER_ROUTINE(point_mass_model, 10, 256)

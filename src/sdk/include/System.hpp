@@ -1,10 +1,10 @@
 #pragma once
 
 #include "IO.hpp"
-#include "RoutineManager.hpp"
-#include "ParameterList.hpp"
 #include "ModuleManager.hpp"
-#include <vector>
+#include "RoutineManager.hpp"
+#include "ChannelList.hpp"
+#include "ParameterList.hpp"
 
 /**
  * @brief Hide the implementation of the system from the user. Expose only the simplest part of the interface.
@@ -18,7 +18,7 @@ namespace Impl
 
 static int s_argc = 0;
 
-static std::vector<const char *> s_argv;
+// static std::vector<const char *> s_argv;
 
 /** @brief Stop chat users from resetting everything accidentally. */
 static bool initialised = false;
@@ -102,6 +102,21 @@ template <typename T> [[nodiscard]] T get_parameter(const char *name)
 template <typename T> void set_parameter(const char *name, const T &value)
 {
 	System::Impl::ParameterList::set_parameter<T>(name, value);
+}
+
+template <typename T> void add_channel(const char *name, const T &value, const ChannelLogRate &log_rate)
+{
+	System::Impl::ChannelList::add_channel<T>(name, value, log_rate);
+}
+
+template <typename T> [[nodiscard]] T get_channel(const char *name)
+{
+	return System::Impl::ChannelList::get_channel<T>(name);
+}
+
+template <typename T> void set_channel(const char *name, const T &value)
+{
+    System::Impl::ChannelList::set_channel<T>(name, value);
 }
 
 } // namespace System
