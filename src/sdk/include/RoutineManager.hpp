@@ -71,13 +71,11 @@ class RoutineManager {
 				    TaskFunction_t function, StackType_t *stack,
 				    uint32_t stack_size,
 				    StaticTask_t *task_storage,
-				    TaskHandle_t **task_handle,
-				    TimerCallbackFunction_t timer_callback,
-				    StaticTimer_t *timer_storage)
+				    TaskHandle_t **task_handle)
 	{
 		/* Register Routine */
 		*task_handle =
-			&RoutineManager::m_tasks[RoutineManager::m_tasks_count];
+			&RoutineManager::m_tasks[RoutineManager::m_tasks_count++];
 
 		**task_handle = xTaskCreateStatic(
 			function, /* Function that implements the task. */
@@ -88,32 +86,6 @@ class RoutineManager {
 			stack, /* Pointer to the task's stack. */
 			task_storage /* Pointer to the task's storage. */
 		);
-
-		RoutineManager::m_tasks_count++;
-
-		/* Register its Timer */
-
-		const auto period = (size_t)(1000.0 / frequency);
-		const TickType_t ticks = pdMS_TO_TICKS(period);
-
-		TimerHandle_t *const timer_handle =
-			&RoutineManager::m_timers[RoutineManager::m_timers_count];
-
-		*timer_handle = xTimerCreateStatic(
-			name, /* The text name assigned to the software timer - for debug only as it is not used by the kernel. */
-			ticks, /* The period of the software timer in ticks. */
-			true, /* xAutoReload is set to pdTRUE. */
-			nullptr, /* The timer's ID is not used. */
-			timer_callback, /* The function executed when the timer expires. */
-			timer_storage /* Pointer to the timer's storage. */
-		);
-
-		RoutineManager::m_timers_count++;
-
-		if (xTimerStart(*timer_handle, 0) != pdTRUE) {
-			printf("Timer %s start failed!", name);
-			Error_Handler();
-		}
 
 		return 0;
 	}

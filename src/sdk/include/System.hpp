@@ -159,22 +159,17 @@ static void name##_fn(void);                                                    
 static StackType_t name##_task_stack[stack_size];                                                                \
 static StaticTask_t name##_task_storage;                                                                         \
 static TaskHandle_t *name##_task_handle = NULL;                                                                        \
-static StaticTimer_t name##_timer_storage;                                                                       \
                                                                                                                         \
 static void name##_task_cb(void *parameters)                                                                     \
-{                                                                                                                \
+{ \
+    TickType_t xLastWakeTime; \
+    xLastWakeTime = xTaskGetTickCount (); \
     while (true) {                                                                                           \
-        xTaskNotifyWait(0, 0, nullptr, portMAX_DELAY);                                                   \
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS((size_t)(1000.0 / frequency)));                                                   \
         name##_fn();                                                                                     \
     }                                                                                                        \
 }                                                                                                                \
                                                                                                                         \
-static void name##_timer_cb(TimerHandle_t xTimer)                                                                \
-{                                                                                                                \
-    if (name##_task_handle) { \
-        xTaskNotify(*name##_task_handle, 0, eNoAction);                                                         \
-    } \
-}                                                                                                                \
                                                                                                                         \
 static const int name##_tmp = System::Impl::RoutineManager::register_routine(                                    \
     #name, /* Routine name */                                                                                \
@@ -183,9 +178,7 @@ static const int name##_tmp = System::Impl::RoutineManager::register_routine(   
     name##_task_stack, /* Routine task stack */                                                              \
     stack_size, /* Size of routine stack */                                                                  \
     &name##_task_storage, /* Routine name */                                                                 \
-    &name##_task_handle, /* Routine task handle pointer pointer. Will be set by the register_routine call  */ \
-    name##_timer_cb, /* Routine timer callback to trigger task */                                            \
-    &name##_timer_storage /* Routine timer storage */                                                        \
+    &name##_task_handle /* Routine task handle pointer pointer. Will be set by the register_routine call  */ \
 );                                                                                                               \
                                                                                                                         \
 } /* namespace Generated */                                                                                      \

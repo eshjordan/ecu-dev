@@ -30,7 +30,7 @@ static StaticTask_t out_update_tsk_buf = {};
 static bool esp32_spi_inited = false;
 static bool can_inited = false;
 
-extern osMutexId esp32DataMutexHandle;
+extern osMutexId_t esp32DataMutexHandle;
 
 static ALIGN ESP32_In_ADC_t adc_data[9] = { 0 };
 static ALIGN ESP32_In_Hall_t hall_data[1] = { 0 };
@@ -83,7 +83,7 @@ bool receive_ack(void)
 
 void update_adc(IOADCChannel_en channel)
 {
-	xSemaphoreTake(esp32DataMutexHandle, portMAX_DELAY);
+	osMutexAcquire(esp32DataMutexHandle, portMAX_DELAY);
 
 	// Send request
 	request_peripheral(ESP32_IN_ADC, channel);
@@ -94,7 +94,7 @@ void update_adc(IOADCChannel_en channel)
 	vTaskDelay(SPI_WAIT_TIME);
 
 	if (!ack) {
-		xSemaphoreGive(esp32DataMutexHandle);
+		osMutexRelease(esp32DataMutexHandle);
 		return;
 	}
 
@@ -107,7 +107,7 @@ void update_adc(IOADCChannel_en channel)
 	    calc_crc(&adc_msg, offsetof(ESP32_In_ADC_t, checksum))) {
 		printf("SPI - Received invalid adc msg - bad CRC\n");
 		vTaskDelay(SPI_WAIT_TIME);
-		xSemaphoreGive(esp32DataMutexHandle);
+		osMutexRelease(esp32DataMutexHandle);
 		return;
 	}
 
@@ -115,12 +115,12 @@ void update_adc(IOADCChannel_en channel)
 
 	vTaskDelay(SPI_WAIT_TIME);
 
-	xSemaphoreGive(esp32DataMutexHandle);
+	osMutexRelease(esp32DataMutexHandle);
 }
 
 void update_hall(IOHallChannel channel)
 {
-	xSemaphoreTake(esp32DataMutexHandle, portMAX_DELAY);
+	osMutexAcquire(esp32DataMutexHandle, portMAX_DELAY);
 
 	// Send request
 	request_peripheral(ESP32_IN_HALL, channel);
@@ -135,13 +135,13 @@ void update_hall(IOHallChannel channel)
 	    calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum))) {
 		printf("SPI - Received invalid acknowledgement msg - bad CRC\n");
 		vTaskDelay(SPI_WAIT_TIME);
-		xSemaphoreGive(esp32DataMutexHandle);
+		osMutexRelease(esp32DataMutexHandle);
 		return;
 	}
 	if (ack_msg.type != ESP32_ACK) {
 		printf("SPI - Received invalid ack command\n");
 		vTaskDelay(SPI_WAIT_TIME);
-		xSemaphoreGive(esp32DataMutexHandle);
+		osMutexRelease(esp32DataMutexHandle);
 		return;
 	}
 
@@ -156,7 +156,7 @@ void update_hall(IOHallChannel channel)
 	    calc_crc(&hall_msg, offsetof(ESP32_In_Hall_t, checksum))) {
 		printf("SPI - Received invalid hall msg - bad CRC\n");
 		vTaskDelay(SPI_WAIT_TIME);
-		xSemaphoreGive(esp32DataMutexHandle);
+		osMutexRelease(esp32DataMutexHandle);
 		return;
 	}
 
@@ -164,12 +164,12 @@ void update_hall(IOHallChannel channel)
 
 	vTaskDelay(SPI_WAIT_TIME);
 
-	xSemaphoreGive(esp32DataMutexHandle);
+	osMutexRelease(esp32DataMutexHandle);
 }
 
 void update_din(IODINChannel_en channel)
 {
-	xSemaphoreTake(esp32DataMutexHandle, portMAX_DELAY);
+	osMutexAcquire(esp32DataMutexHandle, portMAX_DELAY);
 
 	// Send request
 	request_peripheral(ESP32_IN_DIN, channel);
@@ -184,13 +184,13 @@ void update_din(IODINChannel_en channel)
 	    calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum))) {
 		printf("SPI - Received invalid acknowledgement msg - bad CRC\n");
 		vTaskDelay(SPI_WAIT_TIME);
-		xSemaphoreGive(esp32DataMutexHandle);
+		osMutexRelease(esp32DataMutexHandle);
 		return;
 	}
 	if (ack_msg.type != ESP32_ACK) {
 		printf("SPI - Received invalid ack command\n");
 		vTaskDelay(SPI_WAIT_TIME);
-		xSemaphoreGive(esp32DataMutexHandle);
+		osMutexRelease(esp32DataMutexHandle);
 		return;
 	}
 
@@ -205,7 +205,7 @@ void update_din(IODINChannel_en channel)
 	    calc_crc(&din_msg, offsetof(ESP32_In_DIN_t, checksum))) {
 		printf("SPI - Received invalid hall msg - bad CRC\n");
 		vTaskDelay(SPI_WAIT_TIME);
-		xSemaphoreGive(esp32DataMutexHandle);
+		osMutexRelease(esp32DataMutexHandle);
 		return;
 	}
 
@@ -213,12 +213,12 @@ void update_din(IODINChannel_en channel)
 
 	vTaskDelay(SPI_WAIT_TIME);
 
-	xSemaphoreGive(esp32DataMutexHandle);
+	osMutexRelease(esp32DataMutexHandle);
 }
 
 void update_dac(IODACChannel_en channel)
 {
-	xSemaphoreTake(esp32DataMutexHandle, portMAX_DELAY);
+	osMutexAcquire(esp32DataMutexHandle, portMAX_DELAY);
 
 	// Send request
 	request_peripheral(ESP32_OUT_DAC, channel);
@@ -233,13 +233,13 @@ void update_dac(IODACChannel_en channel)
 	    calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum))) {
 		printf("SPI - Received invalid acknowledgement msg - bad CRC\n");
 		vTaskDelay(SPI_WAIT_TIME);
-		xSemaphoreGive(esp32DataMutexHandle);
+		osMutexRelease(esp32DataMutexHandle);
 		return;
 	}
 	if (ack_msg.type != ESP32_ACK) {
 		printf("SPI - Received invalid ack command\n");
 		vTaskDelay(SPI_WAIT_TIME);
-		xSemaphoreGive(esp32DataMutexHandle);
+		osMutexRelease(esp32DataMutexHandle);
 		return;
 	}
 
@@ -254,12 +254,12 @@ void update_dac(IODACChannel_en channel)
 
 	vTaskDelay(SPI_WAIT_TIME);
 
-	xSemaphoreGive(esp32DataMutexHandle);
+	osMutexRelease(esp32DataMutexHandle);
 }
 
 void update_pwm(IOPWMChannel_en channel)
 {
-	xSemaphoreTake(esp32DataMutexHandle, portMAX_DELAY);
+	osMutexAcquire(esp32DataMutexHandle, portMAX_DELAY);
 
 	// Send request
 	request_peripheral(ESP32_OUT_PWM, channel);
@@ -274,13 +274,13 @@ void update_pwm(IOPWMChannel_en channel)
 	    calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum))) {
 		printf("SPI - Received invalid acknowledgement msg - bad CRC\n");
 		vTaskDelay(SPI_WAIT_TIME);
-		xSemaphoreGive(esp32DataMutexHandle);
+		osMutexRelease(esp32DataMutexHandle);
 		return;
 	}
 	if (ack_msg.type != ESP32_ACK) {
 		printf("SPI - Received invalid ack command\n");
 		vTaskDelay(SPI_WAIT_TIME);
-		xSemaphoreGive(esp32DataMutexHandle);
+		osMutexRelease(esp32DataMutexHandle);
 		return;
 	}
 
@@ -295,12 +295,12 @@ void update_pwm(IOPWMChannel_en channel)
 
 	vTaskDelay(SPI_WAIT_TIME);
 
-	xSemaphoreGive(esp32DataMutexHandle);
+	osMutexRelease(esp32DataMutexHandle);
 }
 
 void update_dout(IODOUTChannel channel)
 {
-	xSemaphoreTake(esp32DataMutexHandle, portMAX_DELAY);
+	osMutexAcquire(esp32DataMutexHandle, portMAX_DELAY);
 
 	// Send request
 	request_peripheral(ESP32_OUT_DOUT, channel);
@@ -315,13 +315,13 @@ void update_dout(IODOUTChannel channel)
 	    calc_crc(&ack_msg, offsetof(ESP32_Request_t, checksum))) {
 		printf("SPI - Received invalid acknowledgement msg - bad CRC\n");
 		vTaskDelay(SPI_WAIT_TIME);
-		xSemaphoreGive(esp32DataMutexHandle);
+		osMutexRelease(esp32DataMutexHandle);
 		return;
 	}
 	if (ack_msg.type != ESP32_ACK) {
 		printf("SPI - Received invalid ack command\n");
 		vTaskDelay(SPI_WAIT_TIME);
-		xSemaphoreGive(esp32DataMutexHandle);
+		osMutexRelease(esp32DataMutexHandle);
 		return;
 	}
 
@@ -336,7 +336,7 @@ void update_dout(IODOUTChannel channel)
 
 	vTaskDelay(SPI_WAIT_TIME);
 
-	xSemaphoreGive(esp32DataMutexHandle);
+	osMutexRelease(esp32DataMutexHandle);
 }
 
 extern "C" void esp_in_update(TimerHandle_t handle)
