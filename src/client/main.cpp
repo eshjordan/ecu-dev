@@ -289,7 +289,7 @@ void send_file(const std::filesystem::directory_entry &file, const std::string &
 
     std::string type_and_name = type + "/" + filename.c_str();
 
-    ECU_Msg_t file_header = ecu_msg_make(0, type_and_name.c_str(), data, ECU_Msg_t::VALUE_CMD);
+    ECU_Msg_t file_header = ecu_msg_make(0, type_and_name.c_str(), data, ECU_Command_t::VALUE_CMD);
 
     if (send(sock, &file_header, sizeof(ECU_Msg_t), 0) < 0)
     {
@@ -339,7 +339,7 @@ void send_file(const std::filesystem::directory_entry &file, const std::string &
 
 void echo_test()
 {
-    ECU_Msg_t msg = ecu_msg_make(0, "ping", nullptr, ECU_Msg_t::ECHO_CMD);
+    ECU_Msg_t msg = ecu_msg_make(0, "ping", nullptr, ECU_Command_t::ECHO_CMD);
     send(sock, &msg, sizeof(ECU_Msg_t), 0);
 }
 
@@ -348,7 +348,7 @@ void sync_test()
     uint32_t id         = 0;
     uint64_t sync_count = 10;
 
-    ECU_Msg_t init_msg = ecu_msg_make(id++, "Test Message", &sync_count, ECU_Msg_t::SYNC_CMD);
+    ECU_Msg_t init_msg = ecu_msg_make(id++, "Test Message", &sync_count, ECU_Command_t::SYNC_CMD);
 
     if (send(sock, &init_msg, sizeof(ECU_Msg_t), 0) < 0)
     {
@@ -368,7 +368,7 @@ void sync_test()
     // Start pinging
     for (int i = 0; i < sync_count; i++)
     {
-        ECU_Msg_t msg = ecu_msg_make(id++, "Test Message", nullptr, ECU_Msg_t::PING_CMD);
+        ECU_Msg_t msg = ecu_msg_make(id++, "Test Message", nullptr, ECU_Command_t::PING_CMD);
 
         if (send(sock, &msg, sizeof(ECU_Msg_t), 0) < 0)
         {
@@ -426,13 +426,13 @@ void sync_test()
 
 void remote_restart()
 {
-    ECU_Msg_t msg = ecu_msg_make(0, "restart", nullptr, ECU_Msg_t::RESTART_CMD);
+    ECU_Msg_t msg = ecu_msg_make(0, "restart", nullptr, ECU_Command_t::RESTART_CMD);
     send(sock, &msg, sizeof(ECU_Msg_t), 0);
 }
 
 void request_status()
 {
-    ECU_Msg_t msg = ecu_msg_make(0, "status", nullptr, ECU_Msg_t::STATUS_CMD);
+    ECU_Msg_t msg = ecu_msg_make(0, "status", nullptr, ECU_Command_t::STATUS_CMD);
     send(sock, &msg, sizeof(ECU_Msg_t), 0);
 
     Header_t header;
@@ -470,7 +470,7 @@ void firmware_update_test()
 
     uint32_t id        = 0;
     uint64_t data      = bin_files.size() + lib_files.size();
-    ECU_Msg_t init_msg = ecu_msg_make(id++, "Number of files", &data, ECU_Msg_t::FIRMWARE_UPDATE_CMD);
+    ECU_Msg_t init_msg = ecu_msg_make(id++, "Number of files", &data, ECU_Command_t::FIRMWARE_UPDATE_CMD);
 
     if (send(sock, &init_msg, sizeof(ECU_Msg_t), 0) < 0)
     {

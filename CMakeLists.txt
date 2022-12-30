@@ -1,61 +1,45 @@
 cmake_minimum_required(VERSION 3.0)
 project(ECU)
 
-if(NOT BUILD_TYP)
-    set(BUILD_TYP "amd64")
-endif()
+option(RASPI "Try to compile for a Raspberry Pi 3b+" OFF)
+string(FIND "${CMAKE_C_COMPILER}" "arm" ARM_COMPILER)
 
-if(DEFINED CMAKE_TOOLCHAIN_FILE)
+# Find if we're using an x86 or ARM compiler
+if(ARM_COMPILER EQUAL -1)
+    set(MANAGER_BUILD_DIR "stm32-ecu-manager-server")
 
-    include(${CMAKE_TOOLCHAIN_FILE})
+    set(TARGET_NAME "amd64")
 
-else()
-
-    set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS}")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99 -Wno-implicit")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-
-endif()
-
-if(${BUILD_TYP} MATCHES "amd64")
-
-    set(COMMON_FLAGS " \
-        -march=znver1 \
-        -mtune=znver1"
-    )
+    set(COMMON_FLAGS "-march=znver1 -mtune=znver1")
 
     set(C_FLGS "")
 
-elseif(${BUILD_TYP} MATCHES "raspi")
+elseif(RASPI)
+
+    set(TARGET_NAME "raspi")
 
     add_definitions(-DRASPI)
-    set(COMMON_FLAGS " \
-        -march=armv8-a \
-        -mtune=cortex-a53 \
-        -mfloat-abi=hard \
-        -DRASPPI=3 \
-        -marm"
-    )
+    set(COMMON_FLAGS "-march=armv8-a -mtune=cortex-a53 -mfloat-abi=hard -DRASPPI=3 -marm")
 
-    set(C_FLGS " \
-        -Wno-psabi \
-        -fsigned-char \
-        -mno-unaligned-access"
-    )
+    set(C_FLGS "-Wno-psabi -fsigned-char -mno-unaligned-access")
+
+else()
+
+    set(TARGET_NAMEE "arm")
+
+    set(COMMON_FLAGS "")
+
+    set(C_FLGS "")
 
 endif()
 
-set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} ${COMMON_FLAGS}")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS} ${C_FLGS}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS} ${C_FLGS}")
+set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} ${COMMON_FLAGS} -k")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS} ${C_FLGS} -std=gnu99 -Wno-implicit -fPIC")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS} ${C_FLGS} -std=c++11 -fPIC")
 
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/${BUILD_TYP})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/${BUILD_TYP})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/${BUILD_TYP})
-
-set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -k")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib/${TARGET_NAME})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib/${TARGET_NAME})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin/${TARGET_NAME})
 
 set(CMAKE_BUILD_TYPE "Debug")
 set(STATIC_PROGRAM ON)
@@ -101,6 +85,6 @@ include_directories(${ECU_SDK_INCLUDE})
 
 add_subdirectory(src/program)
 
-if(${BUILD_TYP} MATCHES "amd64")
+if(${TARGET_NAME} MATCHES "amd64")
     add_subdirectory(src/client)
 endif()
