@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 project(ECU)
 
-option(RASPI "Try to compile for a Raspberry Pi 3b+" OFF)
+option(ECU_RASPI "Try to compile for a Raspberry Pi 3b+" OFF)
 string(FIND "${CMAKE_C_COMPILER}" "arm" ARM_COMPILER)
 
 # Find if we're using an x86 or ARM compiler
@@ -14,7 +14,7 @@ if(ARM_COMPILER EQUAL -1)
 
     set(C_FLGS "")
 
-elseif(RASPI)
+elseif(ECU_RASPI)
 
     set(TARGET_NAME "raspi")
 
@@ -42,15 +42,15 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib/${TARGET_NAME
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin/${TARGET_NAME})
 
 set(CMAKE_BUILD_TYPE "Debug")
-set(STATIC_PROGRAM ON)
+set(STATIC_ALLOCATION ON)
 set(LOG_STATIC_ALLOCATION_REQUESTS OFF)
-set(BUILD_SHARED_LIBS ON)
+# set(BUILD_SHARED_LIBS ON)
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 add_definitions(-DUSERSPACE_BUILD)
 
-if(STATIC_PROGRAM)
-    add_definitions(-DSTATIC_PROGRAM)
+if(STATIC_ALLOCATION)
+    add_definitions(-DSTATIC_ALLOCATION)
     if(LOG_STATIC_ALLOCATION_REQUESTS)
         add_definitions(-DLOG_STATIC_ALLOCATION_REQUESTS)
     endif()

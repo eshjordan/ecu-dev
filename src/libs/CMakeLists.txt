@@ -11,7 +11,7 @@ file(GLOB FreeRTOS_CORE_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/FreeRTOS/Source/portable/ThirdParty/GCC/Posix/utils/wait_for_event.c
 )
 
-if(${STATIC_PROGRAM})
+if(${STATIC_ALLOCATION})
     file(GLOB FreeRTOS_CORE_SRC
         ${FreeRTOS_CORE_SRC}
         ${CMAKE_CURRENT_SOURCE_DIR}/FreeRTOS/Source/portable/MemMang/heap_1.c

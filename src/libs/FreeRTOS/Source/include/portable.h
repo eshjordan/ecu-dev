@@ -169,7 +169,7 @@ void vPortDefineHeapRegions( const HeapRegion_t * const pxHeapRegions ) PRIVILEG
  */
 void vPortGetHeapStats( HeapStats_t * pxHeapStats );
 
-#ifndef STATIC_PROGRAM
+#ifndef STATIC_ALLOCATION
 
 /*
  * Map to the memory management routines required for the port.
