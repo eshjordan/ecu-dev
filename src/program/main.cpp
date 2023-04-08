@@ -8,10 +8,14 @@
 #include "mock_rtos.c"
 #endif
 
-
 int main(int argc, char *argv[])
 {
     System::init(argc, argv);
+
+    System::add_parameter("my_param_02", 0.0);
+    System::add_channel("channel_name_02", 0.0, ChannelLogRate::CHANNEL_LOG_100HZ);
+
+    double x = System::get_parameter_value<double>("my_param_02");
 
     /* Add tasks here. */
     System::run();

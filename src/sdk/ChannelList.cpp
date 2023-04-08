@@ -1,6 +1,7 @@
 #include "ChannelList.hpp"
+#include "stdlib.h"
 
-System::Impl::ChannelBase *System::Impl::ChannelList::m_channels[32];
+System::Impl::Channel *System::Impl::ChannelList::m_channels[32];
 uint32_t System::Impl::ChannelList::m_channel_count = 0;
 TimerHandle_t System::Impl::ChannelList::m_timers[];
 StaticTimer_t System::Impl::ChannelList::m_timer_buffers[];
@@ -23,7 +24,7 @@ void System::Impl::ChannelList::timer_cb(TimerHandle_t xTimer)
     case ChannelLogRate::CHANNEL_LOG_OFF:
     case ChannelLogRate::CHANNEL_LOG_COUNT:
     default: {
-        Error_Handler();
+        ecu_fatal_error("Invalid channel log rate set");
         break;
     }
     }
@@ -137,62 +138,3 @@ void System::Impl::ChannelList::timer_cb(TimerHandle_t xTimer)
         }
     }
 }
-
-
-// clang-format off
-
-template void System::Impl::ChannelList::add_channel<short int>(const char *name, const short int &value, const ChannelLogRate &log_rate);
-template void System::Impl::ChannelList::add_channel<int>(const char *name, const int &value, const ChannelLogRate &log_rate);
-template void System::Impl::ChannelList::add_channel<unsigned int>(const char *name, const unsigned int &value, const ChannelLogRate &log_rate);
-template void System::Impl::ChannelList::add_channel<unsigned long int>(const char *name, const unsigned long int &value, const ChannelLogRate &log_rate);
-template void System::Impl::ChannelList::add_channel<long long int>(const char *name, const long long int &value, const ChannelLogRate &log_rate);
-template void System::Impl::ChannelList::add_channel<unsigned long long int>(const char *name, const unsigned long long int &value, const ChannelLogRate &log_rate);
-template void System::Impl::ChannelList::add_channel<bool>(const char *name, const bool &value, const ChannelLogRate &log_rate);
-template void System::Impl::ChannelList::add_channel<signed char>(const char *name, const signed char &value, const ChannelLogRate &log_rate);
-template void System::Impl::ChannelList::add_channel<unsigned char>(const char *name, const unsigned char &value, const ChannelLogRate &log_rate);
-template void System::Impl::ChannelList::add_channel<char>(const char *name, const char &value, const ChannelLogRate &log_rate);
-template void System::Impl::ChannelList::add_channel<wchar_t>(const char *name, const wchar_t &value, const ChannelLogRate &log_rate);
-template void System::Impl::ChannelList::add_channel<char16_t>(const char *name, const char16_t &value, const ChannelLogRate &log_rate);
-template void System::Impl::ChannelList::add_channel<char32_t>(const char *name, const char32_t &value, const ChannelLogRate &log_rate);
-template void System::Impl::ChannelList::add_channel<float>(const char *name, const float &value, const ChannelLogRate &log_rate);
-template void System::Impl::ChannelList::add_channel<double>(const char *name, const double &value, const ChannelLogRate &log_rate);
-template void System::Impl::ChannelList::add_channel<long double>(const char *name, const long double &value, const ChannelLogRate &log_rate);
-// template void System::Impl::ChannelList::add_channel<const char *>(const char *name, const char *value, const ChannelLogRate &log_rate);
-
-template short int System::Impl::ChannelList::get_channel<short int> (const char *name);
-template int System::Impl::ChannelList::get_channel<int> (const char *name);
-template unsigned int System::Impl::ChannelList::get_channel<unsigned int> (const char *name);
-template unsigned long int System::Impl::ChannelList::get_channel<unsigned long int> (const char *name);
-template long long int System::Impl::ChannelList::get_channel<long long int> (const char *name);
-template unsigned long long int System::Impl::ChannelList::get_channel<unsigned long long int> (const char *name);
-template bool System::Impl::ChannelList::get_channel<bool> (const char *name);
-template signed char System::Impl::ChannelList::get_channel<signed char> (const char *name);
-template unsigned char System::Impl::ChannelList::get_channel<unsigned char> (const char *name);
-template char System::Impl::ChannelList::get_channel<char> (const char *name);
-template wchar_t System::Impl::ChannelList::get_channel<wchar_t> (const char *name);
-template char16_t System::Impl::ChannelList::get_channel<char16_t> (const char *name);
-template char32_t System::Impl::ChannelList::get_channel<char32_t> (const char *name);
-template float System::Impl::ChannelList::get_channel<float> (const char *name);
-template double System::Impl::ChannelList::get_channel<double> (const char *name);
-template long double System::Impl::ChannelList::get_channel<long double> (const char *name);
-template const char * System::Impl::ChannelList::get_channel<const char *> (const char *name);
-
-template void System::Impl::ChannelList::set_channel<short int>(const char *name, const short int &value);
-template void System::Impl::ChannelList::set_channel<int>(const char *name, const int &value);
-template void System::Impl::ChannelList::set_channel<unsigned int>(const char *name, const unsigned int &value);
-template void System::Impl::ChannelList::set_channel<unsigned long int>(const char *name, const unsigned long int &value);
-template void System::Impl::ChannelList::set_channel<long long int>(const char *name, const long long int &value);
-template void System::Impl::ChannelList::set_channel<unsigned long long int>(const char *name, const unsigned long long int &value);
-template void System::Impl::ChannelList::set_channel<bool>(const char *name, const bool &value);
-template void System::Impl::ChannelList::set_channel<signed char>(const char *name, const signed char &value);
-template void System::Impl::ChannelList::set_channel<unsigned char>(const char *name, const unsigned char &value);
-template void System::Impl::ChannelList::set_channel<char>(const char *name, const char &value);
-template void System::Impl::ChannelList::set_channel<wchar_t>(const char *name, const wchar_t &value);
-template void System::Impl::ChannelList::set_channel<char16_t>(const char *name, const char16_t &value);
-template void System::Impl::ChannelList::set_channel<char32_t>(const char *name, const char32_t &value);
-template void System::Impl::ChannelList::set_channel<float>(const char *name, const float &value);
-template void System::Impl::ChannelList::set_channel<double>(const char *name, const double &value);
-template void System::Impl::ChannelList::set_channel<long double>(const char *name, const long double &value);
-// template void System::Impl::ChannelList::set_channel<const char *>(const char *name, const char *value);
-
-// clang-format on

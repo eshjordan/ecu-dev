@@ -69,7 +69,7 @@ inline void restart(void *signal)
 void shutdown(int signal);
 
 /**
- * @brief Add a new parameter to the server.
+ * @brief Add a new Parameter to the server.
  *
  * @tparam T Type of the Parameter's value. Set explicitly to avoid runtime errors.
  * @param name Name of the Parameter.
@@ -81,42 +81,52 @@ template <typename T> void add_parameter(const char *name, const T &value)
 }
 
 /**
- * @brief Get the value of an existing parameter given its name.
+ * @brief Get the value of an existing Parameter, given its name.
  *
  * @tparam T Type of the Parameter's value. Set explicitly to avoid runtime errors.
  * @param name Name of the Parameter.
  * @return T Current value of the Parameter.
  */
-template <typename T> [[nodiscard]] T get_parameter(const char *name)
+template <typename T> [[nodiscard]] T get_parameter_value(const char *name)
 {
-	return System::Impl::ParameterList::get_parameter<T>(name);
+	return System::Impl::ParameterList::get_parameter_value<T>(name);
 }
 
 /**
- * @brief Set the value of an existing parameter given its name.
+ * @brief Add a new channel to the server.
  *
- * @tparam T Type of the Parameter's value. Set explicitly to avoid runtime errors.
- * @param name Name of the Parameter.
- * @param value New value of the Parameter.
+ * @tparam T Type of the Channel's value. Set explicitly to avoid runtime errors.
+ * @param name Name of the Channel.
+ * @param value Initial value of the Channel.
+ * @param log_rate Rate at which the value of the channel should be sampled.
  */
-template <typename T> void set_parameter(const char *name, const T &value)
-{
-	System::Impl::ParameterList::set_parameter<T>(name, value);
-}
-
 template <typename T> void add_channel(const char *name, const T &value, const ChannelLogRate &log_rate)
 {
 	System::Impl::ChannelList::add_channel<T>(name, value, log_rate);
 }
 
-template <typename T> [[nodiscard]] T get_channel(const char *name)
+/**
+ * @brief Get the value of an existing Channel given its name.
+ *
+ * @tparam T Type of the Channel's value. Set explicitly to avoid runtime errors.
+ * @param name Name of the Channel.
+ * @return T Current value of the Channel.
+ */
+template <typename T> [[nodiscard]] T get_channel_value(const char *name)
 {
-	return System::Impl::ChannelList::get_channel<T>(name);
+	return System::Impl::ChannelList::get_channel_value<T>(name);
 }
 
-template <typename T> void set_channel(const char *name, const T &value)
+/**
+ * @brief Modify the value of an existing Channel, given its name.
+ *
+ * @tparam T Type of the Channel's value. Set explicitly to avoid runtime errors.
+ * @param name Name of the Channel.
+ * @param value New value of the Channel.
+ */
+template <typename T> void set_channel_value(const char *name, const T &value)
 {
-    System::Impl::ChannelList::set_channel<T>(name, value);
+    System::Impl::ChannelList::set_channel_value<T>(name, value);
 }
 
 } // namespace System

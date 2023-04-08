@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 project(ECU_SDK)
 
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
+
 set(ECU_SDK_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/Channel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ChannelList.cpp
@@ -8,11 +11,13 @@ set(ECU_SDK_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/Connection.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ModuleManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Parameter.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/ParameterValue.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ParameterList.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/RoutineManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Server.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/System.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/portable/x86/IO.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/portable/x86/Error.cpp
 )
 
 set(ECU_SDK_INCLUDE

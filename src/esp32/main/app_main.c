@@ -519,7 +519,7 @@ void app_main(void)
 
     xTaskCreate(run_uart, "run_uart", 4096, NULL, 2, &uart_task);
 
-    xTaskCreate(run_can, "run_can", 4096, NULL, 5, &can_task);
+    // xTaskCreate(run_can, "run_can", 4096, NULL, 5, &can_task);
 
     xTaskCreate(run_pwm, "run_pwm", 4096, NULL, 4, &pwm_task);
 

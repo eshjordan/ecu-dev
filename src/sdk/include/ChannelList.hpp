@@ -2,12 +2,12 @@
 
 #include "Channel.hpp"
 #include "ChannelList.hpp"
+#include "Error.hpp"
 #include "RTOS.hpp"
 #include "portmacro.h"
 #include "utils.hpp"
+#include <stdio.h>
 #include <string.h>
-
-extern "C" void Error_Handler(void);
 
 namespace System
 {
@@ -23,7 +23,7 @@ class ChannelList {
 	/** Member variables */
 
 	/** @brief List of ChannelBase pointers. */
-	static ChannelBase *m_channels[];
+	static Channel *m_channels[];
 
 	static uint32_t m_channel_count;
 
@@ -33,7 +33,23 @@ class ChannelList {
 
 	static void timer_cb(TimerHandle_t xTimer);
 
-    public:
+public:
+
+	static void add_channel(const char *name, const ParameterValue & value, const ChannelLogRate &log_rate)
+	{
+		char tmp_name[64];
+		for (int i = 0; i < m_channel_count; i++) {
+			auto *channel = m_channels[i];
+			channel->get_name(tmp_name);
+			if (strcmp(tmp_name, name) == 0) {
+				ecu_fatal_error("Channel '%s' already registered\n", name);
+				return;
+			}
+		}
+
+		m_channels[m_channel_count++] = new Channel(name, value, log_rate);
+	}
+
 	/**
      * @brief Add a new named Channel to the ChannelList.
      *
@@ -42,7 +58,9 @@ class ChannelList {
      * @param value Value of the Channel.
      */
 	template <typename T>
-	static void add_channel(const char *name, const T &value, const ChannelLogRate &log_rate);
+	static void add_channel(const char *name, T value, const ChannelLogRate &log_rate) {
+		add_channel(name, ParameterValue(value), log_rate);
+	}
 
 	/**
      * @brief Get the value of a named channel.
@@ -51,8 +69,26 @@ class ChannelList {
      * @param name Name of the Channel.
      * @return T Current value of the Channel.
      */
-	template <typename T>
-	[[nodiscard]] static T get_channel(const char *name);
+	template<typename T>
+	[[nodiscard]]
+	static
+	decltype(auto)
+	get_channel_value(const char *name)
+	{
+		char tmp_name[64];
+		for (int i = 0; i < m_channel_count; i++) {
+			auto *channel = m_channels[i];
+			channel->get_name(tmp_name);
+			if (strcmp(tmp_name, name) == 0) {
+				return channel->get_value<T>();
+			}
+		}
+
+		ecu_fatal_error("Channel '%s' not found\n", name);
+
+		// Should never actually return, but needed to prevent type determination compilation errors
+		return m_channels[0]->get_value<T>();
+	}
 
 	/**
      * @brief Set a new value for a named Channel.
@@ -61,8 +97,54 @@ class ChannelList {
      * @param name Name of the Channel.
      * @param value New value of the Channel.
      */
-	template <typename T>
-	static void set_channel(const char *name, const T &value);
+	template<typename T>
+	static
+	void
+	set_channel_value_(const char *name, const ParameterValue &value)
+	{
+		char tmp_name[64];
+		for (int i = 0; i < m_channel_count; i++) {
+			auto *channel = m_channels[i];
+			channel->get_name(tmp_name);
+			if (strcmp(tmp_name, name) == 0) {
+				channel->set_value(value);
+				return;
+			}
+		}
+
+		ecu_fatal_error("Channel '%s' not found\n", name);
+		return;
+	}
+
+	/**
+     * @brief Set a new value for a named Channel.
+     *
+     * @tparam T Type of the Channel's value. Set explicitly to avoid runtime errors.
+     * @param name Name of the Channel.
+     * @param value New value of the Channel.
+     */
+	template<typename T>
+	static
+	void
+	set_channel_value(const char *name, const ParameterValue &value)
+	{
+		set_channel_value_<T>(name, value);
+	}
+
+	/**
+     * @brief Set a new value for a named Channel.
+     *
+     * @tparam T Type of the Channel's value. Set explicitly to avoid runtime errors.
+     * @param name Name of the Channel.
+     * @param value New value of the Channel.
+     */
+	template<typename T>
+	static
+	void
+	set_channel_value(const char *name, T value)
+	{
+		set_channel_value_<T>(name, ParameterValue(value));
+	}
 
 	/**
      * @brief Get the number of Channels in the ChannelList.
@@ -97,59 +179,12 @@ class ChannelList {
 			);
 
 			if (xTimerStart(m_timers[i], 0) != pdTRUE) {
-				printf("Channel logging %dHz timer start failed!\n",
-				       frequency);
-				Error_Handler();
+				ecu_fatal_error("Channel logging %ldHz timer start failed!\n", frequency);
 			}
 		}
 	}
 };
 
-template <typename T>
-void ChannelList::add_channel(const char *name, const T &value, const ChannelLogRate &log_rate)
-{
-	for (int i = 0; i < m_channel_count; i++) {
-		auto *channel = m_channels[i];
-		if (strcmp(channel->get_name(), name) == 0) {
-			printf("Channel '%s' already registered\n", name);
-			return;
-		}
-	}
-
-	m_channels[m_channel_count++] = new Channel<T>(name, value, log_rate);
-}
-
-template <typename T> [[nodiscard]] T ChannelList::get_channel(const char *name)
-{
-	for (int i = 0; i < m_channel_count; i++) {
-		auto *channel = m_channels[i];
-		if (strcmp(channel->get_name(), name) == 0) {
-			return ((Channel<T> *)(channel))->get_value();
-		}
-	}
-
-	printf("Channel '%s' not found\n", name);
-	return {};
-}
-
-template <typename T>
-void ChannelList::set_channel(const char *name, const T &value)
-{
-	for (int i = 0; i < m_channel_count; i++) {
-		auto *channel = m_channels[i];
-		if (strcmp(channel->get_name(), name) == 0) {
-			if (type_hash<T>() != channel->get_type()) {
-				printf("Channel '%s' set to wrong type, explicitly set the typename template argument\n",
-				       name);
-			}
-			((Channel<T> *)channel)->set_value(value);
-			return;
-		}
-	}
-
-	printf("Channel '%s' not found\n", name);
-}
 
 }
 }
-

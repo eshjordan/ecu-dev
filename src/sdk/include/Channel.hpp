@@ -39,7 +39,7 @@ class ChannelBase {
      *
      * @return TYPE_ID Type ID value.
      */
-	[[nodiscard]] virtual TYPE_ID get_type(void) const = 0;
+	[[nodiscard]] virtual ParameterType get_type(void) const = 0;
 
 	/**
      * @brief Get the log rate of the channel.
@@ -50,83 +50,40 @@ class ChannelBase {
 };
 
 /**
- * @brief Template class to store named values.
+ * @brief Class to store named values, to be logged at a set frequency.
  *
- * @tparam T Type of the channel's value. Set explicitly if possible.
  */
-template <typename T> class Channel : public ChannelBase {
-    private:
+class Channel  {
+
+private:
 	/** @brief Value stored by the Channel. */
-	T m_value{};
-
-	/** @brief Name of the Channel. */
-	const char *m_name{};
-
-	/** @brief Type of the Channel. */
-	const TYPE_ID m_type = TYPE_ID::UNDEFINED;
+	Parameter m_parameter{};
 
 	/** @brief Logging rate of the Channel. */
 	const ChannelLogRate m_log_rate = ChannelLogRate::CHANNEL_LOG_OFF;
 
-    public:
+public:
+	Channel();
+
+	explicit Channel(const char *name) : m_parameter(name) {}
+
 	/**
      * @brief Construct a new named Channel object
      *
      * @param name Channel name.
      * @param value Initial value of the Channel.
+     * @param log_rate Logging rate of the Channel.
      */
-	Channel<T>(const char *name, const T &value,
+	Channel(const char *name, const ParameterValue &value,
 		   const ChannelLogRate &log_rate)
-		: m_type(type_hash<T>()), m_name(name), m_log_rate(log_rate)
-	{
-		(void)name;
-		(void)log_rate;
-		set_value(value);
-	}
+		: m_parameter(name, value), m_log_rate(log_rate)
+	{}
 
-	/** Rule of Six */
-
-	/**
-     * @brief Default constructor. Deleted as all Channels must be named at creation.
-     *
-     */
-	Channel(void) = delete;
-
-	/**
-     * @brief Destroy the Channel object.
-     *
-     */
-	~Channel<T>(void) = default;
-
-	/**
-     * @brief Copy constructor.
-     *
-     * @param other Channel to copy.
-     */
-	Channel<T>(const Channel<T> &other) = default;
-
-	/**
-     * @brief Copy assignment operator.
-     *
-     * @param other Channel to copy.
-     * @return Channel<T>& Reference to this Channel.
-     */
-	Channel<T> &operator=(const Channel<T> &other) = default;
-
-	/**
-     * @brief Move constructor.
-     *
-     * @param other Channel to move.
-     */
-	Channel<T>(Channel<T> &&other) noexcept = default;
-
-	/**
-     * @brief Move assignment operator.
-     *
-     * @param other Channel to move.
-     * @return Channel<T>& Reference to this Channel.
-     */
-	Channel<T> &operator=(Channel<T> &&other) noexcept = default;
+	/// Construct with given name and given parameter value.
+	template<typename ValueTypeT>
+	Channel(const char *name, ValueTypeT value, const ChannelLogRate &log_rate)
+	: Channel(name, ParameterValue(value), log_rate)
+	{}
 
 	/** Getters and Setters */
 
@@ -135,9 +92,9 @@ template <typename T> class Channel : public ChannelBase {
      *
      * @return const char * Channel name.
      */
-	[[nodiscard]] const char *get_name(void) const override
+	void get_name(char *out) const
 	{
-		return m_name;
+		m_parameter.get_name(out);
 	}
 
 	/**
@@ -145,19 +102,28 @@ template <typename T> class Channel : public ChannelBase {
      *
      * @return TYPE_ID Channel type.
      */
-	[[nodiscard]] TYPE_ID get_type(void) const override
+	[[nodiscard]] ParameterType get_type(void) const
 	{
-		return m_type;
+		return m_parameter.get_type();
 	}
 
+	/// Get value of parameter using rclcpp::ParameterType as template argument.
 	/**
-     * @brief Get the Channel's value.
-     *
-     * @return T Channel value.
-     */
-	[[nodiscard]] T get_value(void) const
+	* \throws rclcpp::exceptions::InvalidParameterTypeException if the type doesn't match
+	*/
+	template<ParameterType ParamT>
+	decltype(auto)
+	get_value() const
 	{
-		return m_value;
+		return m_parameter.get_value<ParamT>();
+	}
+
+	/// Get value of parameter using c++ types as template argument.
+	template<typename T>
+	decltype(auto)
+	get_value() const
+	{
+		return m_parameter.get_value<T>();
 	}
 
 	/**
@@ -165,7 +131,7 @@ template <typename T> class Channel : public ChannelBase {
 	 *
 	 * @return ChannelLogRate Logging rate.
 	 */
-	[[nodiscard]] ChannelLogRate get_log_rate(void) const override
+	[[nodiscard]] ChannelLogRate get_log_rate(void) const
 	{
 		return m_log_rate;
 	}
@@ -175,9 +141,16 @@ template <typename T> class Channel : public ChannelBase {
      *
      * @param value New value of the Channel.
      */
+	template<typename T>
 	void set_value(const T &value) noexcept
 	{
-		m_value = value;
+		ParameterValue new_value(value);
+		if (new_value.get_type() != m_parameter.get_type())
+		{
+			ecu_fatal_error("Cannot set channel to a different type");
+		}
+
+		m_parameter.value_ = new_value;
 	}
 };
 
