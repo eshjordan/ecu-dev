@@ -89,6 +89,35 @@ public:
     }
 
     /**
+     * @brief Get the value of a named parameter.
+     *
+     * @tparam T Type of the Parameter's value. Set explicitly to avoid runtime errors.
+     * @param name Name of the Parameter.
+     * @return T Current value of the Parameter.
+     */
+    template<ParameterType T>
+	[[nodiscard]]
+	static
+	decltype(auto)
+    get_parameter_value(const char *name)
+    {
+        char tmp_name[64];
+        for (int i = 0; i < m_parameter_count; i++)
+        {
+            auto *parameter = m_parameters[i];
+            parameter->get_name(tmp_name);
+            if (strcmp(tmp_name, name) == 0) {
+                return parameter->get_value<T>();
+            }
+        }
+
+        ecu_fatal_error("Parameter '%s' not found\n", name);
+
+        // Should never actually return, but needed to prevent type determination compilation errors
+        return m_parameters[0]->get_value<T>();
+    }
+
+    /**
      * @brief Set a new value for a named Parameter.
      *
      * @tparam T Type of the Parameter's value. Set explicitly to avoid runtime errors.

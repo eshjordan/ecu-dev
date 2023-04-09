@@ -32,14 +32,15 @@ enum Interproc_Command_t {
 	PROGRAM_UPDATE_CMD  = (u8)(8U),     /* Update the ECU's programmed software, user-defined. */
 	VALUE_CMD           = (u8)(9U),     /* Send a raw data value. */
 	PARAM_GET_CMD       = (u8)(10U),    /* Retreive a parameter's value. */
-	PARAM_SET_CMD       = (u8)(11U)     /* Set a parameter's value. */
+	PARAM_SET_CMD       = (u8)(11U),    /* Set a parameter's value. */
+	CHANNEL_GET_CMD     = (u8)(12U)     /* Retreive a channel's value. */
 } ALIGN;
 
 typedef enum Interproc_Command_t Interproc_Command_t;
 
 struct Interproc_Msg_t {
 	Interproc_Command_t command : 8;
-	u8 data[7] STRUCT_INIT;
+	u8 data[11] STRUCT_INIT;
 	CRC checksum STRUCT_INIT;
 } ALIGN;
 
