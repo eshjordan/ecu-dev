@@ -7,16 +7,14 @@ extern "C" {
 
 #include "Header.h"
 
-#define ECU_MSG_START_BYTE 0x9DU
+#define PARAMETER_START_BYTE 0xEDU
 
 // clang-format off
 
 #ifdef __cplusplus
-#define STRUCT_INIT {}
-#define START_BYTE_INIT =ECU_MSG_START_BYTE
+#define _PARAMETER_HEADER_INIT ={PARAMETER_START_BYTE, 0U, 0U}
 #else
-#define STRUCT_INIT
-#define START_BYTE_INIT
+#define PARAMETER_START_BYTE_INIT
 #endif
 
 // clang-format on
@@ -25,34 +23,20 @@ extern "C" {
 #define ALIGN __attribute__((aligned(4)))
 
 struct Parameter_t {
-    enum Parameter_Type_t {
-        UNDEFINED = 0,
-        SHORT_INT,
-        INT,
-        LONG_INT,
-        LONG_LONG_INT,
-        UNSIGNED_SHORT_INT,
-        UNSIGNED_INT,
-        UNSIGNED_LONG_INT,
-        UNSIGNED_LONG_LONG_INT,
-        BOOL,
-        SIGNED_CHAR,
-        UNSIGNED_CHAR,
-        CHAR,
-        WCHAR,
-        CHAR16,
-        CHAR32,
-        FLOAT,
-        DOUBLE,
-        LONG_DOUBLE,
-        STRING
-    }; ALIGN;
+    enum Parameter_Type_t : uint8_t {
+        PARAMETER_NOT_SET,
+        PARAMETER_BOOL,
+        PARAMETER_INTEGER,
+        PARAMETER_DOUBLE,
+        PARAMETER_STRING,
+        PARAMETER_BYTE_ARRAY,
+    } ALIGN;
 
-    Header_t header STRUCT_INIT;
-    char name[64] STRUCT_INIT;
-    uint8_t value[8] STRUCT_INIT; // Able to have 8 bytes / 64 bits (long long int) value at max
-    enum Parameter_Type_t command STRUCT_INIT;
-    CRC checksum STRUCT_INIT;
+    Header_t header _PARAMETER_HEADER_INIT;
+    char name[64] _STRUCT_INIT;
+    uint8_t value[8] _STRUCT_INIT; // Able to have 8 bytes / 64 bits (long long int) value at max
+    enum Parameter_Type_t command _STRUCT_INIT;
+    CRC checksum _STRUCT_INIT;
 } ALIGN;
 
 

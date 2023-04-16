@@ -1,5 +1,4 @@
 #include "main.hpp"
-#include "ECU_Msg.h"
 #include <algorithm>
 #include <filesystem>
 
@@ -289,18 +288,18 @@ void send_file(const std::filesystem::directory_entry &file, const std::string &
 
     std::string type_and_name = type + "/" + filename.c_str();
 
-    ECU_Msg_t file_header = ecu_msg_make(0, type_and_name.c_str(), data, ECU_Command_t::VALUE_CMD);
+    Interproc_Msg_t file_header = interproc_msg_make(Interproc_Command_t::CMD_VALUE, data, sizeof(data));
 
-    if (send(sock, &file_header, sizeof(ECU_Msg_t), 0) < 0)
+    if (send(sock, &file_header, sizeof(Interproc_Msg_t), 0) < 0)
     {
         printf("File header send failed\n");
         return;
     }
 
-    ECU_Msg_t ack_msg;
+    Interproc_Msg_t ack_msg;
 
     // Wait for server to acknowledge
-    if (recv(sock, &ack_msg, sizeof(ECU_Msg_t), 0) < 0)
+    if (recv(sock, &ack_msg, sizeof(Interproc_Msg_t), 0) < 0)
     {
         printf("ACK recv failed\n");
         return;
@@ -328,7 +327,7 @@ void send_file(const std::filesystem::directory_entry &file, const std::string &
     assert(tx_bytes == file_size);
 
     // Wait for server to acknowledge
-    if (recv(sock, &ack_msg, sizeof(ECU_Msg_t), 0) < 0)
+    if (recv(sock, &ack_msg, sizeof(Interproc_Msg_t), 0) < 0)
     {
         printf("ACK recv failed\n");
         return;
@@ -339,8 +338,8 @@ void send_file(const std::filesystem::directory_entry &file, const std::string &
 
 void echo_test()
 {
-    ECU_Msg_t msg = ecu_msg_make(0, "ping", nullptr, ECU_Command_t::ECHO_CMD);
-    send(sock, &msg, sizeof(ECU_Msg_t), 0);
+    Interproc_Msg_t msg = interproc_msg_make(Interproc_Command_t::CMD_ECHO, nullptr, 0);
+    send(sock, &msg, sizeof(Interproc_Msg_t), 0);
 }
 
 void sync_test()
@@ -348,9 +347,9 @@ void sync_test()
     uint32_t id         = 0;
     uint64_t sync_count = 10;
 
-    ECU_Msg_t init_msg = ecu_msg_make(id++, "Test Message", &sync_count, ECU_Command_t::SYNC_CMD);
+    Interproc_Msg_t init_msg = interproc_msg_make(Interproc_Command_t::CMD_SYNC, &sync_count, sizeof(sync_count));
 
-    if (send(sock, &init_msg, sizeof(ECU_Msg_t), 0) < 0)
+    if (send(sock, &init_msg, sizeof(Interproc_Msg_t), 0) < 0)
     {
         printf("Init send failed\n");
         return;
@@ -359,7 +358,7 @@ void sync_test()
     uint8_t buf[1024];
 
     // Wait for server to acknowledge
-    if (recv(sock, buf, sizeof(ECU_Msg_t), 0) < 0)
+    if (recv(sock, buf, sizeof(Interproc_Msg_t), 0) < 0)
     {
         printf("ACK recv failed\n");
         return;
@@ -368,32 +367,32 @@ void sync_test()
     // Start pinging
     for (int i = 0; i < sync_count; i++)
     {
-        ECU_Msg_t msg = ecu_msg_make(id++, "Test Message", nullptr, ECU_Command_t::PING_CMD);
+        Interproc_Msg_t msg = interproc_msg_make(Interproc_Command_t::CMD_PING, nullptr, 0);
 
-        if (send(sock, &msg, sizeof(ECU_Msg_t), 0) < 0)
+        if (send(sock, &msg, sizeof(Interproc_Msg_t), 0) < 0)
         {
             printf("send %d failed\n", i);
             return;
         }
 
         // Wait for server to acknowledge
-        if (recv(sock, buf, sizeof(ECU_Msg_t), 0) < 0)
+        if (recv(sock, buf, sizeof(Interproc_Msg_t), 0) < 0)
         {
             printf("ACK recv failed\n");
             return;
         }
     }
 
-    ECU_Msg_t sync_status;
+    Interproc_Msg_t sync_status;
     ssize_t bytes_received = 0;
 
-    if ((bytes_received = recv(sock, &sync_status, sizeof(ECU_Msg_t), 0)) < 0)
+    if ((bytes_received = recv(sock, &sync_status, sizeof(Interproc_Msg_t), 0)) < 0)
     {
         printf("Sec recv failed\n");
         return;
     }
 
-    if (ecu_msg_check(&sync_status) < 0)
+    if (interproc_msg_check(&sync_status) < 0)
     {
         printf("Received message is not a message\n");
         return;
@@ -401,13 +400,13 @@ void sync_test()
 
     auto seconds = *reinterpret_cast<int64_t *>(sync_status.data);
 
-    if ((bytes_received = recv(sock, &sync_status, sizeof(ECU_Msg_t), 0)) < 0)
+    if ((bytes_received = recv(sock, &sync_status, sizeof(Interproc_Msg_t), 0)) < 0)
     {
         printf("Nsec recv failed\n");
         return;
     }
 
-    if (ecu_msg_check(&sync_status) < 0)
+    if (interproc_msg_check(&sync_status) < 0)
     {
         printf("Received message is not a message\n");
         return;
@@ -426,14 +425,14 @@ void sync_test()
 
 void remote_restart()
 {
-    ECU_Msg_t msg = ecu_msg_make(0, "restart", nullptr, ECU_Command_t::RESTART_CMD);
-    send(sock, &msg, sizeof(ECU_Msg_t), 0);
+    Interproc_Msg_t msg = interproc_msg_make(Interproc_Command_t::CMD_RESET, nullptr, 0);
+    send(sock, &msg, sizeof(Interproc_Msg_t), 0);
 }
 
 void request_status()
 {
-    ECU_Msg_t msg = ecu_msg_make(0, "status", nullptr, ECU_Command_t::STATUS_CMD);
-    send(sock, &msg, sizeof(ECU_Msg_t), 0);
+    Interproc_Msg_t msg = interproc_msg_make(Interproc_Command_t::CMD_STATUS, nullptr, 0);
+    send(sock, &msg, sizeof(Interproc_Msg_t), 0);
 
     Header_t header;
     recv(sock, &header, sizeof(Header_t), 0);
@@ -470,16 +469,16 @@ void firmware_update_test()
 
     uint32_t id        = 0;
     uint64_t data      = bin_files.size() + lib_files.size();
-    ECU_Msg_t init_msg = ecu_msg_make(id++, "Number of files", &data, ECU_Command_t::FIRMWARE_UPDATE_CMD);
+    Interproc_Msg_t init_msg = interproc_msg_make(Interproc_Command_t::CMD_FIRMWARE_UPDATE, &data, sizeof(data));
 
-    if (send(sock, &init_msg, sizeof(ECU_Msg_t), 0) < 0)
+    if (send(sock, &init_msg, sizeof(Interproc_Msg_t), 0) < 0)
     {
         printf("Command send failed\n");
         return;
     }
 
-    ECU_Msg_t ack_msg;
-    if (recv(sock, &ack_msg, sizeof(ECU_Msg_t), 0) < 0)
+    Interproc_Msg_t ack_msg;
+    if (recv(sock, &ack_msg, sizeof(Interproc_Msg_t), 0) < 0)
     {
         printf("ACK recv failed\n");
         return;

@@ -6,12 +6,16 @@
 #include <string.h>
 
 Interproc_Msg_t interproc_msg_make(Interproc_Command_t command,
-				   const void *const data)
+				   const void *const data, uint16_t length)
 {
-	Interproc_Msg_t dst = { .command = command };
+	Interproc_Msg_t dst = {
+		.header = header_make(INTERPROC_MSG_START_BYTE, length),
+		.command = command,
+		.data = {0}
+	};
 
 	if (data) {
-		memcpy(dst.data, data, sizeof(dst.data));
+		memcpy(dst.data, data, length);
 	}
 
 	interproc_msg_calc_checksum(&dst);
@@ -31,7 +35,7 @@ ecu_err_t interproc_msg_check(const Interproc_Msg_t *const msg)
 	    calc_crc(msg, offsetof(Interproc_Msg_t, checksum))) {
 		return -ERR_CRC_FAILED;
 	}
-	return 1;
+	return ERR_OK;
 }
 
 #endif

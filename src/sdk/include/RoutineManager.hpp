@@ -82,7 +82,7 @@ class RoutineManager {
 			NULL, /* Name of the task. */
 			stack_size / 2, /* Stack size in words, not bytes. */
 			nullptr, /* Parameter passed into the task. */
-			tskIDLE_PRIORITY, /* Priority of the task. */
+			(configTIMER_TASK_PRIORITY-1), /* Priority of the task. */
 			stack, /* Pointer to the task's stack. */
 			task_storage /* Pointer to the task's storage. */
 		);

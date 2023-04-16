@@ -1,5 +1,11 @@
-#include "CRC.h"
-#include "ECU_Msg.h"
+#include "CAN_Msg.h"
+#include "ECU_Error.h"
+#include "ESP32_Msg.h"
+#include "Header.h"
+#include "Interproc_Msg.h"
+#include "Parameter.h"
+#include "Timestamp.h"
+#include "types.h"
 #include <arpa/inet.h>
 #include <cassert>
 #include <csignal>

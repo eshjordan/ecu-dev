@@ -168,9 +168,40 @@ public:
 			uint32_t frequency = timer_values[i];
 			const auto period = (size_t)(1000.0 / frequency);
 			const TickType_t ticks = pdMS_TO_TICKS(period);
+			char timer_name[12];
+
+			switch (frequency) {
+			case CHANNEL_LOG_1HZ: {
+				strcpy(timer_name, "1Hz_tmr");
+				break;
+			} case CHANNEL_LOG_10HZ: {
+				strcpy(timer_name, "10Hz_tmr");
+				break;
+			} case CHANNEL_LOG_20HZ: {
+				strcpy(timer_name, "20Hz_tmr");
+				break;
+			} case CHANNEL_LOG_50HZ: {
+				strcpy(timer_name, "50Hz_tmr");
+				break;
+			} case CHANNEL_LOG_100HZ: {
+				strcpy(timer_name, "100Hz_tmr");
+				break;
+			} case CHANNEL_LOG_200HZ: {
+				strcpy(timer_name, "200Hz_tmr");
+				break;
+			} case CHANNEL_LOG_500HZ: {
+				strcpy(timer_name, "500Hz_tmr");
+				break;
+			} case CHANNEL_LOG_1000HZ: {
+				strcpy(timer_name, "1000Hz_tmr");
+				break;
+			} default: {
+				break;
+			}
+			}
 
 			m_timers[i] = xTimerCreateStatic(
-				"", /* The text name assigned to the software timer - for debug only as it is not used by the kernel. */
+				timer_name, /* The text name assigned to the software timer - for debug only as it is not used by the kernel. */
 				ticks, /* The period of the software timer in ticks. */
 				true, /* xAutoReload is set to pdTRUE. */
 				(void*)frequency, /* The timer's ID is used to store the frequency each callback is running for. */
